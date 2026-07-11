@@ -2,7 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { IconGamepadFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGamepadFillDuo18";
 import { IconGridCircleListFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGridCircleListFillDuo18";
+import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
+import { IconMediaPlayFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMediaPlayFillDuo18";
 import { IconMsgs2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMsgs2FillDuo18";
+import { IconRankingStarFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconRankingStarFillDuo18";
+import { IconStarFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconStarFillDuo18";
+import { IconThumbsUpFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsUpFillDuo18";
 import { IconUsersFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconUsersFillDuo18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { getPublishedGamesCount } from "@/lib/db-games";
@@ -68,11 +73,31 @@ function PopularGamesSection({ games }: { games: AdminPopularGame[] }) {
           <TableRow>
             <TableHead className="w-16">Sıra</TableHead>
             <TableHead>Oyun</TableHead>
-            <TableHead className="w-24 text-center">Skor</TableHead>
-            <TableHead className="w-24 text-center">Oynama</TableHead>
-            <TableHead className="w-24 text-center">Favori</TableHead>
-            <TableHead className="w-24 text-center">Beğeni</TableHead>
-            <TableHead className="w-20 text-center">Puan</TableHead>
+            <TableHead className="w-24 text-center">
+              <span className="inline-flex items-center justify-center" title="Skor" aria-label="Skor">
+                <IconRankingStarFillDuo18 className="size-5" />
+              </span>
+            </TableHead>
+            <TableHead className="w-24 text-center">
+              <span className="inline-flex items-center justify-center" title="Oynama" aria-label="Oynama">
+                <IconMediaPlayFillDuo18 className="size-5" />
+              </span>
+            </TableHead>
+            <TableHead className="w-24 text-center">
+              <span className="inline-flex items-center justify-center" title="Favori" aria-label="Favori">
+                <IconHeartFillDuo18 className="size-5" />
+              </span>
+            </TableHead>
+            <TableHead className="w-24 text-center">
+              <span className="inline-flex items-center justify-center" title="Beğeni" aria-label="Beğeni">
+                <IconThumbsUpFillDuo18 className="size-5" />
+              </span>
+            </TableHead>
+            <TableHead className="w-20 text-center">
+              <span className="inline-flex items-center justify-center" title="Puan" aria-label="Puan">
+                <IconStarFillDuo18 className="size-5" />
+              </span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
