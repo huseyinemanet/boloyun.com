@@ -21,6 +21,10 @@
   "images": {
     "binding": "IMAGES"
   },
+  "vars": {
+    "EMAIL_SERVICE_PROVIDER": "brevo",
+    "EMAIL_FROM_ADDRESS": "noreply@boloyun.com"
+  },
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1

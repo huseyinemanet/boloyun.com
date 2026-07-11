@@ -5,6 +5,7 @@ export type SystemStatus = {
   database: "Bağlı" | "Bağlantı yok";
   r2: "Yapılandırıldı" | "Yapılandırılmadı";
   cdn: "Yapılandırıldı" | "Yapılandırılmadı";
+  email: "Yapılandırıldı" | "Yapılandırılmadı";
   lastImportAt: string | null;
   detectedIframeDomains: string[];
 };
@@ -36,6 +37,7 @@ export async function getSystemStatus(): Promise<SystemStatus> {
     database,
     r2: isR2Configured() ? "Yapılandırıldı" : "Yapılandırılmadı",
     cdn: isCdnConfigured() ? "Yapılandırıldı" : "Yapılandırılmadı",
+    email: isEmailConfigured() ? "Yapılandırıldı" : "Yapılandırılmadı",
     lastImportAt,
     detectedIframeDomains: [...domains].sort(),
   };
@@ -48,4 +50,10 @@ export function isR2Configured() {
 
 export function isCdnConfigured() {
   return Boolean(process.env.R2_PUBLIC_BASE_URL?.trim());
+}
+
+export function isEmailConfigured() {
+  const provider = process.env.EMAIL_SERVICE_PROVIDER?.trim().toLocaleLowerCase("tr-TR");
+  const fromAddress = process.env.EMAIL_FROM_ADDRESS?.trim();
+  return provider === "brevo" && Boolean(fromAddress && /^[^\s@]+@boloyun\.com$/i.test(fromAddress));
 }

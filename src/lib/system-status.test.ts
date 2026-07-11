@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
-import { isCdnConfigured, isR2Configured } from "./system-status";
+import { isCdnConfigured, isEmailConfigured, isR2Configured } from "./system-status";
 
-const keys = ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET_NAME", "R2_PUBLIC_BASE_URL"] as const;
+const keys = ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET_NAME", "R2_PUBLIC_BASE_URL", "EMAIL_SERVICE_PROVIDER", "EMAIL_FROM_ADDRESS"] as const;
 const originalValues = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
 
 afterEach(() => {
@@ -32,5 +32,20 @@ describe("system integration status", () => {
 
     process.env.R2_PUBLIC_BASE_URL = "https://cdn.boloyun.com";
     assert.equal(isCdnConfigured(), true);
+  });
+
+  it("reports email only for the configured Brevo sender on boloyun.com", () => {
+    Reflect.deleteProperty(process.env, "EMAIL_SERVICE_PROVIDER");
+    Reflect.deleteProperty(process.env, "EMAIL_FROM_ADDRESS");
+    assert.equal(isEmailConfigured(), false);
+
+    process.env.EMAIL_SERVICE_PROVIDER = "brevo";
+    assert.equal(isEmailConfigured(), false);
+
+    process.env.EMAIL_FROM_ADDRESS = "noreply@example.com";
+    assert.equal(isEmailConfigured(), false);
+
+    process.env.EMAIL_FROM_ADDRESS = "noreply@boloyun.com";
+    assert.equal(isEmailConfigured(), true);
   });
 });
