@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function AdminSettingsIndexPage() {
+export default async function AdminSettingsIndexPage() {
   redirect("/admin/settings/general");
 }
