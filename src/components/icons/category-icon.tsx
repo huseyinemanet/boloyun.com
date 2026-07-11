@@ -5,14 +5,14 @@ import { sanitizeSvgInput } from "@/lib/sanitize/html";
 import { cn } from "@/lib/utils";
 
 const CATEGORY_ICON_COLORS = [
-  "oklch(0.585 0.233 277.117)",
-  "oklch(0.673 0.182 276.935)",
-  "oklch(0.627 0.265 303.9)",
-  "oklch(0.702 0.183 293.541)",
-  "oklch(0.606 0.25 292.717)",
-  "oklch(0.588 0.158 241.966)",
-  "oklch(0.696 0.165 251.9)",
-  "oklch(0.541 0.281 293.009)",
+  "oklch(0.795 0.184 86.047)",
+  "oklch(0.681 0.162 75.834)",
+  "oklch(0.769 0.188 70.08)",
+  "oklch(0.666 0.179 58.318)",
+  "oklch(0.554 0.135 66.442)",
+  "oklch(0.476 0.114 61.907)",
+  "oklch(0.421 0.095 57.708)",
+  "oklch(0.852 0.199 91.936)",
 ] as const;
 
 type CategoryIconProps = {
