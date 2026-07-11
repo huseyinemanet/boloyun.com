@@ -5,20 +5,33 @@ export function AdminCursorPagination({
   basePath,
   itemCount,
   itemName,
+  emptyLabel,
   previousCursor,
   nextCursor,
 }: {
   basePath: string;
   itemCount: number;
   itemName: string;
+  emptyLabel?: string;
   previousCursor: KeysetCursor | null;
   nextCursor: KeysetCursor | null;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2 text-sm">
       <p className="shrink-0 text-muted-foreground">
-        <span className="font-bold text-foreground">{itemCount.toLocaleString("tr-TR")} {itemName}</span>
-        {itemCount > 0 ? " gösteriliyor" : " bulunamadı"}
+        {itemCount > 0 ? (
+          <>
+            <span className="font-bold text-foreground">{itemCount.toLocaleString("tr-TR")} {itemName}</span>
+            {" gösteriliyor"}
+          </>
+        ) : (
+          emptyLabel ?? (
+            <>
+              <span className="font-bold text-foreground">0 {itemName}</span>
+              {" bulunamadı"}
+            </>
+          )
+        )}
       </p>
       <Pagination className="mx-0 w-auto justify-end">
         <PaginationContent>

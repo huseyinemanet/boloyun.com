@@ -27,9 +27,9 @@ export default async function ImportsPage({ searchParams }: ImportsPageProps) {
         description="Yeni bulunan oyunları burada kontrol edip yayınlayabilirsin."
       />
 
-      <AdminCursorPagination basePath="/admin/imports" itemCount={imports.length} itemName="oyun" previousCursor={previousCursor} nextCursor={nextCursor} />
+      <AdminCursorPagination basePath="/admin/imports" itemCount={imports.length} itemName="oyun" emptyLabel="Onay bekleyen oyun yok" previousCursor={previousCursor} nextCursor={nextCursor} />
       <ImportsTable imports={imports} />
-      <AdminCursorPagination basePath="/admin/imports" itemCount={imports.length} itemName="oyun" previousCursor={previousCursor} nextCursor={nextCursor} />
+      <AdminCursorPagination basePath="/admin/imports" itemCount={imports.length} itemName="oyun" emptyLabel="Onay bekleyen oyun yok" previousCursor={previousCursor} nextCursor={nextCursor} />
     </div>
   );
 }
