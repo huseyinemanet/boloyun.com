@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LoaderCircleIcon } from "lucide-react";
 import { IconGamepadFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGamepadFillDuo18";
 import { IconGridCircleListFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGridCircleListFillDuo18";
 import { IconHouseDashboard2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHouseDashboard2FillDuo18";
@@ -13,6 +14,7 @@ import { IconFilesContentFillDuo18 } from "nucleo-ui-fill-duo-18/components/Icon
 import { IconSlidersVerticalFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconSlidersVerticalFillDuo18";
 import { IconTag2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconTag2FillDuo18";
 import { IconUsersFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconUsersFillDuo18";
+import { useState, type MouseEvent } from "react";
 import { cn } from "@/lib/utils";
 
 const adminLinks = [
@@ -31,18 +33,38 @@ const adminLinks = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+
+  function markPending(event: MouseEvent<HTMLAnchorElement>, href: string) {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.altKey ||
+      event.shiftKey ||
+      pathname === href
+    ) {
+      return;
+    }
+
+    setPendingHref(href);
+  }
 
   return (
     <aside className="overflow-x-auto lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-visible">
       <nav className="flex min-w-max gap-1 lg:grid lg:min-w-0 lg:gap-0.5" aria-label="Admin menüsü">
         {adminLinks.map(({ href, label, icon: Icon }) => {
           const active = href === "/admin" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+          const pending = pendingHref === href && pathname !== href;
 
           return (
             <Link
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
+              aria-busy={pending || undefined}
+              onClick={(event) => markPending(event, href)}
               className={cn(
                 "group flex items-center gap-2 whitespace-nowrap rounded-md px-2 py-1.5 text-sm font-semibold transition-colors",
                 active
@@ -57,7 +79,7 @@ export function AdminSidebar() {
                 )}
                 aria-hidden="true"
               >
-                <Icon className="size-4" />
+                {pending ? <LoaderCircleIcon className="size-4 animate-spin" /> : <Icon className="size-4" />}
               </span>
               <span>{label}</span>
             </Link>
