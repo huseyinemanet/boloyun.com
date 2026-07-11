@@ -1,0 +1,58 @@
+import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { encodeKeysetCursor, type KeysetCursor } from "@/lib/keyset-pagination";
+
+export function AdminCursorPagination({
+  basePath,
+  itemCount,
+  itemName,
+  previousCursor,
+  nextCursor,
+}: {
+  basePath: string;
+  itemCount: number;
+  itemName: string;
+  previousCursor: KeysetCursor | null;
+  nextCursor: KeysetCursor | null;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2 text-sm">
+      <p className="shrink-0 text-muted-foreground">
+        <span className="font-bold text-foreground">{itemCount.toLocaleString("tr-TR")} {itemName}</span>
+        {itemCount > 0 ? " gösteriliyor" : " bulunamadı"}
+      </p>
+      <Pagination className="mx-0 w-auto justify-end">
+        <PaginationContent>
+          <PaginationItem>
+            {previousCursor ? (
+              <PaginationPrevious href={cursorHref(basePath, previousCursor, "previous")} text="Önceki" />
+            ) : (
+              <DisabledPageLink label="Önceki" side="previous" />
+            )}
+          </PaginationItem>
+          <PaginationItem>
+            {nextCursor ? (
+              <PaginationNext href={cursorHref(basePath, nextCursor, "next")} text="Sonraki" />
+            ) : (
+              <DisabledPageLink label="Sonraki" side="next" />
+            )}
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+    </div>
+  );
+}
+
+function cursorHref(basePath: string, cursor: KeysetCursor, direction: "next" | "previous") {
+  const params = new URLSearchParams({ cursor: encodeKeysetCursor(cursor), direction });
+  return `${basePath}?${params.toString()}`;
+}
+
+function DisabledPageLink({ label, side }: { label: string; side: "previous" | "next" }) {
+  return (
+    <span className="inline-flex h-8 items-center justify-center gap-1 rounded-md px-2.5 text-sm font-bold text-muted-foreground opacity-45">
+      {side === "previous" ? <span aria-hidden="true">‹</span> : null}
+      <span>{label}</span>
+      {side === "next" ? <span aria-hidden="true">›</span> : null}
+    </span>
+  );
+}

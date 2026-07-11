@@ -3,32 +3,36 @@ import Link from "next/link";
 import { IconOpenInNewWindowFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconOpenInNewWindowFillDuo18";
 import { IconPencilFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconPencilFillDuo18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
-import { AdminPagination, parseAdminPage } from "@/components/admin/admin-pagination";
+import { AdminCursorPagination } from "@/components/admin/admin-cursor-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getAdminGamesPage } from "@/lib/db-games";
 import type { PublishStatus } from "@/types/game";
+import { decodeKeysetCursor, parseKeysetDirection } from "@/lib/keyset-pagination";
 
 export const dynamic = "force-dynamic";
 const PER_PAGE = 50;
 
 type AdminGamesPageProps = {
   searchParams: Promise<{
-    page?: string;
+    cursor?: string;
+    direction?: string;
   }>;
 };
 
 export default async function AdminGamesPage({ searchParams }: AdminGamesPageProps) {
-  const currentPage = parseAdminPage((await searchParams).page);
-  const { items: games, total } = await getAdminGamesPage({ page: currentPage, perPage: PER_PAGE });
+  const params = await searchParams;
+  const cursor = decodeKeysetCursor(params.cursor);
+  const direction = parseKeysetDirection(params.direction);
+  const { items: games, previousCursor, nextCursor } = await getAdminGamesPage({ cursor, direction, perPage: PER_PAGE });
 
   return (
     <div className="space-y-3">
       <AdminPageHeader title="Oyunlar" description="Yayındaki, taslak ve pasif oyunları buradan düzenleyebilirsin." />
 
-      <AdminPagination currentPage={currentPage} perPage={PER_PAGE} total={total} basePath="/admin/games" itemName="oyun" />
+      <AdminCursorPagination basePath="/admin/games" itemCount={games.length} itemName="oyun" previousCursor={previousCursor} nextCursor={nextCursor} />
       <section className="overflow-hidden rounded-md border border-border bg-card">
         <Table>
           <TableHeader className="bg-muted/40">
@@ -95,7 +99,7 @@ export default async function AdminGamesPage({ searchParams }: AdminGamesPagePro
           </TableBody>
         </Table>
       </section>
-      <AdminPagination currentPage={currentPage} perPage={PER_PAGE} total={total} basePath="/admin/games" itemName="oyun" />
+      <AdminCursorPagination basePath="/admin/games" itemCount={games.length} itemName="oyun" previousCursor={previousCursor} nextCursor={nextCursor} />
     </div>
   );
 }

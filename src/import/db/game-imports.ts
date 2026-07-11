@@ -2,6 +2,7 @@ import type { ParsedGame } from "@/import/parsers/types";
 import type { DiscoveredGameUrl } from "@/import/sitemap/discover";
 import { normalizeImportCategories } from "@/import/taxonomy/category-normalizer";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
+import { keysetFilter, type KeysetCursor, type KeysetDirection } from "@/lib/keyset-pagination";
 
 export type GameImportStatus =
   | "discovered"
@@ -23,6 +24,7 @@ export type GameImportQueueItem = {
 
 export type ScrapedGameImport = {
   id: string;
+  updated_at: string;
   source_url: string;
   source_domain: string | null;
   import_status: GameImportStatus;
@@ -364,24 +366,38 @@ export async function getAdminImportStats() {
   };
 }
 
-export async function getAdminImportsPage({ page, perPage }: { page: number; perPage: number }) {
+export async function getAdminImportsPage({ cursor, direction, perPage }: {
+  cursor: KeysetCursor | null;
+  direction: KeysetDirection;
+  perPage: number;
+}) {
   const supabase = getRequiredSupabaseServiceClient();
-  const from = (page - 1) * perPage;
-  const to = from + perPage - 1;
-  const { data, error, count } = await supabase
+  const ascending = direction === "previous";
+  let query = supabase
     .from("game_imports")
-    .select("*", { count: "exact" })
+    .select("*")
     .in("import_status", ["scraped", "ai_generated", "pending_review", "needs_fix", "failed"])
-    .order("updated_at", { ascending: false })
-    .range(from, to);
+    .order("updated_at", { ascending })
+    .order("id", { ascending })
+    .limit(perPage + 1);
+  if (cursor) query = query.or(keysetFilter(cursor, direction));
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(`Admin import kayitlari okunamadi: ${error.message}`);
   }
 
+  const hasMore = (data?.length ?? 0) > perPage;
+  const items = ((data ?? []).slice(0, perPage) as ScrapedGameImport[]);
+  if (ascending) items.reverse();
   return {
-    items: (data ?? []) as ScrapedGameImport[],
-    total: count ?? 0,
+    items,
+    previousCursor: items.length > 0 && (direction === "next" ? cursor !== null : hasMore)
+      ? { updatedAt: items[0].updated_at, id: items[0].id }
+      : null,
+    nextCursor: items.length > 0 && (direction === "previous" ? true : hasMore)
+      ? { updatedAt: items[items.length - 1].updated_at, id: items[items.length - 1].id }
+      : null,
   };
 }
 

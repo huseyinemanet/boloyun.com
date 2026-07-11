@@ -7,6 +7,7 @@ import { slugify } from "@/lib/slug/slugify";
 import { getPublicSettings } from "@/lib/db-settings";
 import { isGameSourceAllowed } from "@/lib/settings/game-security";
 import { measuredQuery } from "@/lib/query-observability";
+import { keysetFilter, type KeysetCursor, type KeysetDirection } from "@/lib/keyset-pagination";
 
 const publicGameSelect = [
   "id",
@@ -468,35 +469,62 @@ export async function getPublishedGamesByCategorySlugPage({
   };
 }
 
-export async function getAdminGames(limit = 200): Promise<Game[]> {
-  return getAdminGamesPage({ page: 1, perPage: limit }).then((result) => result.items);
-}
+export type AdminGameListItem = Pick<Game, "id" | "title" | "slug" | "shortDescription" | "thumbnailUrl" | "status" | "playCount"> & {
+  updatedAt: string;
+};
 
-export async function getAdminGamesPage({ page, perPage }: { page: number; perPage: number }): Promise<{ items: Game[]; total: number }> {
+export async function getAdminGamesPage({ cursor, direction, perPage }: {
+  cursor: KeysetCursor | null;
+  direction: KeysetDirection;
+  perPage: number;
+}): Promise<{ items: AdminGameListItem[]; previousCursor: KeysetCursor | null; nextCursor: KeysetCursor | null }> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
-    const from = (page - 1) * perPage;
+    const items = fallbackGames.slice(0, perPage).map((game, index) => ({ ...game, updatedAt: new Date(index).toISOString() }));
     return {
-      items: fallbackGames.slice(from, from + perPage),
-      total: fallbackGames.length,
+      items,
+      previousCursor: null,
+      nextCursor: null,
     };
   }
 
-  const from = (page - 1) * perPage;
-  const to = from + perPage - 1;
-  const { data, error, count } = await supabase
+  const ascending = direction === "previous";
+  let query = supabase
     .from("games")
-    .select("*", { count: "exact" })
-    .order("updated_at", { ascending: false })
-    .range(from, to);
+    .select("id,title,slug,short_description,thumbnail_url,status,play_count,updated_at")
+    .order("updated_at", { ascending })
+    .order("id", { ascending })
+    .limit(perPage + 1);
+
+  if (cursor) query = query.or(keysetFilter(cursor, direction));
+  const { data, error } = await query;
 
   if (error || !data) {
-    return { items: [], total: 0 };
+    return { items: [], previousCursor: null, nextCursor: null };
   }
 
+  const hasMore = data.length > perPage;
+  const pageRows = data.slice(0, perPage);
+  if (ascending) pageRows.reverse();
+  const items = pageRows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    slug: row.slug,
+    shortDescription: row.short_description ?? "",
+    thumbnailUrl: row.thumbnail_url ?? "/images/game-placeholder.svg",
+    status: row.status as PublishStatus,
+    playCount: row.play_count ?? 0,
+    updatedAt: row.updated_at,
+  }));
+
   return {
-    items: (data as GameRow[]).map(mapGameRow),
-    total: count ?? 0,
+    items,
+    previousCursor: items.length > 0 && (direction === "next" ? cursor !== null : hasMore)
+      ? { updatedAt: items[0].updatedAt, id: items[0].id }
+      : null,
+    nextCursor: items.length > 0 && (direction === "previous" ? true : hasMore)
+      ? { updatedAt: items[items.length - 1].updatedAt, id: items[items.length - 1].id }
+      : null,
   };
 }
 
