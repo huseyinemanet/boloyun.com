@@ -36,16 +36,17 @@ const PENDING_SPINNER_TIMEOUT_MS = 8000;
 export function AdminSidebar() {
   const pathname = usePathname();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const visiblePendingHref = pendingHref && !isAdminLinkActive(pathname, pendingHref) ? pendingHref : null;
 
   useEffect(() => {
-    if (!pendingHref) return;
+    if (!visiblePendingHref) return;
 
     const timeout = window.setTimeout(() => {
-      setPendingHref((currentHref) => (currentHref === pendingHref ? null : currentHref));
+      setPendingHref((currentHref) => (currentHref === visiblePendingHref ? null : currentHref));
     }, PENDING_SPINNER_TIMEOUT_MS);
 
     return () => window.clearTimeout(timeout);
-  }, [pendingHref]);
+  }, [visiblePendingHref]);
 
   function markPending(event: MouseEvent<HTMLAnchorElement>, href: string) {
     if (
@@ -55,7 +56,7 @@ export function AdminSidebar() {
       event.ctrlKey ||
       event.altKey ||
       event.shiftKey ||
-      pathname === href
+      isAdminLinkActive(pathname, href)
     ) {
       return;
     }
@@ -67,8 +68,8 @@ export function AdminSidebar() {
     <aside className="overflow-x-auto lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-visible">
       <nav className="flex min-w-max gap-1 lg:grid lg:min-w-0 lg:gap-0.5" aria-label="Admin menüsü">
         {adminLinks.map(({ href, label, icon: Icon }) => {
-          const active = href === "/admin" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
-          const pending = pendingHref === href && pathname !== href;
+          const active = isAdminLinkActive(pathname, href);
+          const pending = visiblePendingHref === href;
 
           return (
             <Link
@@ -100,4 +101,8 @@ export function AdminSidebar() {
       </nav>
     </aside>
   );
+}
+
+function isAdminLinkActive(pathname: string, href: string) {
+  return href === "/admin" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 }
