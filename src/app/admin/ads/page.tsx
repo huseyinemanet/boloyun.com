@@ -22,6 +22,7 @@ export default async function AdminAdsPage({ searchParams }: AdminAdsPageProps) 
   const selectedSlot = data.slots.find((slot) => slot.id === slotId) ?? data.slots[0];
   const selectedAd = data.ads.find((ad) => ad.id === adId);
   const adsBySlot = groupAdsBySlot(data.ads);
+  const newAdHref = selectedSlot ? `/admin/ads?slot=${selectedSlot.id}#ad-form` : "/admin/ads#ad-form";
 
   return (
     <div className="space-y-3">
@@ -35,7 +36,10 @@ export default async function AdminAdsPage({ searchParams }: AdminAdsPageProps) 
               <p className="mt-1 text-xs text-muted-foreground">{data.slots.length} slot</p>
             </div>
             <Button asChild variant="outline" size="lg" className="font-semibold">
-              <Link href="/admin/ads">Yeni reklam</Link>
+              <Link href={newAdHref}>
+                <PlusIcon />
+                Yeni reklam
+              </Link>
             </Button>
           </div>
 
@@ -106,7 +110,7 @@ export default async function AdminAdsPage({ searchParams }: AdminAdsPageProps) 
             {selectedSlot ? <AdSlotForm slot={selectedSlot} /> : null}
           </section>
 
-          <section id="ad-form" className="rounded-md border border-border bg-card p-4">
+          <section id="ad-form" className="scroll-mt-24 rounded-md border border-border bg-card p-4">
             <h2 className="font-bold">{selectedAd ? "Reklam düzenle" : "Yeni reklam"}</h2>
             <p className="mt-1 text-xs text-muted-foreground">Reklam kodu sadece admin tarafından girilir. Tarih boşsa sürekli çalışır.</p>
             <AdForm slots={data.slots} selectedSlot={selectedSlot} ad={selectedAd} />
