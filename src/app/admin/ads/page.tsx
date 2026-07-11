@@ -3,13 +3,9 @@ import { PencilIcon, PlusIcon } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
-import { getAdminAdManagerData, type AdRow, type AdSlotRow } from "@/lib/db-ads";
-import { saveAdAction, saveAdSlotAction } from "./actions";
+import { getAdminAdManagerData, type AdRow } from "@/lib/db-ads";
+import { AdForm, AdSlotForm } from "./ads-forms";
 import { AdsTable } from "./ads-table";
 
 export const dynamic = "force-dynamic";
@@ -129,92 +125,6 @@ export default async function AdminAdsPage({ searchParams }: AdminAdsPageProps) 
   );
 }
 
-function AdSlotForm({ slot }: { slot: AdSlotRow }) {
-  return (
-    <form action={saveAdSlotAction} className="mt-4 grid gap-3">
-      <input type="hidden" name="id" value={slot.id} />
-      <Field label="Slot adı" name="name" defaultValue={slot.name} />
-      <Field label="Slot key" name="key" defaultValue={slot.key} />
-      <TextArea label="Açıklama" name="description" defaultValue={slot.description ?? ""} rows={3} />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Sayfa tipi" name="page_type" defaultValue={slot.page_type ?? ""} />
-        <Field label="Pozisyon" name="position" defaultValue={slot.position ?? ""} />
-      </div>
-      <label className="flex items-center gap-2 text-sm font-bold">
-        <Checkbox name="is_active" defaultChecked={slot.is_active !== false} />
-        Aktif
-      </label>
-      <Button className="h-10 text-sm font-bold">Slotu Güncelle</Button>
-    </form>
-  );
-}
-
-function AdForm({ slots, selectedSlot, ad }: { slots: AdSlotRow[]; selectedSlot?: AdSlotRow; ad?: AdRow }) {
-  return (
-    <form action={saveAdAction} className="mt-4 grid gap-3">
-      <input type="hidden" name="id" value={ad?.id ?? ""} />
-      <label className="block text-sm font-bold">
-        Slot
-        <Select name="slot_id" defaultValue={ad?.slot_id ?? selectedSlot?.id ?? ""}>
-          <SelectTrigger className="mt-1 h-10 w-full">
-            <SelectValue placeholder="Slot seç" />
-          </SelectTrigger>
-          <SelectContent>
-            {slots.map((slot) => (
-              <SelectItem key={slot.id} value={slot.id}>
-                {slot.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </label>
-      <Field label="Reklam adı" name="name" defaultValue={ad?.name ?? ""} />
-      <TextArea label="Reklam kodu" name="ad_code" defaultValue={ad?.ad_code ?? ""} rows={6} />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Öncelik" name="priority" defaultValue={String(ad?.priority ?? 0)} />
-        <div className="grid gap-2 text-sm font-bold">
-          Gösterim
-          <label className="flex items-center gap-2 text-xs font-bold">
-            <Checkbox name="show_desktop" defaultChecked={ad?.show_desktop !== false} />
-            Desktop
-          </label>
-          <label className="flex items-center gap-2 text-xs font-bold">
-            <Checkbox name="show_mobile" defaultChecked={ad?.show_mobile !== false} />
-            Mobil
-          </label>
-        </div>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Başlangıç" name="start_at" defaultValue={toDateTimeLocal(ad?.start_at)} type="datetime-local" />
-        <Field label="Bitiş" name="end_at" defaultValue={toDateTimeLocal(ad?.end_at)} type="datetime-local" />
-      </div>
-      <label className="flex items-center gap-2 text-sm font-bold">
-        <Checkbox name="is_active" defaultChecked={ad?.is_active !== false} />
-        Aktif
-      </label>
-      <Button className="h-10 text-sm font-bold">{ad ? "Reklamı Güncelle" : "Reklam Ekle"}</Button>
-    </form>
-  );
-}
-
-function Field({ label, name, defaultValue, type = "text" }: { label: string; name: string; defaultValue: string; type?: string }) {
-  return (
-    <label className="block text-sm font-bold">
-      {label}
-      <Input name={name} type={type} defaultValue={defaultValue} className="mt-1 h-10" />
-    </label>
-  );
-}
-
-function TextArea({ label, name, defaultValue, rows }: { label: string; name: string; defaultValue: string; rows: number }) {
-  return (
-    <label className="block text-sm font-bold">
-      {label}
-      <Textarea name={name} defaultValue={defaultValue} rows={rows} className="mt-1 resize-y" />
-    </label>
-  );
-}
-
 function groupAdsBySlot(ads: AdRow[]) {
   const map = new Map<string, AdRow[]>();
   for (const ad of ads) {
@@ -223,11 +133,4 @@ function groupAdsBySlot(ads: AdRow[]) {
     map.set(ad.slot_id, current);
   }
   return map;
-}
-
-function toDateTimeLocal(value?: string | null) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().slice(0, 16);
 }

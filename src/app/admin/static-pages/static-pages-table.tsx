@@ -126,24 +126,29 @@ export function StaticPagesTable({ pages }: { pages: StaticPageListItem[] }) {
       {error ? <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm font-semibold text-destructive">{error}</p> : null}
 
       <section className="overflow-hidden rounded-md border border-border bg-card">
-        <Table className="min-w-[620px] table-fixed">
+        <Table className="min-w-[560px] table-fixed text-sm">
           <TableHeader className="bg-muted/40">
             <TableRow>
-              <TableHead>
+              <TableHead className="h-9 px-3 py-2">
                 <SortButton label="Başlık" onClick={() => toggleSort("title")} />
               </TableHead>
-              <TableHead className="w-32">Durum</TableHead>
-              <TableHead className="w-44">
+              <TableHead className="h-9 w-24 px-3 py-2">Durum</TableHead>
+              <TableHead className="h-9 w-32 px-3 py-2">
                 <SortButton label="Son güncelleme" onClick={() => toggleSort("updated_at")} />
               </TableHead>
+              <TableHead className="h-9 w-32 px-3 py-2 text-right">İşlem</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((page) => (
-              <TableRow key={page.id} className="group align-top">
-                <TableCell className="whitespace-normal py-4">
-                  <Link href={`/admin/static-pages/${page.id}/edit`} className="font-bold text-primary hover:underline">{page.title}</Link>
-                  <div className="invisible mt-2 flex flex-wrap items-center gap-1 text-xs font-semibold opacity-0 transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+              <TableRow key={page.id} className="align-middle">
+                <TableCell className="px-3 py-2">
+                  <Link href={`/admin/static-pages/${page.id}/edit`} className="block truncate font-bold text-primary hover:underline">{page.title}</Link>
+                </TableCell>
+                <TableCell className="px-3 py-2"><Badge variant={page.status === "published" ? "default" : "outline"} className="px-2 py-0.5 text-[11px] leading-4">{page.status === "published" ? "Yayında" : "Taslak"}</Badge></TableCell>
+                <TableCell className="whitespace-nowrap px-3 py-2 text-muted-foreground"><time dateTime={page.updated_at ?? undefined} title={formatFullDate(page.updated_at)}>{formatRelativeDate(page.updated_at)}</time></TableCell>
+                <TableCell className="px-3 py-2 text-right">
+                  <div className="inline-flex items-center gap-1 text-xs font-semibold">
                     <Link href={`/admin/static-pages/${page.id}/edit`} className="text-primary hover:underline">Düzenle</Link>
                     <span className="text-muted-foreground">|</span>
                     <Link href={`/sayfa/${page.slug}`} target="_blank" className="text-primary hover:underline">Görüntüle</Link>
@@ -170,12 +175,10 @@ export function StaticPagesTable({ pages }: { pages: StaticPageListItem[] }) {
                     </AlertDialog>
                   </div>
                 </TableCell>
-                <TableCell><Badge variant={page.status === "published" ? "default" : "outline"}>{page.status === "published" ? "Yayında" : "Taslak"}</Badge></TableCell>
-                <TableCell className="whitespace-normal text-muted-foreground"><time dateTime={page.updated_at ?? undefined} title={formatFullDate(page.updated_at)}>{formatRelativeDate(page.updated_at)}</time></TableCell>
               </TableRow>
             ))}
             {!rows.length ? (
-              <TableRow><TableCell colSpan={3} className="h-32 text-center font-medium text-muted-foreground">{pages.length ? "Aramanızla eşleşen sayfa bulunamadı." : "Henüz statik sayfa yok. Yeni bir sayfa ekleyebilirsiniz."}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="h-32 text-center font-medium text-muted-foreground">{pages.length ? "Aramanızla eşleşen sayfa bulunamadı." : "Henüz statik sayfa yok. Yeni bir sayfa ekleyebilirsiniz."}</TableCell></TableRow>
             ) : null}
           </TableBody>
         </Table>

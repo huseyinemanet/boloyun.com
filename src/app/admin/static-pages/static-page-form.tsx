@@ -9,7 +9,14 @@ import { staticPageEditorContent } from "@/lib/db-static-pages";
 import { absoluteUrl } from "@/lib/seo/metadata";
 import { saveStaticPageAction } from "./actions";
 
-export function StaticPageForm({ page }: { page: StaticPageRow }) {
+type StaticPageFormProps = {
+  page: StaticPageRow;
+  mode?: "create" | "edit";
+};
+
+export function StaticPageForm({ page, mode = "edit" }: StaticPageFormProps) {
+  const isCreate = mode === "create";
+
   return (
     <form action={saveStaticPageAction} className="space-y-4">
       <input type="hidden" name="id" value={page.id} />
@@ -42,8 +49,8 @@ export function StaticPageForm({ page }: { page: StaticPageRow }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button asChild variant="outline"><Link href="/admin/static-pages">İptal</Link></Button>
         <div className="flex items-center gap-2">
-          {page.status === "published" ? <Button asChild variant="outline"><Link href={`/sayfa/${page.slug}`} target="_blank">Sayfayı Görüntüle <ExternalLinkIcon /></Link></Button> : null}
-          <Button className="font-bold">Sayfayı Güncelle</Button>
+          {!isCreate && page.status === "published" ? <Button asChild variant="outline"><Link href={`/sayfa/${page.slug}`} target="_blank">Sayfayı Görüntüle <ExternalLinkIcon /></Link></Button> : null}
+          <Button className="font-bold">{isCreate ? "Sayfayı Oluştur" : "Sayfayı Güncelle"}</Button>
         </div>
       </div>
     </form>
