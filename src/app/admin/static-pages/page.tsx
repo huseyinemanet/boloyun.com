@@ -12,7 +12,7 @@ export default async function AdminStaticPagesPage() {
   return (
     <div className="space-y-3">
       <AdminPageHeader
-        title="Statik Sayfalar"
+        title="Sayfalar"
         description="Bilgi ve politika sayfalarını oluştur, düzenle, yayınla veya kaldır."
         actions={(
           <Button asChild variant="outline" className="h-10 font-bold">

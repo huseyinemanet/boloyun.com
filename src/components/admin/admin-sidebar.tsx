@@ -24,7 +24,7 @@ const adminLinks = [
   { href: "/admin/games", label: "Oyunlar", icon: IconGamepadFillDuo18 },
   { href: "/admin/categories", label: "Kategoriler", icon: IconGridCircleListFillDuo18 },
   { href: "/admin/tags", label: "Etiketler", icon: IconTag2FillDuo18 },
-  { href: "/admin/static-pages", label: "Statik Sayfalar", icon: IconFilesContentFillDuo18 },
+  { href: "/admin/static-pages", label: "Sayfalar", icon: IconFilesContentFillDuo18 },
   { href: "/admin/ads", label: "Reklamlar", icon: IconMegaphoneFillDuo18 },
   { href: "/admin/comments", label: "Yorumlar", icon: IconMsgs2FillDuo18 },
   { href: "/admin/users", label: "Kullanıcılar", icon: IconUsersFillDuo18 },

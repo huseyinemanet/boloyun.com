@@ -56,7 +56,7 @@ export function validateSettingsSection<S extends SettingsSection>(section: S, i
         robotsDisallow: pathArray(value.robotsDisallow, "Robots engel listesi", 30),
         sitemapEnabled: boolean(value.sitemapEnabled, "Sitemap"),
         sitemapIncludeTags: boolean(value.sitemapIncludeTags, "Sitemap etiketleri"),
-        sitemapIncludeStaticPages: boolean(value.sitemapIncludeStaticPages, "Sitemap statik sayfaları"),
+        sitemapIncludeStaticPages: boolean(value.sitemapIncludeStaticPages, "Sitemap sayfaları"),
         searchIndexable: boolean(value.searchIndexable, "Arama indeksleme"),
         structuredDataEnabled: boolean(value.structuredDataEnabled, "Yapılandırılmış veri"),
         googleVerification: token(value.googleVerification, "Google doğrulama"),
