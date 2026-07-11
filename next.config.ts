@@ -5,6 +5,9 @@ initOpenNextCloudflareForDev();
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  async redirects() {
+    return [{ source: "/admin/settings", destination: "/admin/settings/general", permanent: false }];
+  },
   async headers() {
     return [{
       source: "/:path*",
