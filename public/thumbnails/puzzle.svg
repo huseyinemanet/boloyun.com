@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+  <rect width="640" height="480" fill="#312e81"/>
+  <circle cx="210" cy="175" r="58" fill="#f59e0b"/>
+  <circle cx="325" cy="175" r="58" fill="#14b8a6"/>
+  <circle cx="440" cy="175" r="58" fill="#ef4444"/>
+  <circle cx="265" cy="285" r="58" fill="#22c55e"/>
+  <circle cx="380" cy="285" r="58" fill="#f8fafc"/>
+  <text x="44" y="420" fill="#fff" font-family="Arial" font-size="44" font-weight="700">Top Patlatma</text>
+</svg>

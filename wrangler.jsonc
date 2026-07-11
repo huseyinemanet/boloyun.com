@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "boloyun",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-07-11",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [
+    { "pattern": "boloyun.com/*", "zone_name": "boloyun.com" },
+    { "pattern": "www.boloyun.com/*", "zone_name": "boloyun.com" }
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "r2_buckets": [
+    {
+      "binding": "SITE_ASSETS",
+      "bucket_name": "boloyun-assets"
+    }
+  ],
+  "images": {
+    "binding": "IMAGES"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}

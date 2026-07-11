@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+  <rect width="640" height="480" fill="#16a34a"/>
+  <path d="M70 82h500v316H70z" fill="none" stroke="#dcfce7" stroke-width="12"/>
+  <path d="M320 82v316" stroke="#dcfce7" stroke-width="8"/>
+  <circle cx="320" cy="240" r="72" fill="none" stroke="#dcfce7" stroke-width="8"/>
+  <circle cx="430" cy="250" r="52" fill="#f8fafc"/>
+  <path d="m430 198 32 24-12 39h-40l-12-39z" fill="#111827"/>
+  <text x="42" y="430" fill="#fff" font-family="Arial" font-size="48" font-weight="700">Penalti Ustasi</text>
+</svg>

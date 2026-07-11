@@ -1,0 +1,69 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { IconGamepadFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGamepadFillDuo18";
+import { IconGridCircleListFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGridCircleListFillDuo18";
+import { IconHouseDashboard2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHouseDashboard2FillDuo18";
+import { IconListCheckbox2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconListCheckbox2FillDuo18";
+import { IconMagnifierSparkle2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMagnifierSparkle2FillDuo18";
+import { IconMegaphoneFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMegaphoneFillDuo18";
+import { IconMsgs2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMsgs2FillDuo18";
+import { IconFilesContentFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconFilesContentFillDuo18";
+import { IconSlidersVerticalFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconSlidersVerticalFillDuo18";
+import { IconTag2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconTag2FillDuo18";
+import { IconUsersFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconUsersFillDuo18";
+import { cn } from "@/lib/utils";
+
+const adminLinks = [
+  { href: "/admin", label: "Genel Bakış", icon: IconHouseDashboard2FillDuo18 },
+  { href: "/admin/crawler", label: "Yeni Oyun Tara", icon: IconMagnifierSparkle2FillDuo18 },
+  { href: "/admin/imports", label: "Onay Kuyruğu", icon: IconListCheckbox2FillDuo18 },
+  { href: "/admin/games", label: "Oyunlar", icon: IconGamepadFillDuo18 },
+  { href: "/admin/categories", label: "Kategoriler", icon: IconGridCircleListFillDuo18 },
+  { href: "/admin/tags", label: "Etiketler", icon: IconTag2FillDuo18 },
+  { href: "/admin/static-pages", label: "Statik Sayfalar", icon: IconFilesContentFillDuo18 },
+  { href: "/admin/ads", label: "Reklamlar", icon: IconMegaphoneFillDuo18 },
+  { href: "/admin/comments", label: "Yorumlar", icon: IconMsgs2FillDuo18 },
+  { href: "/admin/users", label: "Kullanıcılar", icon: IconUsersFillDuo18 },
+  { href: "/admin/settings", label: "Ayarlar", icon: IconSlidersVerticalFillDuo18 },
+] as const;
+
+export function AdminSidebar() {
+  const pathname = usePathname();
+
+  return (
+    <aside className="overflow-x-auto lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-visible">
+      <nav className="flex min-w-max gap-1 lg:grid lg:min-w-0 lg:gap-0.5" aria-label="Admin menüsü">
+        {adminLinks.map(({ href, label, icon: Icon }) => {
+          const active = href === "/admin" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+
+          return (
+            <Link
+              key={href}
+              href={href}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "group flex items-center gap-2 whitespace-nowrap rounded-md px-2 py-1.5 text-sm font-semibold transition-colors",
+                active
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+              )}
+            >
+              <span
+                className={cn(
+                  "grid size-6 shrink-0 place-items-center rounded-md transition-colors",
+                  active ? "bg-primary-foreground/10" : "bg-muted text-foreground group-hover:bg-background",
+                )}
+                aria-hidden="true"
+              >
+                <Icon className="size-4" />
+              </span>
+              <span>{label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    </aside>
+  );
+}

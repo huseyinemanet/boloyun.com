@@ -1,0 +1,21 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { getTagMetadata, TagView } from "../../tag-view";
+
+type Props = { params: Promise<{ slug: string; page: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug, page } = await params;
+  return getTagMetadata(slug, parsePage(page));
+}
+
+export default async function PaginatedTagPage({ params }: Props) {
+  const { slug, page } = await params;
+  return <TagView slug={slug} page={parsePage(page)} />;
+}
+
+function parsePage(value: string) {
+  const page = Number(value);
+  if (!Number.isInteger(page) || page <= 1) notFound();
+  return page;
+}

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+  <rect width="640" height="480" fill="#14532d"/>
+  <path d="M0 360h640v120H0z" fill="#111827"/>
+  <path d="M0 418h640" stroke="#f8fafc" stroke-width="12" stroke-dasharray="48 32"/>
+  <rect x="170" y="245" width="300" height="82" rx="28" fill="#ef4444"/>
+  <rect x="230" y="206" width="170" height="75" rx="24" fill="#f97316"/>
+  <circle cx="230" cy="334" r="34" fill="#020617"/>
+  <circle cx="415" cy="334" r="34" fill="#020617"/>
+  <text x="44" y="90" fill="#fff" font-family="Arial" font-size="52" font-weight="700">Sehir Yarisi</text>
+</svg>
