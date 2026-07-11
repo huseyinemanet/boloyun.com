@@ -48,9 +48,9 @@ export default async function AdminGamesPage({ searchParams }: AdminGamesPagePro
             {games.map((game) => (
               <TableRow key={game.id}>
                 <TableCell>
-                  <div className="relative h-12 w-16 overflow-hidden rounded-md bg-muted">
+                  <Link href={`/admin/games/${game.id}/edit`} aria-label={`${game.title} oyununu düzenle`} className="relative block h-12 w-16 overflow-hidden rounded-md bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                     <Image src={game.thumbnailUrl} alt={game.title} fill sizes="64px" unoptimized className="object-cover" />
-                  </div>
+                  </Link>
                 </TableCell>
                 <TableCell className="min-w-[320px] whitespace-normal">
                   <Link href={`/admin/games/${game.id}/edit`} className="font-semibold text-primary hover:underline">
