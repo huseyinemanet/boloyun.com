@@ -4,6 +4,7 @@ export type SystemStatus = {
   appVersion: string;
   database: "Bağlı" | "Bağlantı yok";
   r2: "Yapılandırıldı" | "Yapılandırılmadı";
+  cdn: "Yapılandırıldı" | "Yapılandırılmadı";
   lastImportAt: string | null;
   detectedIframeDomains: string[];
 };
@@ -34,11 +35,17 @@ export async function getSystemStatus(): Promise<SystemStatus> {
     appVersion: process.env.npm_package_version || "0.1.0",
     database,
     r2: isR2Configured() ? "Yapılandırıldı" : "Yapılandırılmadı",
+    cdn: isCdnConfigured() ? "Yapılandırıldı" : "Yapılandırılmadı",
     lastImportAt,
     detectedIframeDomains: [...domains].sort(),
   };
 }
 
 export function isR2Configured() {
-  return Boolean(process.env.R2_PUBLIC_BASE_URL);
+  return ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET_NAME"]
+    .every((key) => Boolean(process.env[key]?.trim()));
+}
+
+export function isCdnConfigured() {
+  return Boolean(process.env.R2_PUBLIC_BASE_URL?.trim());
 }
