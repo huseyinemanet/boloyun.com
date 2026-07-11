@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ExternalLinkIcon } from "lucide-react";
+import { AdminCheckboxField } from "@/components/admin/admin-checkbox-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -41,7 +42,7 @@ export function StaticPageForm({ page, mode = "edit" }: StaticPageFormProps) {
         <label className="block text-sm font-bold">SEO açıklaması<Textarea name="seo_description" defaultValue={page.seo_description ?? ""} rows={3} className="mt-1 resize-y" /></label>
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block text-sm font-bold">Durum<Select name="status" defaultValue={page.status}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="published">Yayında</SelectItem><SelectItem value="draft">Taslak</SelectItem></SelectContent></Select></label>
-          <label className="flex items-center gap-2 self-end rounded-md border border-border px-3 py-2.5 text-sm font-bold"><input type="checkbox" name="is_indexable" defaultChecked={page.is_indexable ?? true} /> Arama motorlarında indekslenebilir</label>
+          <AdminCheckboxField name="is_indexable" label="Arama motorlarında indekslenebilir" defaultChecked={page.is_indexable ?? true} fieldClassName="self-end" />
         </div>
         <div className="rounded-md border border-border bg-muted/30 p-3 text-xs"><p className="font-bold">Canonical URL</p><p className="mt-1 break-all text-muted-foreground">{absoluteUrl(`/sayfa/${page.slug}`)}</p></div>
       </section>

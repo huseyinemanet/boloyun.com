@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { AdminCheckboxField } from "@/components/admin/admin-checkbox-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -41,10 +42,7 @@ export function CategoryForm({ category }: { category?: CategoryRow }) {
       <Field label="SEO title" name="seo_title" defaultValue={category?.seo_title ?? ""} />
       <TextArea label="SEO description" name="seo_description" defaultValue={category?.seo_description ?? ""} rows={3} />
       <Field label="Open Graph görsel URL" name="og_image_url" defaultValue={category?.og_image_url ?? ""} />
-      <label className="flex items-center gap-2 text-sm font-bold">
-        <input type="checkbox" name="is_indexable" defaultChecked={category?.is_indexable ?? true} />
-        Arama motorlarında indekslenebilir
-      </label>
+      <AdminCheckboxField name="is_indexable" label="Arama motorlarında indekslenebilir" defaultChecked={category?.is_indexable ?? true} />
 
       {state.message ? (
         <p

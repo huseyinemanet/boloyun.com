@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { ArrowDownIcon, ArrowUpIcon, HistoryIcon, PlusIcon, RotateCcwIcon, SaveIcon, Trash2Icon, UploadIcon } from "lucide-react";
+import { AdminCheckboxField } from "@/components/admin/admin-checkbox-field";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -262,7 +262,7 @@ function TextField({ label, value, onChange, type = "text", disabled = false }: 
 function TextAreaField({ label, value, onChange, rows = 4 }: { label: string; value: string; onChange: (value: string) => void; rows?: number }) { return <label className="grid gap-1 text-sm font-bold">{label}<Textarea value={value} rows={rows} onChange={(event) => onChange(event.target.value)} /></label>; }
 function NumberField({ label, value, onChange, min, max }: { label: string; value: number; onChange: (value: number) => void; min: number; max: number }) { return <label className="grid gap-1 text-sm font-bold">{label}<Input type="number" value={value} min={min} max={max} onChange={(event) => onChange(Number(event.target.value))} /></label>; }
 function SelectField({ label, value, options, onChange }: { label: string; value: string; options: Array<[string, string]>; onChange: (value: string) => void }) { return <label className="grid gap-1 text-sm font-bold">{label}<Select value={value} onValueChange={onChange}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{options.map(([key, text]) => <SelectItem key={key} value={key}>{text}</SelectItem>)}</SelectContent></Select></label>; }
-function ToggleField({ label, description, checked, onChange }: { label: string; description?: string; checked: boolean; onChange: (value: boolean) => void }) { return <label className="flex cursor-pointer items-start gap-3 rounded-md border border-border p-3"><Checkbox checked={checked} onCheckedChange={(value) => onChange(value === true)} /><span><span className="block text-sm font-bold">{label}</span>{description ? <span className="mt-0.5 block text-xs text-muted-foreground">{description}</span> : null}</span></label>; }
+function ToggleField({ label, description, checked, onChange }: { label: string; description?: string; checked: boolean; onChange: (value: boolean) => void }) { return <AdminCheckboxField label={label} description={description} checked={checked} onCheckedChange={(value) => onChange(value === true)} />; }
 function ListField({ label, value, onChange }: { label: string; value: string[]; onChange: (value: string[]) => void }) { return <label className="grid gap-1 text-sm font-bold">{label}<Textarea value={value.join("\n")} rows={5} onChange={(event) => onChange(event.target.value.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean))} /></label>; }
 
 function AssetField({ label, value, kind, onChange }: { label: string; value: string; kind: "logo" | "favicon" | "cover"; onChange: (value: string) => void }) {

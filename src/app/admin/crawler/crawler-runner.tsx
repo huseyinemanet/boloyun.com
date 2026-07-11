@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { AdminCheckboxField } from "@/components/admin/admin-checkbox-field";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 
 type CrawlerStats = {
@@ -171,10 +171,13 @@ export function CrawlerRunner() {
           />
           <span className="mt-1 block text-xs font-normal text-muted-foreground">Boş bırakırsan yeni bulunan kayıtların tamamı scrape edilir. Sayı girersen o kadarını işler.</span>
         </label>
-        <label className="flex items-center gap-2 text-sm font-bold md:col-span-2">
-          <Checkbox name="scrape_now" defaultChecked disabled={isRunning} />
-          Yeni bulunan oyunların bilgilerini hemen çek
-        </label>
+        <AdminCheckboxField
+          name="scrape_now"
+          label="Yeni bulunan oyunların bilgilerini hemen çek"
+          defaultChecked
+          disabled={isRunning}
+          fieldClassName="md:col-span-2"
+        />
         <div className="md:col-span-2">
           <Button disabled={isRunning} className="h-10 px-4 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-50">
             {isRunning ? "Taranıyor..." : "Yeni Oyunları Tara"}

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { AdminCheckboxField } from "@/components/admin/admin-checkbox-field";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,10 +67,13 @@ export default async function EditGamePage({ params }: Props) {
             <legend className="px-1 text-sm font-bold">Kategoriler</legend>
             <div className="mt-2 grid max-h-56 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
               {categories.map((category) => (
-                <label key={category.id} className="flex items-center gap-2 text-xs font-semibold">
-                  <input type="checkbox" name="category_ids" value={category.id} defaultChecked={taxonomy.categoryIds.includes(category.id)} />
-                  {category.name}
-                </label>
+                <AdminCheckboxField
+                  key={category.id}
+                  name="category_ids"
+                  value={category.id}
+                  label={category.name}
+                  defaultChecked={taxonomy.categoryIds.includes(category.id)}
+                />
               ))}
             </div>
           </fieldset>
@@ -139,8 +143,8 @@ export default async function EditGamePage({ params }: Props) {
                 </SelectContent>
               </Select>
             </label>
-            <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" name="is_indexable" defaultChecked={game.isIndexable} /> Arama motorlarında indekslenebilir</label>
-            <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" name="is_broken" defaultChecked={game.isBroken} /> Oyun kırık</label>
+            <AdminCheckboxField name="is_indexable" label="Arama motorlarında indekslenebilir" defaultChecked={game.isIndexable} />
+            <AdminCheckboxField name="is_broken" label="Oyun kırık" defaultChecked={game.isBroken} />
             <div className="rounded-md border border-border bg-muted/30 p-3 text-xs leading-5">
               <p className="font-bold">Canonical</p><p className="break-all text-muted-foreground">{absoluteUrl(`/oyun/${game.slug}`)}</p>
               <p className="mt-2 font-bold">SERP önizlemesi</p><p className="mt-1 font-semibold text-primary">{game.seoTitle}</p><p className="text-muted-foreground">{game.seoDescription}</p>

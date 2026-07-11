@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
+import { AdminCheckboxField } from "@/components/admin/admin-checkbox-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -51,10 +52,7 @@ export function TagForm({ tag }: TagFormProps) {
       <Field label="SEO başlığı" name="seo_title" defaultValue={tag?.seo_title ?? ""} />
       <Area label="SEO açıklaması" name="seo_description" defaultValue={tag?.seo_description ?? ""} rows={3} />
       <Field label="Open Graph görsel URL" name="og_image_url" defaultValue={tag?.og_image_url ?? ""} error={state.fieldErrors.og_image_url} />
-      <label className="flex items-center gap-2 text-sm font-bold">
-        <input type="checkbox" name="is_indexable" defaultChecked={tag?.is_indexable ?? false} />
-        İndekslenebilir
-      </label>
+      <AdminCheckboxField name="is_indexable" label="İndekslenebilir" defaultChecked={tag?.is_indexable ?? false} />
       {tag ? (
         <p className={`rounded-md p-3 text-xs font-bold ${(tag.publishedGameCount ?? 0) >= 5 ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>
           {tag.publishedGameCount} yayınlanmış oyun. İndeksleme için en az 5 oyun gerekir.

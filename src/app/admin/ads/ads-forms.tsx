@@ -2,8 +2,8 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { AdminCheckboxField } from "@/components/admin/admin-checkbox-field";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,10 +35,7 @@ export function AdSlotForm({ slot }: { slot: AdSlotRow }) {
         <Field label="Sayfa tipi" name="page_type" defaultValue={slot.page_type ?? ""} />
         <Field label="Pozisyon" name="position" defaultValue={slot.position ?? ""} />
       </div>
-      <label className="flex items-center gap-2 text-sm font-bold">
-        <Checkbox name="is_active" defaultChecked={slot.is_active !== false} />
-        Aktif
-      </label>
+      <AdminCheckboxField name="is_active" label="Aktif" defaultChecked={slot.is_active !== false} />
       <FormMessage state={state} />
       <SubmitButton label="Slotu Güncelle" />
     </form>
@@ -74,16 +71,10 @@ export function AdForm({ slots, selectedSlot, ad }: { slots: AdSlotRow[]; select
       <TextArea label="Reklam kodu" name="ad_code" defaultValue={ad?.ad_code ?? ""} rows={6} required error={state.fieldErrors.ad_code} />
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Öncelik" name="priority" defaultValue={String(ad?.priority ?? 0)} type="number" error={state.fieldErrors.priority} />
-        <div className="grid gap-2 text-sm font-bold">
-          Gösterim
-          <label className="flex items-center gap-2 text-xs font-bold">
-            <Checkbox name="show_desktop" defaultChecked={ad?.show_desktop !== false} />
-            Desktop
-          </label>
-          <label className="flex items-center gap-2 text-xs font-bold">
-            <Checkbox name="show_mobile" defaultChecked={ad?.show_mobile !== false} />
-            Mobil
-          </label>
+        <div className="grid gap-2">
+          <p className="text-sm font-bold">Gösterim</p>
+          <AdminCheckboxField name="show_desktop" label="Desktop" defaultChecked={ad?.show_desktop !== false} />
+          <AdminCheckboxField name="show_mobile" label="Mobil" defaultChecked={ad?.show_mobile !== false} />
           <FieldError message={state.fieldErrors.show} />
         </div>
       </div>
@@ -91,10 +82,7 @@ export function AdForm({ slots, selectedSlot, ad }: { slots: AdSlotRow[]; select
         <Field label="Başlangıç" name="start_at" defaultValue={toDateTimeLocal(ad?.start_at)} type="datetime-local" error={state.fieldErrors.date} />
         <Field label="Bitiş" name="end_at" defaultValue={toDateTimeLocal(ad?.end_at)} type="datetime-local" />
       </div>
-      <label className="flex items-center gap-2 text-sm font-bold">
-        <Checkbox name="is_active" defaultChecked={ad?.is_active !== false} />
-        Aktif
-      </label>
+      <AdminCheckboxField name="is_active" label="Aktif" defaultChecked={ad?.is_active !== false} />
       <FormMessage state={state} />
       <SubmitButton label={ad ? "Reklamı Güncelle" : "Reklam Ekle"} />
     </form>
