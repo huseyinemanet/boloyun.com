@@ -15,7 +15,7 @@ export default async function AdminStaticPagesPage() {
         title="Statik Sayfalar"
         description="Bilgi ve politika sayfalarını oluştur, düzenle, yayınla veya kaldır."
         actions={(
-          <Button asChild className="h-10 font-bold">
+          <Button asChild variant="outline" className="h-10 font-bold">
             <a href="/admin/static-pages/new">
               <PlusIcon />
               Yeni Sayfa Ekle
