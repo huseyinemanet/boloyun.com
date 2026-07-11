@@ -1,5 +1,6 @@
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminPagination, parseAdminPage } from "@/components/admin/admin-pagination";
+import { Button } from "@/components/ui/button";
 import { getAdminUserCounts, getAdminUsersPage, type AdminUserFilter } from "@/lib/db-users";
 import { UsersTable } from "./users-table";
 
@@ -24,9 +25,9 @@ export default async function AdminUsersPage({ searchParams }: Props) {
         title="Kullanıcılar"
         description="Üyeleri, yöneticileri, rolleri ve hesap durumlarını yönet."
         actions={(
-          <a href="/admin/users/new" className="h-10 rounded-md border border-primary px-3 py-2 text-sm font-bold text-primary">
-            Yeni Kullanıcı Ekle
-          </a>
+          <Button asChild variant="outline" className="h-10 px-3 text-sm font-bold">
+            <a href="/admin/users/new">Yeni Kullanıcı Ekle</a>
+          </Button>
         )}
       />
 
