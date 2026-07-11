@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { assertHumanForm, consumeRateLimits, getClientIp } from "@/lib/abuse";
 import { ensureProfileForAuthUser } from "@/lib/auth-profiles";
 import { migrateCurrentSessionFavorites } from "@/lib/auth-favorites";
+import { syncBrevoMarketingContact } from "@/lib/brevo-contacts";
 import { getPublicSettings } from "@/lib/db-settings";
 import { getRequestOrigin } from "@/lib/request-origin";
 import { hasTrustedMutationOrigin } from "@/lib/request-security";
@@ -67,6 +68,17 @@ export async function POST(request: NextRequest) {
   } catch {
     await routeClient.supabase.auth.signOut();
     return routeClient.applyTo(redirectTo(request, "/kayit?error=create"));
+  }
+
+  if (marketingAccepted) {
+    try {
+      const brevoSync = await syncBrevoMarketingContact({ email, username });
+      if (!brevoSync.ok || brevoSync.skipped) {
+        console.warn("Brevo pazarlama kişi senkronizasyonu tamamlanmadı.", brevoSync);
+      }
+    } catch (syncError) {
+      console.warn("Brevo pazarlama kişi senkronizasyonu hata verdi.", syncError);
+    }
   }
 
   if (!data.session) return routeClient.applyTo(redirectTo(request, "/giris?notice=verify-email"));
