@@ -1,13 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getRequestOrigin } from "@/lib/request-origin";
-import { hasTrustedMutationOrigin } from "@/lib/request-security";
 import { safeLocalPath } from "@/lib/security/navigation";
 import { createSupabaseRouteClient } from "@/lib/supabase/server";
 
-export async function POST(request: NextRequest) {
-  if (!hasTrustedMutationOrigin(request)) return redirectTo(request, "/giris?error=form");
-  const formData = await request.formData();
-  const next = safeLocalPath(formData.get("next"));
+export async function GET(request: NextRequest) {
+  const next = safeLocalPath(request.nextUrl.searchParams.get("next"));
   const routeClient = await createSupabaseRouteClient();
   if (!routeClient.supabase) return redirectTo(request, "/giris?error=config");
 

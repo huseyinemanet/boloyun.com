@@ -28,12 +28,11 @@ export default async function LoginPage({ searchParams }: Props) {
         {notice === "password-updated" ? <Message type="success">Şifren güncellendi. Yeni şifrenle giriş yapabilirsin.</Message> : null}
         {error ? <Message type="error">{getLoginError(error)}</Message> : null}
 
-        <form action="/auth/google" method="post" className="mt-4">
-          <input type="hidden" name="next" value={next} />
-          <Button variant="outline" className="h-10 w-full px-4 text-sm font-black">
+        <Button asChild variant="outline" className="mt-4 h-10 w-full px-4 text-sm font-black">
+          <Link href={`/auth/google?next=${encodeURIComponent(next)}`}>
             Google ile Giriş Yap
-          </Button>
-        </form>
+          </Link>
+        </Button>
 
         <div className="my-4 flex items-center gap-3 text-xs font-bold text-muted-foreground">
           <span className="h-px flex-1 bg-border" />
