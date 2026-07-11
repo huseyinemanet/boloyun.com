@@ -11,6 +11,7 @@ export function GameCard({ game }: { game: Game }) {
             src={game.thumbnailUrl}
             alt=""
             fill
+            unoptimized
             sizes="(max-width: 768px) 50vw, 220px"
             className="object-cover transition group-hover:scale-105"
           />
