@@ -14,24 +14,65 @@ import {
 import type { UserRole, UserStatus } from "@/lib/auth";
 import { recordAdminAudit } from "@/lib/admin-audit";
 
-export async function createUserAction(formData: FormData) {
+export type CreateUserFormValues = {
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  display_name: string;
+  password: string;
+  role: UserRole;
+};
+
+export type CreateUserFormState = {
+  status: "idle" | "error";
+  message: string;
+  fieldErrors: Partial<Record<keyof CreateUserFormValues, string>>;
+  values: CreateUserFormValues;
+};
+
+export async function createUserAction(_previousState: CreateUserFormState, formData: FormData): Promise<CreateUserFormState> {
   const admin = await requireAdmin();
 
-  const password = String(formData.get("password") ?? "");
-  if (password.length < 8) {
-    redirect("/admin/users/new?error=password");
+  const values: CreateUserFormValues = {
+    username: String(formData.get("username") ?? "").trim(),
+    email: String(formData.get("email") ?? "").trim(),
+    first_name: String(formData.get("first_name") ?? "").trim(),
+    last_name: String(formData.get("last_name") ?? "").trim(),
+    display_name: String(formData.get("display_name") ?? "").trim(),
+    password: String(formData.get("password") ?? ""),
+    role: normalizeRole(String(formData.get("role") ?? "member")),
+  };
+
+  const fieldErrors = validateCreateUser(values);
+  if (Object.keys(fieldErrors).length) {
+    return {
+      status: "error",
+      message: "Lütfen işaretli alanları kontrol edin.",
+      fieldErrors,
+      values,
+    };
   }
 
-  const authUserId = await createAdminUser({
-    email: String(formData.get("email") ?? "").trim(),
-    password,
-    username: String(formData.get("username") ?? "").trim(),
-    firstName: String(formData.get("first_name") ?? "").trim(),
-    lastName: String(formData.get("last_name") ?? "").trim(),
-    displayName: String(formData.get("display_name") ?? "").trim(),
-    role: normalizeRole(String(formData.get("role") ?? "member")),
-  });
-  await recordAdminAudit({ actorProfileId: admin.id, action: "user.create", targetType: "auth_user", details: { authUserId, role: normalizeRole(String(formData.get("role") ?? "member")) } });
+  try {
+    const authUserId = await createAdminUser({
+      email: values.email,
+      password: values.password,
+      username: values.username,
+      firstName: values.first_name,
+      lastName: values.last_name,
+      displayName: values.display_name,
+      role: values.role,
+    });
+    await recordAdminAudit({ actorProfileId: admin.id, action: "user.create", targetType: "auth_user", details: { authUserId, role: values.role } });
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Kullanıcı oluşturulamadı.",
+      fieldErrors: {},
+      values,
+    };
+  }
 
   revalidatePath("/admin/users");
   redirect("/admin/users");
@@ -104,4 +145,19 @@ function normalizeRole(value: string): UserRole {
 
 function normalizeStatus(value: string): UserStatus {
   return value === "blocked" ? "blocked" : "active";
+}
+
+function validateCreateUser(values: CreateUserFormValues): CreateUserFormState["fieldErrors"] {
+  const errors: CreateUserFormState["fieldErrors"] = {};
+
+  if (!values.username) errors.username = "Kullanıcı adı gerekli.";
+  else if (values.username.length < 3) errors.username = "Kullanıcı adı en az 3 karakter olmalı.";
+
+  if (!values.email) errors.email = "E-posta gerekli.";
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) errors.email = "Geçerli bir e-posta girin.";
+
+  if (!values.password) errors.password = "Geçici şifre gerekli.";
+  else if (values.password.length < 8) errors.password = "Geçici şifre en az 8 karakter olmalı.";
+
+  return errors;
 }
