@@ -9,17 +9,17 @@ afterEach(() => {
   for (const key of keys) {
     const value = originalValues[key];
     if (value === undefined) delete process.env[key];
-    else process.env[key] = value;
+    else Reflect.set(process.env, key, value);
   }
 });
 
 describe("system integration status", () => {
   it("reports R2 only when every upload setting is present", () => {
     for (const key of keys) Reflect.deleteProperty(process.env, key);
-    process.env.R2_ACCOUNT_ID = "account";
-    process.env.R2_ACCESS_KEY_ID = "access";
-    process.env.R2_SECRET_ACCESS_KEY = "secret";
-    process.env.R2_BUCKET_NAME = "bucket";
+    Reflect.set(process.env, "R2_ACCOUNT_ID", "account");
+    Reflect.set(process.env, "R2_ACCESS_KEY_ID", "access");
+    Reflect.set(process.env, "R2_SECRET_ACCESS_KEY", "secret");
+    Reflect.set(process.env, "R2_BUCKET_NAME", "bucket");
 
     assert.equal(isR2Configured(), true);
     Reflect.deleteProperty(process.env, "R2_BUCKET_NAME");
@@ -30,7 +30,7 @@ describe("system integration status", () => {
     Reflect.deleteProperty(process.env, "R2_PUBLIC_BASE_URL");
     assert.equal(isCdnConfigured(), false);
 
-    process.env.R2_PUBLIC_BASE_URL = "https://cdn.boloyun.com";
+    Reflect.set(process.env, "R2_PUBLIC_BASE_URL", "https://cdn.boloyun.com");
     assert.equal(isCdnConfigured(), true);
   });
 
@@ -39,13 +39,13 @@ describe("system integration status", () => {
     Reflect.deleteProperty(process.env, "EMAIL_FROM_ADDRESS");
     assert.equal(isEmailConfigured(), false);
 
-    process.env.EMAIL_SERVICE_PROVIDER = "brevo";
+    Reflect.set(process.env, "EMAIL_SERVICE_PROVIDER", "brevo");
     assert.equal(isEmailConfigured(), false);
 
-    process.env.EMAIL_FROM_ADDRESS = "noreply@example.com";
+    Reflect.set(process.env, "EMAIL_FROM_ADDRESS", "noreply@example.com");
     assert.equal(isEmailConfigured(), false);
 
-    process.env.EMAIL_FROM_ADDRESS = "noreply@boloyun.com";
+    Reflect.set(process.env, "EMAIL_FROM_ADDRESS", "noreply@boloyun.com");
     assert.equal(isEmailConfigured(), true);
   });
 });

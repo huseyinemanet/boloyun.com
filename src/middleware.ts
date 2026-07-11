@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const host = request.headers.get("host")?.split(":", 1)[0].toLocaleLowerCase("en-US");
   if (host === "www.boloyun.com") {
     const destination = request.nextUrl.clone();
