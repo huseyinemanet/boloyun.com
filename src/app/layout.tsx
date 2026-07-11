@@ -20,11 +20,13 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { integrations } = await getPublicSettings();
+
   return (
     <html lang="tr" className="dark font-sans" style={{ colorScheme: "dark" }}>
       <head>
@@ -41,7 +43,7 @@ export default function RootLayout({
         <a href="#main-content" className="skip-link">Ana içeriğe geç</a>
         <Header />
         {children}
-        <ConsentScripts />
+        <ConsentScripts settings={integrations} />
       </body>
     </html>
   );
