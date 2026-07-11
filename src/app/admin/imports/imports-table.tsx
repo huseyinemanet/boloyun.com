@@ -14,8 +14,9 @@ import {
   type VisibilityState,
 } from "@tanstack/react-table";
 import { ChevronDownIcon } from "lucide-react";
+import { IconInboxStackFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconInboxStackFillDuo18";
 import { Button } from "@/components/ui/button";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -205,6 +206,9 @@ export function ImportsTable({ imports }: { imports: ScrapedGameImport[] }) {
     return (
       <Empty className="border border-border py-12">
         <EmptyHeader>
+          <EmptyMedia variant="icon" className="size-12 rounded-xl bg-primary/10 text-primary">
+            <IconInboxStackFillDuo18 className="size-6" />
+          </EmptyMedia>
           <EmptyTitle>Onay bekleyen oyun yok.</EmptyTitle>
           <EmptyDescription>Yeni bulunan oyunlar burada görünecek.</EmptyDescription>
         </EmptyHeader>
