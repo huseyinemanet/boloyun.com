@@ -46,8 +46,9 @@ export default async function Home({ searchParams }: HomeProps) {
     getCurrentProfile(),
   ]);
   const visibleConfiguredSections = configuredSections.filter(({ section }) => section.visibility !== "members" || Boolean(profile));
-  const visibleGames = [...publishedGames.slice(0, 72), ...allGames.items]
-    .filter((game, index, items) => items.findIndex((item) => item.id === game.id) === index);
+  const visibleGames = [...new Map(
+    [...publishedGames.slice(0, 72), ...allGames.items].map((game) => [game.id, game]),
+  ).values()];
 
   return (
     <div className="space-y-5">

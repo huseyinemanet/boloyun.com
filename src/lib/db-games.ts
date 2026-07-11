@@ -36,6 +36,23 @@ const publicGameSelect = [
   "seo_description",
 ].join(",");
 
+// Collection pages only render card metadata. Fetching full descriptions,
+// player URLs and SEO content for every card makes the OpenNext RSC payload
+// unnecessarily large and burns Worker CPU while mapping and serializing it.
+const publicGameCardSelect = [
+  "id",
+  "title",
+  "slug",
+  "thumbnail_url",
+  "game_type",
+  "status",
+  "rating_avg",
+  "rating_count",
+  "likes_count",
+  "dislikes_count",
+  "play_count",
+].join(",");
+
 export type GameRow = {
   id: string;
   title: string;
@@ -174,7 +191,7 @@ const getPublishedGamesCached = unstable_cache(async function getPublishedGames(
 
   const { data, error } = await measuredQuery("games.published.latest", supabase
     .from("games")
-    .select(publicGameSelect)
+    .select(publicGameCardSelect)
     .eq("status", "published")
     .order("created_at", { ascending: false })
     .limit(limit));
@@ -315,7 +332,7 @@ export async function getPublishedGamesPage({ page, perPage }: { page: number; p
   const to = from + perPage - 1;
   const { data, error, count } = await measuredQuery("games.published.page", supabase
     .from("games")
-    .select(publicGameSelect, { count: "exact" })
+    .select(publicGameCardSelect, { count: "exact" })
     .eq("status", "published")
     .order("created_at", { ascending: false })
     .range(from, to));
@@ -643,7 +660,7 @@ export async function getPublishedGamesByIds(ids: string[]): Promise<Game[]> {
 
   const { data, error } = await supabase
     .from("games")
-    .select(publicGameSelect)
+    .select(publicGameCardSelect)
     .eq("status", "published")
     .in("id", ids);
 
