@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { signInAction, signInWithGoogleAction } from "./actions";
 import { BotProtectionFields } from "@/components/security/bot-protection-fields";
+import { getCurrentProfile } from "@/lib/auth";
+import { safeLocalPath } from "@/lib/security/navigation";
+import { redirect } from "next/navigation";
 
 type Props = {
   searchParams: Promise<{ error?: string; notice?: string; next?: string; challenge?: string }>;
@@ -10,6 +12,11 @@ type Props = {
 
 export default async function LoginPage({ searchParams }: Props) {
   const { error, notice, next = "/", challenge } = await searchParams;
+  const profile = await getCurrentProfile();
+  if (profile) {
+    const target = safeLocalPath(next, "/profil");
+    redirect(target === "/giris" || target === "/kayit" ? "/profil" : target);
+  }
 
   return (
     <main className="mx-auto w-full max-w-md px-3 py-10">
@@ -21,7 +28,7 @@ export default async function LoginPage({ searchParams }: Props) {
         {notice === "password-updated" ? <Message type="success">Şifren güncellendi. Yeni şifrenle giriş yapabilirsin.</Message> : null}
         {error ? <Message type="error">{getLoginError(error)}</Message> : null}
 
-        <form action={signInWithGoogleAction} className="mt-4">
+        <form action="/auth/google" method="post" className="mt-4">
           <input type="hidden" name="next" value={next} />
           <Button variant="outline" className="h-10 w-full px-4 text-sm font-black">
             Google ile Giriş Yap
@@ -34,16 +41,16 @@ export default async function LoginPage({ searchParams }: Props) {
           <span className="h-px flex-1 bg-border" />
         </div>
 
-        <form action={signInAction} className="space-y-3">
+        <form action="/auth/signin" method="post" className="space-y-3">
           <BotProtectionFields challenge={challenge === "1"} action="login" />
           <input type="hidden" name="next" value={next} />
           <label className="block text-sm font-bold">
             E-posta
-            <Input name="email" type="email" required className="mt-1 h-10" />
+            <Input name="email" type="email" autoComplete="email" required className="mt-1 h-10" />
           </label>
           <label className="block text-sm font-bold">
             Şifre
-            <Input name="password" type="password" required className="mt-1 h-10" />
+            <Input name="password" type="password" autoComplete="current-password" required className="mt-1 h-10" />
           </label>
           <Button className="h-10 w-full px-4 text-sm font-black">Giriş Yap</Button>
         </form>
@@ -64,7 +71,11 @@ function Message({ type, children }: { type: "success" | "error"; children: Reac
 function getLoginError(error: string) {
   if (error === "blocked") return "Hesabın engellenmiş. Yardım için site yönetimiyle iletişime geç.";
   if (error === "config") return "Üyelik sistemi henüz yapılandırılmamış.";
-  if (error === "google") return "Google ile giriş henüz Supabase tarafında etkin değil.";
+  if (error === "google") return "Google ile giriş başlatılamadı. Lütfen tekrar dene.";
   if (error === "challenge") return "Çok sayıda giriş denemesi algılandı. Lütfen bot doğrulamasını tamamla.";
+  if (error === "form") return "Form gönderilemedi. Lütfen alanları tekrar doldur.";
+  if (error === "profile") return "Hesabın açıldı ancak profil bilgileri hazırlanamadı. Lütfen tekrar dene.";
+  if (error === "callback") return "Giriş bağlantısı geçersiz veya süresi dolmuş.";
+  if (error === "invalid-link") return "E-posta bağlantısı geçersiz veya süresi dolmuş.";
   return "E-posta veya şifre hatalı.";
 }

@@ -2,16 +2,20 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { signUpAction } from "./actions";
 import { getPublicSettings } from "@/lib/db-settings";
 import { BotProtectionFields } from "@/components/security/bot-protection-fields";
+import { getCurrentProfile } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 type Props = {
   searchParams: Promise<{ error?: string; challenge?: string }>;
 };
 
 export default async function RegisterPage({ searchParams }: Props) {
-    const { error, challenge } = await searchParams;
+  const { error, challenge } = await searchParams;
+  const profile = await getCurrentProfile();
+  if (profile) redirect("/profil");
+
   const { general, community } = await getPublicSettings();
   const registrationsEnabled = general.registrationsEnabled && community.registrationsEnabled;
 
@@ -22,20 +26,20 @@ export default async function RegisterPage({ searchParams }: Props) {
         <p className="mt-2 text-sm text-muted-foreground">Oyunlarını favorilere eklemek ve yorum yazmak için ücretsiz hesap oluştur.</p>
         {!registrationsEnabled ? <p className="mt-3 rounded-md bg-warning/10 p-3 text-sm font-semibold text-warning">Yeni üyelikler şu anda kapalı. Mevcut hesabınla giriş yapabilirsin.</p> : null}
         {error ? <p className="mt-3 rounded-md bg-destructive/10 p-3 text-sm font-semibold text-destructive">{getRegisterError(error)}</p> : null}
-        {registrationsEnabled ? <form action={signUpAction} className="mt-4 space-y-3">
+        {registrationsEnabled ? <form action="/auth/signup" method="post" className="mt-4 space-y-3">
           <BotProtectionFields challenge={challenge === "1"} action="signup" />
           <label className="block text-sm font-bold">
             Kullanıcı adı
-            <Input name="username" required minLength={community.usernameMinLength} maxLength={community.usernameMaxLength} className="mt-1 h-10" />
+            <Input name="username" autoComplete="username" required minLength={community.usernameMinLength} maxLength={community.usernameMaxLength} className="mt-1 h-10" />
           </label>
-          {community.minimumAge > 0 ? <label className="block text-sm font-bold">Doğum yılı<Input name="birth_year" type="number" required min={1900} max={new Date().getFullYear() - community.minimumAge} className="mt-1 h-10" /></label> : null}
+          {community.minimumAge > 0 ? <label className="block text-sm font-bold">Doğum yılı<Input name="birth_year" type="number" autoComplete="bday-year" required min={1900} max={new Date().getFullYear() - community.minimumAge} className="mt-1 h-10" /></label> : null}
           <label className="block text-sm font-bold">
             E-posta
-            <Input name="email" type="email" required className="mt-1 h-10" />
+            <Input name="email" type="email" autoComplete="email" required className="mt-1 h-10" />
           </label>
           <label className="block text-sm font-bold">
             Şifre
-            <Input name="password" type="password" required minLength={8} className="mt-1 h-10" />
+            <Input name="password" type="password" autoComplete="new-password" required minLength={8} className="mt-1 h-10" />
           </label>
           <label className="flex items-start gap-2 text-sm font-semibold">
             <Checkbox name="terms_accepted" required className="mt-1" />
@@ -62,5 +66,7 @@ function getRegisterError(error: string) {
   if (error === "closed") return "Yeni üyelikler şu anda kapalı.";
   if (error === "age") return "Kayıt için minimum yaş sınırı karşılanmıyor.";
   if (error === "challenge") return "Çok sayıda istek algılandı. Lütfen bot doğrulamasını tamamla.";
+  if (error === "form") return "Form gönderilemedi. Lütfen alanları tekrar doldur.";
+  if (error === "email") return "Bu e-posta adresiyle kayıt oluşturulamadı. Hesabın varsa giriş yapmayı dene.";
   return "Kayıt oluşturulamadı. Lütfen bilgileri kontrol et.";
 }

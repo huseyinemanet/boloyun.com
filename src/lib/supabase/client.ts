@@ -1,3 +1,4 @@
+import { createBrowserClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
 export type SupabaseBrowserConfig = {
@@ -13,7 +14,7 @@ export function createSupabaseBrowserClient(config?: SupabaseBrowserConfig) {
     return null;
   }
 
-  return createClient(url, anonKey);
+  return createBrowserClient(url, anonKey);
 }
 
 export function createSupabaseServiceClient() {
@@ -29,11 +30,4 @@ export function createSupabaseServiceClient() {
       persistSession: false,
     },
   });
-}
-
-export function createSupabasePasswordRecoveryClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) return null;
-  return createClient(url, anonKey, { auth: { flowType: "implicit", persistSession: false, autoRefreshToken: false } });
 }
