@@ -201,7 +201,7 @@ const getPublishedGamesCached = unstable_cache(async function getPublishedGames(
   }
 
   return (data as unknown as GameRow[]).map(mapGameRow);
-}, ["published-games"], { revalidate: 300, tags: ["games"] });
+}, ["published-game-cards-v2"], { revalidate: 300, tags: ["games"] });
 export const getPublishedGames = cache(getPublishedGamesCached);
 
 export async function getPublishedGamesCount(): Promise<number> {
