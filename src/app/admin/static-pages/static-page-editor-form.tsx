@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
+import { type FormEvent, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { ExternalLinkIcon } from "lucide-react";
 import { AdminCheckboxField } from "@/components/admin/admin-checkbox-field";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,21 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { saveStaticPageAction, type StaticPageFormValues } from "./actions";
+import {
+  type AdminStaticPageFieldErrors,
+  type AdminStaticPageValues,
+  normalizeAdminStaticPageStatus,
+  validateAdminStaticPageValues,
+} from "@/lib/admin-static-page-validation";
 
-export type StaticPageEditorInitialValues = StaticPageFormValues & {
+export type StaticPageEditorInitialValues = AdminStaticPageValues & {
   canonical_url: string;
+};
+
+type FormState = {
+  message: string;
+  fieldErrors: AdminStaticPageFieldErrors;
+  values: AdminStaticPageValues;
 };
 
 type StaticPageEditorFormProps = {
@@ -21,19 +32,58 @@ type StaticPageEditorFormProps = {
   mode?: "create" | "edit";
 };
 
-const initialStaticPageFormState = {
-  status: "idle",
-  message: "",
-  fieldErrors: {},
-} as const;
-
 export function StaticPageEditorForm({ initialValues, mode = "edit" }: StaticPageEditorFormProps) {
-  const [state, formAction] = useActionState(saveStaticPageAction, initialStaticPageFormState);
-  const values = state.values ?? initialValues;
+  const router = useRouter();
+  const [state, setState] = useState<FormState>({ message: "", fieldErrors: {}, values: initialValues });
+  const [isPending, startTransition] = useTransition();
+  const values = state.values;
   const isCreate = mode === "create";
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const nextValues: AdminStaticPageValues = {
+      id: String(formData.get("id") ?? "").trim(),
+      title: String(formData.get("title") ?? "").trim(),
+      slug: String(formData.get("slug") ?? "").trim(),
+      content: String(formData.get("content") ?? "").trim(),
+      seo_title: String(formData.get("seo_title") ?? "").trim(),
+      seo_description: String(formData.get("seo_description") ?? "").trim(),
+      status: normalizeAdminStaticPageStatus(String(formData.get("status") ?? "published")),
+      og_image_url: String(formData.get("og_image_url") ?? "").trim(),
+      is_indexable: formData.get("is_indexable") === "on",
+    };
+    const fieldErrors = validateAdminStaticPageValues(nextValues);
+
+    if (Object.keys(fieldErrors).length) {
+      setState({ message: "Lütfen işaretli alanları kontrol edin.", fieldErrors, values: nextValues });
+      return;
+    }
+
+    startTransition(async () => {
+      const response = await fetch("/api/admin/static-pages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nextValues),
+      });
+
+      if (response.ok) {
+        router.push("/admin/static-pages");
+        router.refresh();
+        return;
+      }
+
+      const result = await response.json().catch(() => null) as Partial<FormState> | null;
+      setState({
+        message: result?.message || "Sayfa kaydedilemedi.",
+        fieldErrors: result?.fieldErrors ?? {},
+        values: result?.values ?? nextValues,
+      });
+    });
+  }
+
   return (
-    <form action={formAction} noValidate className="space-y-4">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4">
       <input type="hidden" name="id" value={values.id} />
       {state.message ? (
         <p role="alert" aria-live="polite" className="rounded-md bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
@@ -83,7 +133,7 @@ export function StaticPageEditorForm({ initialValues, mode = "edit" }: StaticPag
         <Button asChild variant="outline"><Link href="/admin/static-pages">İptal</Link></Button>
         <div className="flex items-center gap-2">
           {!isCreate && values.status === "published" ? <Button asChild variant="outline"><Link href={`/sayfa/${values.slug}`} target="_blank">Sayfayı Görüntüle <ExternalLinkIcon /></Link></Button> : null}
-          <SubmitButton label={isCreate ? "Sayfayı Oluştur" : "Sayfayı Güncelle"} />
+          <SubmitButton label={isCreate ? "Sayfayı Oluştur" : "Sayfayı Güncelle"} pending={isPending} />
         </div>
       </div>
     </form>
@@ -99,7 +149,7 @@ function TextField({
   error,
 }: {
   label: string;
-  name: keyof StaticPageFormValues;
+  name: keyof AdminStaticPageValues;
   value: string;
   required?: boolean;
   placeholder?: string;
@@ -140,7 +190,7 @@ function TextAreaField({
   placeholder,
 }: {
   label: string;
-  name: keyof StaticPageFormValues;
+  name: keyof AdminStaticPageValues;
   value: string;
   rows: number;
   required?: boolean;
@@ -176,7 +226,7 @@ function TextAreaField({
   );
 }
 
-function SelectField({ label, name, value, error }: { label: string; name: keyof StaticPageFormValues; value: string; error?: string }) {
+function SelectField({ label, name, value, error }: { label: string; name: keyof AdminStaticPageValues; value: string; error?: string }) {
   const errorId = `${name}-error`;
 
   return (
@@ -196,9 +246,7 @@ function SelectField({ label, name, value, error }: { label: string; name: keyof
   );
 }
 
-function SubmitButton({ label }: { label: string }) {
-  const { pending } = useFormStatus();
-
+function SubmitButton({ label, pending }: { label: string; pending: boolean }) {
   return (
     <Button disabled={pending} className="font-bold">
       {pending ? "Kaydediliyor..." : label}

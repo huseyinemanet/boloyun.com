@@ -81,14 +81,14 @@ export async function saveAdminStaticPage(formData: FormData) {
     ? supabase.from("static_pages").update(values).eq("id", id)
     : supabase.from("static_pages").insert(values);
   const { error } = await query;
-  if (error) throw new Error(`Statik sayfa kaydedilemedi: ${error.message}`);
+  if (error) throw new Error(`Sayfa kaydedilemedi: ${error.message}`);
 }
 
 export async function deleteAdminStaticPage(id: string) {
   const supabase = createSupabaseServiceClient();
   if (!supabase) throw new Error("Supabase service client yok.");
   const { error } = await supabase.from("static_pages").delete().eq("id", id);
-  if (error) throw new Error(`Statik sayfa silinemedi: ${error.message}`);
+  if (error) throw new Error(`Sayfa silinemedi: ${error.message}`);
 }
 
 export function staticPageEditorContent(page: StaticPageRow) {
