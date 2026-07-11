@@ -17,30 +17,50 @@ type SlugRow = {
   is_broken?: boolean | null;
 };
 
-export async function getSitemapRecords(): Promise<SitemapRecord[]> {
+export async function getCoreSitemapRecords(): Promise<SitemapRecord[]> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return [];
 
-  const [games, categories, tags, staticPages] = await Promise.all([
-    fetchGames(),
+  const [categories, tags, staticPages] = await Promise.all([
     fetchCategories(),
     fetchIndexableTags(),
     fetchStaticPages(),
   ]);
 
   return [
-    ...games.map((row) => record("game", `/oyun/${row.slug}`, row.updated_at)),
     ...categories.map((row) => record("category", `/kategori/${row.slug}`, row.updated_at)),
     ...tags.map((row) => record("tag", `/etiket/${row.slug}`, row.updated_at)),
     ...staticPages.map((row) => record("static", `/sayfa/${row.slug}`, row.updated_at)),
   ];
 }
 
-async function fetchGames() {
-  const modern = await fetchAll("games", "slug, updated_at, is_indexable, is_broken", { status: "published", indexable: true, excludeBroken: true });
-  if (!modern.error) return modern.rows;
-  const legacy = await fetchAll("games", "slug, updated_at", { status: "published" });
-  return legacy.rows;
+export async function getGameSitemapCount() {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return 0;
+  const { count, error } = await supabase
+    .from("games")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "published")
+    .eq("is_indexable", true)
+    .eq("is_broken", false);
+  return error ? 0 : count ?? 0;
+}
+
+export async function getGameSitemapPage(page: number, pageSize: number): Promise<SitemapRecord[]> {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase || !Number.isInteger(page) || page < 0) return [];
+  const from = page * pageSize;
+  const { data, error } = await supabase
+    .from("games")
+    .select("slug, updated_at")
+    .eq("status", "published")
+    .eq("is_indexable", true)
+    .eq("is_broken", false)
+    .order("updated_at", { ascending: false })
+    .order("slug", { ascending: true })
+    .range(from, from + pageSize - 1);
+  if (error) return [];
+  return ((data ?? []) as SlugRow[]).map((row) => record("game", `/oyun/${row.slug}`, row.updated_at));
 }
 
 async function fetchCategories() {
