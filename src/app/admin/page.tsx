@@ -1,5 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
+import { IconGamepadFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGamepadFillDuo18";
+import { IconGridCircleListFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGridCircleListFillDuo18";
+import { IconMsgs2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMsgs2FillDuo18";
+import { IconUsersFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconUsersFillDuo18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { getPublishedGamesCount } from "@/lib/db-games";
 import { getAdminPopularGames, type AdminPopularGame } from "@/lib/db-games";
@@ -19,22 +23,33 @@ export default async function AdminPage() {
     getAdminPopularGames(8),
   ]);
   const stats = [
-    { label: "Toplam Oyun", value: gamesCount, href: "/admin/games" },
-    { label: "Toplam Kategori", value: categoriesCount, href: "/admin/categories" },
-    { label: "Toplam Yorum", value: commentsCount, href: "/admin/comments" },
-    { label: "Toplam Kullanıcı", value: usersCount, href: "/admin/users" },
+    { label: "Toplam Oyun", value: gamesCount, href: "/admin/games", icon: IconGamepadFillDuo18 },
+    { label: "Toplam Kategori", value: categoriesCount, href: "/admin/categories", icon: IconGridCircleListFillDuo18 },
+    { label: "Toplam Yorum", value: commentsCount, href: "/admin/comments", icon: IconMsgs2FillDuo18 },
+    { label: "Toplam Kullanıcı", value: usersCount, href: "/admin/users", icon: IconUsersFillDuo18 },
   ];
 
   return (
     <div className="space-y-3">
       <AdminPageHeader title="Genel Bakış" description="Sitenin genel durumunu ve öne çıkan oyunları buradan görebilirsin." />
       <div className="grid gap-3 md:grid-cols-4">
-        {stats.map((stat) => (
-          <Link key={stat.label} href={stat.href} className="rounded-md border border-border bg-card p-4 transition hover:border-primary hover:bg-primary/10">
-            <p className="text-sm text-muted-foreground">{stat.label}</p>
-            <p className="mt-1 text-2xl font-bold">{stat.value.toLocaleString("tr-TR")}</p>
-          </Link>
-        ))}
+        {stats.map((stat) => {
+          const Icon = stat.icon;
+
+          return (
+            <Link key={stat.label} href={stat.href} className="rounded-md border border-border bg-card p-4 transition hover:border-primary hover:bg-primary/10">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  <p className="mt-1 text-2xl font-bold">{stat.value.toLocaleString("tr-TR")}</p>
+                </div>
+                <span className="grid size-10 shrink-0 place-items-center rounded-md bg-primary/10 text-primary" aria-hidden="true">
+                  <Icon className="size-5" />
+                </span>
+              </div>
+            </Link>
+          );
+        })}
       </div>
       {popularGames.length ? <PopularGamesSection games={popularGames} /> : null}
     </div>
