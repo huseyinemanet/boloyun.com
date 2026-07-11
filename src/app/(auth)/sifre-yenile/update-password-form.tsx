@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-export function UpdatePasswordForm() {
+export function UpdatePasswordForm({ supabaseUrl, supabaseAnonKey }: { supabaseUrl: string; supabaseAnonKey: string }) {
   const [ready, setReady] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [email, setEmail] = useState("");
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
+    const supabase = createSupabaseBrowserClient({ url: supabaseUrl, anonKey: supabaseAnonKey });
     async function establishRecoverySession() {
       await Promise.resolve();
       if (!supabase) { setError("Üyelik sistemi yapılandırılmamış."); return; }
@@ -33,7 +33,7 @@ export function UpdatePasswordForm() {
       else setError("Şifre yenileme bağlantısı geçersiz veya süresi dolmuş.");
     }
     void establishRecoverySession();
-  }, []);
+  }, [supabaseAnonKey, supabaseUrl]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -42,7 +42,7 @@ export function UpdatePasswordForm() {
     if (password.length < 8) { setError("Şifre en az 8 karakter olmalı."); return; }
     setPending(true);
     setError("");
-    const supabase = createSupabaseBrowserClient();
+    const supabase = createSupabaseBrowserClient({ url: supabaseUrl, anonKey: supabaseAnonKey });
     const { error: updateError } = supabase ? await supabase.auth.updateUser({ password }) : { error: new Error("config") };
     if (updateError) { setError("Şifre güncellenemedi. Farklı ve güçlü bir şifre deneyin."); setPending(false); return; }
     await supabase?.auth.signOut();
