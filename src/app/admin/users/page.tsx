@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminPagination, parseAdminPage } from "@/components/admin/admin-pagination";
 import { getAdminUserCounts, getAdminUsersPage, type AdminUserFilter } from "@/lib/db-users";
@@ -25,9 +24,9 @@ export default async function AdminUsersPage({ searchParams }: Props) {
         title="Kullanıcılar"
         description="Üyeleri, yöneticileri, rolleri ve hesap durumlarını yönet."
         actions={(
-          <Link href="/admin/users/new" className="h-10 rounded-md border border-primary px-3 py-2 text-sm font-bold text-primary">
+          <a href="/admin/users/new" className="h-10 rounded-md border border-primary px-3 py-2 text-sm font-bold text-primary">
             Yeni Kullanıcı Ekle
-          </Link>
+          </a>
         )}
       />
 

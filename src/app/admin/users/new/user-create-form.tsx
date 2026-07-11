@@ -1,15 +1,24 @@
 "use client";
 
-import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
+import { type FormEvent, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { CreateUserFormState, CreateUserFormValues } from "../actions";
-import { createUserAction } from "../actions";
+import {
+  type AdminUserCreateFieldErrors,
+  type AdminUserCreateValues,
+  normalizeAdminUserCreateRole,
+  validateAdminUserCreateValues,
+} from "@/lib/admin-user-create-validation";
 
-const initialState: CreateUserFormState = {
-  status: "idle",
+type FormState = {
+  message: string;
+  fieldErrors: AdminUserCreateFieldErrors;
+  values: AdminUserCreateValues;
+};
+
+const initialState: FormState = {
   message: "",
   fieldErrors: {},
   values: {
@@ -24,10 +33,53 @@ const initialState: CreateUserFormState = {
 };
 
 export function UserCreateForm() {
-  const [state, formAction] = useActionState(createUserAction, initialState);
+  const router = useRouter();
+  const [state, setState] = useState<FormState>(initialState);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const values: AdminUserCreateValues = {
+      username: String(formData.get("username") ?? "").trim(),
+      email: String(formData.get("email") ?? "").trim(),
+      first_name: String(formData.get("first_name") ?? "").trim(),
+      last_name: String(formData.get("last_name") ?? "").trim(),
+      display_name: String(formData.get("display_name") ?? "").trim(),
+      password: String(formData.get("password") ?? ""),
+      role: normalizeAdminUserCreateRole(String(formData.get("role") ?? "member")),
+    };
+    const fieldErrors = validateAdminUserCreateValues(values);
+
+    if (Object.keys(fieldErrors).length) {
+      setState({ message: "Lütfen işaretli alanları kontrol edin.", fieldErrors, values });
+      return;
+    }
+
+    startTransition(async () => {
+      const response = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+
+      if (response.ok) {
+        router.push("/admin/users");
+        router.refresh();
+        return;
+      }
+
+      const result = await response.json().catch(() => null) as Partial<FormState> | null;
+      setState({
+        message: result?.message || "Kullanıcı oluşturulamadı.",
+        fieldErrors: result?.fieldErrors ?? {},
+        values: result?.values ?? values,
+      });
+    });
+  }
 
   return (
-    <form action={formAction} noValidate autoComplete="off" className="space-y-4 rounded-md border border-border bg-card p-4">
+    <form onSubmit={handleSubmit} noValidate autoComplete="off" className="space-y-4 rounded-md border border-border bg-card p-4">
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Kullanıcı adı" name="username" required defaultValue={state.values.username} error={state.fieldErrors.username} autoComplete="username" />
         <Field label="E-posta" name="email" type="email" required defaultValue={state.values.email} error={state.fieldErrors.email} autoComplete="email" />
@@ -55,18 +107,10 @@ export function UserCreateForm() {
         </p>
       ) : null}
 
-      <SubmitButton />
+      <Button disabled={isPending} className="h-10 px-4 text-sm font-bold">
+        {isPending ? "Kullanıcı ekleniyor..." : "Kullanıcı Ekle"}
+      </Button>
     </form>
-  );
-}
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-
-  return (
-    <Button disabled={pending} className="h-10 px-4 text-sm font-bold">
-      {pending ? "Kullanıcı ekleniyor..." : "Kullanıcı Ekle"}
-    </Button>
   );
 }
 
@@ -80,7 +124,7 @@ function Field({
   autoComplete,
 }: {
   label: string;
-  name: keyof CreateUserFormValues;
+  name: keyof AdminUserCreateValues;
   type?: string;
   required?: boolean;
   defaultValue: string;
