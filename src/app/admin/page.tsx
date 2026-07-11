@@ -81,9 +81,11 @@ function PopularGamesSection({ games }: { games: AdminPopularGame[] }) {
                 <TableCell className="text-base font-bold text-muted-foreground">#{index + 1}</TableCell>
                 <TableCell className="whitespace-normal">
                   <div className="flex min-w-0 items-center gap-3">
-                    <Image src={game.thumbnailUrl} alt={game.title} width={72} height={40} unoptimized className="h-10 w-auto shrink-0 rounded-md object-contain" />
+                    <Link href={`/admin/games/${game.id}/edit`} aria-label={`${game.title} oyununu düzenle`} className="shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                      <Image src={game.thumbnailUrl} alt={game.title} width={72} height={40} unoptimized className="h-10 w-auto rounded-md object-contain" />
+                    </Link>
                     <div className="min-w-0">
-                      <Link href={`/oyun/${game.slug}`} target="_blank" className="block truncate font-bold text-primary hover:underline">
+                      <Link href={`/admin/games/${game.id}/edit`} className="block truncate font-bold text-primary hover:underline">
                         {game.title}
                       </Link>
                       {game.categoryName ? <p className="truncate text-xs leading-4 text-muted-foreground">{game.categoryName}</p> : null}
