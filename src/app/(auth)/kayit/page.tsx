@@ -41,10 +41,15 @@ export default async function RegisterPage({ searchParams }: Props) {
             Şifre
             <Input name="password" type="password" autoComplete="new-password" required minLength={8} className="mt-1 h-10" />
           </label>
-          <label className="flex items-start gap-2 text-sm font-semibold">
-            <Checkbox name="terms_accepted" required className="mt-1" />
-            <span>Kullanım şartlarını ve gizlilik politikasını kabul ediyorum.</span>
-          </label>
+          <div className="flex items-start gap-2 text-sm font-semibold">
+            <Checkbox id="terms_accepted" name="terms_accepted" required aria-label="Kullanım şartlarını ve gizlilik politikasını kabul ediyorum" className="mt-1" />
+            <p>
+              <Link href="/sayfa/kullanim-sartlari" className="text-primary hover:underline">Kullanım şartlarını</Link>
+              {" ve "}
+              <Link href="/sayfa/gizlilik-politikasi" className="text-primary hover:underline">gizlilik politikasını</Link>
+              {" kabul ediyorum."}
+            </p>
+          </div>
           <label className="flex items-start gap-2 text-sm text-muted-foreground">
             <Checkbox name="marketing_emails_accepted" className="mt-1" />
             <span>Yeni oyunlar ve duyurular için e-posta almak istiyorum.</span>
