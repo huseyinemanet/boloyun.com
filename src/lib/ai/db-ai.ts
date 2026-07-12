@@ -79,7 +79,7 @@ type ActivityRow = JobItemRow & {
 };
 
 const PROCESS_ITEMS_PER_CLICK = 5;
-const STALE_PROCESSING_MINUTES = 10;
+const STALE_PROCESSING_MINUTES = 1;
 
 export async function getAiDashboardData() {
   const [configs, stats, jobs, activity] = await Promise.all([
@@ -197,7 +197,7 @@ export async function createTranslationJob(input: { provider: AiProvider; batchS
   return jobId;
 }
 
-export async function processTranslationJob(jobId: string) {
+export async function processTranslationJob(jobId: string, options: { limit?: number } = {}) {
   const supabase = requiredServiceClient();
   logAi("job.process.start", { jobId });
   const job = await getJob(jobId);
@@ -219,10 +219,10 @@ export async function processTranslationJob(jobId: string) {
     .eq("job_id", jobId)
     .eq("status", "pending")
     .order("created_at", { ascending: true })
-    .limit(Math.min(job.batchSize, PROCESS_ITEMS_PER_CLICK));
+    .limit(Math.max(1, Math.min(job.batchSize, options.limit ?? PROCESS_ITEMS_PER_CLICK)));
   if (itemsError) throw new Error(`Çeviri iş kalemleri okunamadı: ${itemsError.message}`);
   const items = (itemsData ?? []) as JobItemRow[];
-  logAi("job.process.items", { jobId, selected: items.length, batchSize: job.batchSize, perClickLimit: PROCESS_ITEMS_PER_CLICK });
+  logAi("job.process.items", { jobId, selected: items.length, batchSize: job.batchSize, perClickLimit: options.limit ?? PROCESS_ITEMS_PER_CLICK });
 
   for (const item of items) {
     await processTranslationItem(jobId, item, config);
