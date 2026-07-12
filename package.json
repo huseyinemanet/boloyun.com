@@ -13,7 +13,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/**/*.test.ts",
+    "test": "tsx --test \"src/**/*.test.ts\"",
     "import:discover": "tsx src/import/cli/import-discover.ts",
     "import:scrape": "tsx src/import/cli/import-scrape.ts",
     "import:generate-content": "tsx src/import/cli/import-generate-content.ts",
