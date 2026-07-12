@@ -15,6 +15,11 @@ test("unknown setting fields are rejected", () => {
   assert.throws(() => validateSettingsSection("general", { ...DEFAULT_SETTINGS.general, injected: true }), /alanları geçersiz/);
 });
 
+test("pruned legacy setting fields are ignored while reading existing records", () => {
+  assert.deepEqual(validateSettingsSection("general", { ...DEFAULT_SETTINGS.general, contactEmail: "iletisim@boloyun.com", timezone: "Europe/Istanbul" }), DEFAULT_SETTINGS.general);
+  assert.deepEqual(validateSettingsSection("community", { ...DEFAULT_SETTINGS.community, emailVerificationRequired: false }), DEFAULT_SETTINGS.community);
+});
+
 test("SEO templates reject unknown variables and render known variables", () => {
   assert.throws(() => validateSettingsSection("seo", { ...DEFAULT_SETTINGS.seo, gameTitleTemplate: "{{bilinmeyen}}" }), /bilinmeyen/);
   assert.equal(renderSeoTemplate("{{oyun_adı}} Oyna – {{site_adı}}", { oyun_adı: "Ateş ve Su", site_adı: "Bol Oyun" }), "Ateş ve Su Oyna – Bol Oyun");

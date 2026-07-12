@@ -3,16 +3,10 @@ import type { SettingsDataMap, SettingsSection } from "@/lib/settings/types";
 export const DEFAULT_SETTINGS: SettingsDataMap = {
   general: {
     siteName: "Bol Oyun",
-    tagline: "Oyunu seç, hemen oyna",
-    description: "En sevilen mini oyunları, klasik Flash oyunlarını, araba, aksiyon, spor ve beceri oyunlarını ücretsiz oyna.",
-    contactEmail: "iletisim@boloyun.com",
-    locale: "tr-TR",
-    timezone: "Europe/Istanbul",
     maintenanceMode: false,
     registrationsEnabled: true,
     logoUrl: "/logo.svg",
     faviconUrl: "/favicon.ico",
-    defaultCoverUrl: "/opengraph-image",
   },
   appearance: {
     heroTitle: "Ücretsiz Mini Oyunlar Oyna",
@@ -53,7 +47,6 @@ export const DEFAULT_SETTINGS: SettingsDataMap = {
   ads: { enabled: true, showToMembers: true, preRollEnabled: false, preRollSkipSeconds: 5, adsTxt: "" },
   community: {
     registrationsEnabled: true,
-    emailVerificationRequired: false,
     usernameMinLength: 3,
     usernameMaxLength: 29,
     usernamePattern: "^[a-zA-Z0-9_][a-zA-Z0-9_-]*$",

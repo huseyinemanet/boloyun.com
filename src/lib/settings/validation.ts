@@ -3,25 +3,23 @@ import type { SettingsDataMap, SettingsSection } from "@/lib/settings/types";
 
 const TEMPLATE_VARIABLES = new Set(["site_adı", "oyun_adı", "kategori_adı", "sayfa"]);
 const ALLOWED_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/x-icon", "image/vnd.microsoft.icon"]);
+const LEGACY_SETTINGS_KEYS: Partial<Record<SettingsSection, string[]>> = {
+  general: ["tagline", "description", "contactEmail", "locale", "timezone", "defaultCoverUrl"],
+  community: ["emailVerificationRequired"],
+};
 
 export function validateSettingsSection<S extends SettingsSection>(section: S, input: unknown): SettingsDataMap[S] {
-  const value = record(input);
+  const value = omitKeys(record(input), LEGACY_SETTINGS_KEYS[section] ?? []);
   assertExactKeys(value, Object.keys(DEFAULT_SETTINGS[section]), section);
 
   switch (section) {
     case "general":
       return {
         siteName: text(value.siteName, "Site adı", 2, 80),
-        tagline: text(value.tagline, "Slogan", 0, 160),
-        description: text(value.description, "Site açıklaması", 10, 500),
-        contactEmail: email(value.contactEmail, "İletişim e-postası"),
-        locale: literal(value.locale, ["tr-TR"] as const, "Site dili"),
-        timezone: text(value.timezone, "Saat dilimi", 3, 80),
         maintenanceMode: boolean(value.maintenanceMode, "Bakım modu"),
         registrationsEnabled: boolean(value.registrationsEnabled, "Yeni üyelikler"),
         logoUrl: assetUrl(value.logoUrl, "Logo"),
         faviconUrl: assetUrl(value.faviconUrl, "Favicon"),
-        defaultCoverUrl: assetUrl(value.defaultCoverUrl, "Varsayılan kapak"),
       } as SettingsDataMap[S];
     case "appearance":
       return {
@@ -77,7 +75,6 @@ export function validateSettingsSection<S extends SettingsSection>(section: S, i
       try { new RegExp(patternValue); } catch { throw new Error("Kullanıcı adı deseni geçerli bir düzenli ifade değil."); }
       return {
         registrationsEnabled: boolean(value.registrationsEnabled, "Üyelikler"),
-        emailVerificationRequired: boolean(value.emailVerificationRequired, "E-posta doğrulaması"),
         usernameMinLength: min,
         usernameMaxLength: max,
         usernamePattern: patternValue,
@@ -120,6 +117,13 @@ function record(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function omitKeys(value: Record<string, unknown>, keys: string[]) {
+  if (!keys.length) return value;
+  const result = { ...value };
+  for (const key of keys) delete result[key];
+  return result;
+}
+
 function assertExactKeys(value: Record<string, unknown>, expected: string[], section: string) {
   const expectedSet = new Set(expected);
   const missing = expected.filter((key) => !(key in value));
@@ -147,12 +151,6 @@ function integer(value: unknown, label: string, min: number, max: number) {
 function literal<T extends string>(value: unknown, allowed: readonly T[], label: string): T {
   if (typeof value !== "string" || !allowed.includes(value as T)) throw new Error(`${label} geçersiz.`);
   return value as T;
-}
-
-function email(value: unknown, label: string) {
-  const result = text(value, label, 3, 254);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(result)) throw new Error(`${label} geçersiz.`);
-  return result;
 }
 
 function httpsUrl(value: unknown, label: string) {

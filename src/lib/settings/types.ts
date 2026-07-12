@@ -14,16 +14,10 @@ export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 
 export type GeneralSettings = {
   siteName: string;
-  tagline: string;
-  description: string;
-  contactEmail: string;
-  locale: "tr-TR";
-  timezone: string;
   maintenanceMode: boolean;
   registrationsEnabled: boolean;
   logoUrl: string;
   faviconUrl: string;
-  defaultCoverUrl: string;
 };
 
 export type AppearanceSettings = {
@@ -75,7 +69,6 @@ export type AdSettings = {
 
 export type CommunitySettings = {
   registrationsEnabled: boolean;
-  emailVerificationRequired: boolean;
   usernameMinLength: number;
   usernameMaxLength: number;
   usernamePattern: string;
