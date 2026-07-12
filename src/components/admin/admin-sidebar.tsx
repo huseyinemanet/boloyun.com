@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 
 const adminLinks = [
   { href: "/admin", label: "Genel Bakış", icon: IconHouseDashboard2FillDuo18 },
-  { href: "/ai", label: "AI Merkezi", icon: IconArtificialIntelligenceFillDuo18 },
+  { href: "/admin/ai", label: "AI Merkezi", icon: IconArtificialIntelligenceFillDuo18 },
   { href: "/admin/crawler", label: "Yeni Oyun Tara", icon: IconMagnifierSparkle2FillDuo18 },
   { href: "/admin/imports", label: "Onay Kuyruğu", icon: IconListCheckbox2FillDuo18 },
   { href: "/admin/games", label: "Oyunlar", icon: IconGamepadFillDuo18 },
