@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AiCenterPage() {
-  const { configs, stats, jobs, activity } = await getAiDashboardData();
+  const { configs, stats, jobs, activity, activityTotal } = await getAiDashboardData();
   const activeConfig = configs.find((config) => config.enabled) ?? configs.find((config) => config.provider === "deepseek") ?? configs[0];
 
   return (
@@ -91,7 +91,7 @@ export default async function AiCenterPage() {
         <AiJobsTable jobs={jobs} />
       </section>
 
-      <RealtimeActivityPanel initialStats={stats} initialJobs={jobs} initialActivity={activity} />
+      <RealtimeActivityPanel initialStats={stats} initialJobs={jobs} initialActivity={activity} initialActivityTotal={activityTotal} />
     </div>
   );
 }

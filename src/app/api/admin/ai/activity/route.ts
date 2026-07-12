@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth";
-import { getTranslationStats, listRecentJobs, listRecentTranslationActivity } from "@/lib/ai/db-ai";
+import { countTranslationActivity, getTranslationStats, listRecentJobs, listRecentTranslationActivity } from "@/lib/ai/db-ai";
 
 export const dynamic = "force-dynamic";
 
@@ -10,14 +10,19 @@ export async function GET() {
     if (!profile) return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
     if (profile.role !== "admin" || profile.status !== "active") return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 });
 
-    const [stats, jobs, activity] = await Promise.all([
+    const [stats, jobs] = await Promise.all([
       getTranslationStats(),
       listRecentJobs(),
-      listRecentTranslationActivity(),
+    ]);
+    const activeJob = jobs.find((job) => job.status === "running") ?? jobs.find((job) => job.status === "queued") ?? jobs[0];
+    const activityLimit = Math.min(Math.max(activeJob?.totalCount ?? 20, 20), 500);
+    const [activity, activityTotal] = await Promise.all([
+      listRecentTranslationActivity(activityLimit, activeJob?.id),
+      countTranslationActivity(activeJob?.id),
     ]);
 
     return NextResponse.json(
-      { stats, jobs, activity, serverTime: new Date().toISOString() },
+      { stats, jobs, activity, activityTotal, serverTime: new Date().toISOString() },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {

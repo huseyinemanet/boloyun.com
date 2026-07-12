@@ -76,19 +76,33 @@ type ActivityRow = JobItemRow & {
   started_at: string | null;
   completed_at: string | null;
   updated_at: string;
+  games?: {
+    title?: string | null;
+    slug?: string | null;
+    thumbnail_url?: string | null;
+  } | Array<{
+    title?: string | null;
+    slug?: string | null;
+    thumbnail_url?: string | null;
+  }> | null;
 };
 
 const PROCESS_ITEMS_PER_CLICK = 5;
 const STALE_PROCESSING_MINUTES = 1;
 
 export async function getAiDashboardData() {
-  const [configs, stats, jobs, activity] = await Promise.all([
+  const [configs, stats, jobs] = await Promise.all([
     listProviderConfigs(),
     getTranslationStats(),
     listRecentJobs(),
-    listRecentTranslationActivity(),
   ]);
-  return { configs, stats, jobs, activity };
+  const activeJob = jobs.find((job) => job.status === "running") ?? jobs.find((job) => job.status === "queued") ?? jobs[0];
+  const activityLimit = Math.min(Math.max(activeJob?.totalCount ?? 20, 20), 500);
+  const [activity, activityTotal] = await Promise.all([
+    listRecentTranslationActivity(activityLimit, activeJob?.id),
+    countTranslationActivity(activeJob?.id),
+  ]);
+  return { configs, stats, jobs, activity, activityTotal };
 }
 
 export async function listProviderConfigs(): Promise<AiProviderConfig[]> {
@@ -224,8 +238,12 @@ export async function processTranslationJob(jobId: string, options: { limit?: nu
   const items = (itemsData ?? []) as JobItemRow[];
   logAi("job.process.items", { jobId, selected: items.length, batchSize: job.batchSize, perClickLimit: options.limit ?? PROCESS_ITEMS_PER_CLICK });
 
+  let processed = 0;
+  let failed = 0;
   for (const item of items) {
-    await processTranslationItem(jobId, item, config);
+    const result = await processTranslationItem(jobId, item, config);
+    if (result === "failed") failed += 1;
+    else processed += 1;
     await refreshJobCounts(jobId);
     await sleep(250);
   }
@@ -234,7 +252,7 @@ export async function processTranslationJob(jobId: string, options: { limit?: nu
   logAi("job.process.done", { jobId, processed: items.length });
   revalidateTag("games", "max");
   revalidatePath("/");
-  return summarizeJob(jobId);
+  return Object.assign(await summarizeJob(jobId), { processed, failedStep: failed });
 }
 
 export async function pauseTranslationJob(jobId: string) {
@@ -300,18 +318,29 @@ export async function listRecentJobs(limit = 8): Promise<AiTranslationJob[]> {
   return ((data ?? []) as JobRow[]).map(mapJob);
 }
 
-export async function listRecentTranslationActivity(limit = 20): Promise<AiTranslationActivity[]> {
+export async function listRecentTranslationActivity(limit = 20, jobId?: string): Promise<AiTranslationActivity[]> {
   const supabase = requiredServiceClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("ai_translation_job_items")
-    .select("id, job_id, game_id, status, attempts, error_message, before_snapshot, started_at, completed_at, updated_at")
+    .select("id, job_id, game_id, status, attempts, error_message, before_snapshot, started_at, completed_at, updated_at, games(title, slug, thumbnail_url)")
     .order("updated_at", { ascending: false })
     .limit(limit);
+  if (jobId) query = query.eq("job_id", jobId);
+  const { data, error } = await query;
   if (error) throw new Error(`AI işlem logları okunamadı: ${error.message}`);
   return ((data ?? []) as ActivityRow[]).map(mapActivity);
 }
 
-async function processTranslationItem(jobId: string, item: JobItemRow, config: AiRuntimeConfig) {
+export async function countTranslationActivity(jobId?: string) {
+  const supabase = requiredServiceClient();
+  let query = supabase.from("ai_translation_job_items").select("id", { count: "exact", head: true });
+  if (jobId) query = query.eq("job_id", jobId);
+  const { count, error } = await query;
+  if (error) throw new Error(`AI işlem logu sayısı okunamadı: ${error.message}`);
+  return count ?? 0;
+}
+
+async function processTranslationItem(jobId: string, item: JobItemRow, config: AiRuntimeConfig): Promise<"completed" | "failed"> {
   const supabase = requiredServiceClient();
   const attempts = Number(item.attempts ?? 0) + 1;
   logAi("item.process.start", { jobId, itemId: item.id, gameId: item.game_id, attempts, provider: config.provider, model: config.model });
@@ -376,6 +405,7 @@ async function processTranslationItem(jobId: string, item: JobItemRow, config: A
       updated_at: new Date().toISOString(),
     }).eq("id", item.id);
     logAi("item.process.completed", { jobId, itemId: item.id, gameId: item.game_id });
+    return "completed";
   } catch (error) {
     const message = error instanceof Error ? error.message : "Bilinmeyen çeviri hatası";
     logAiError("item.process.failed", error, { jobId, itemId: item.id, gameId: item.game_id, attempts });
@@ -394,6 +424,7 @@ async function processTranslationItem(jobId: string, item: JobItemRow, config: A
       completed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).eq("id", item.id);
+    return "failed";
   }
 }
 
@@ -547,11 +578,14 @@ function mapJob(row: JobRow): AiTranslationJob {
 }
 
 function mapActivity(row: ActivityRow): AiTranslationActivity {
+  const game = Array.isArray(row.games) ? row.games[0] : row.games;
   return {
     id: row.id,
     jobId: row.job_id,
     gameId: row.game_id,
-    title: typeof row.before_snapshot?.title === "string" ? row.before_snapshot.title : row.game_id,
+    title: game?.title || (typeof row.before_snapshot?.title === "string" ? row.before_snapshot.title : row.game_id),
+    slug: game?.slug ?? null,
+    thumbnailUrl: game?.thumbnail_url ?? null,
     status: isTranslationItemStatus(row.status) ? row.status : "failed",
     attempts: row.attempts ?? 0,
     errorMessage: row.error_message,

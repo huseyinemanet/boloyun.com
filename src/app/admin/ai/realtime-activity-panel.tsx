@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   flexRender,
@@ -31,6 +33,7 @@ type ActivityPayload = {
   stats: AiTranslationStats;
   jobs: AiTranslationJob[];
   activity: AiTranslationActivity[];
+  activityTotal: number;
   serverTime: string;
   error?: string;
 };
@@ -39,6 +42,7 @@ type RealtimeActivityPanelProps = {
   initialStats: AiTranslationStats;
   initialJobs: AiTranslationJob[];
   initialActivity: AiTranslationActivity[];
+  initialActivityTotal: number;
 };
 
 type ActivityTableRow = AiTranslationActivity & {
@@ -56,7 +60,7 @@ const activityColumnLabels: Record<string, string> = {
 const activityColumnWidths: Record<string, string> = {
   updatedAt: "w-44",
   status: "w-36",
-  title: "w-[320px]",
+  title: "w-[420px]",
   attempts: "w-28",
   errorMessage: "w-[360px]",
 };
@@ -67,13 +71,15 @@ const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
   timeZone: "Europe/Istanbul",
 });
 
-export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivity }: RealtimeActivityPanelProps) {
+export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivity, initialActivityTotal }: RealtimeActivityPanelProps) {
   const [payload, setPayload] = useState<ActivityPayload>({
     stats: initialStats,
     jobs: initialJobs,
     activity: initialActivity,
+    activityTotal: initialActivityTotal,
     serverTime: initialActivity[0]?.updatedAt ?? initialJobs[0]?.updatedAt ?? "1970-01-01T00:00:00.000Z",
   });
+  const [now, setNow] = useState(() => Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([{ id: "updatedAt", desc: true }]);
@@ -98,7 +104,11 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
     {
       accessorKey: "updatedAt",
       header: "Zaman",
-      cell: ({ row }) => <span className="text-muted-foreground">{formatDate(row.original.updatedAt)}</span>,
+      cell: ({ row }) => (
+        <time className="text-muted-foreground" dateTime={row.original.updatedAt} title={formatDate(row.original.updatedAt)}>
+          {relativeTime(row.original.updatedAt, now)}
+        </time>
+      ),
     },
     {
       accessorKey: "status",
@@ -113,7 +123,7 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
     {
       accessorKey: "title",
       header: "Oyun",
-      cell: ({ row }) => <span className="block truncate font-semibold">{row.original.title}</span>,
+      cell: ({ row }) => <GameActivityLink item={row.original} />,
     },
     {
       accessorKey: "attempts",
@@ -125,7 +135,7 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
       header: "Hata",
       cell: ({ row }) => <span className="block truncate text-muted-foreground">{row.original.errorMessage ?? "-"}</span>,
     },
-  ], []);
+  ], [now]);
 
   // TanStack Table exposes mutable functions that React Compiler intentionally does not memoize.
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -160,6 +170,11 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
   const filteredCount = activityTable.getFilteredRowModel().rows.length;
 
   useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
     let disposed = false;
     let timeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -172,7 +187,9 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const next = await response.json() as ActivityPayload;
         if (next.error) throw new Error(next.error);
-        if (!Array.isArray(next.jobs) || !Array.isArray(next.activity) || !next.stats) throw new Error("Aktivite yanıtı eksik döndü.");
+        if (!Array.isArray(next.jobs) || !Array.isArray(next.activity) || !next.stats || typeof next.activityTotal !== "number") {
+          throw new Error("Aktivite yanıtı eksik döndü.");
+        }
         if (disposed) return;
         logTransitions(previousStatuses.current, next.activity);
         previousStatuses.current = new Map(next.activity.map((item) => [item.id, item.status]));
@@ -217,7 +234,7 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
           overflow: hidden;
           background: color-mix(in srgb, var(--primary) 10%, transparent);
         }
-        .ai-processing-row::after {
+        .ai-processing-shimmer {
           content: "";
           position: absolute;
           inset: 0;
@@ -225,6 +242,11 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
           background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--primary) 30%, white 30%), transparent);
           animation: ai-row-shimmer 1.35s ease-in-out infinite;
           pointer-events: none;
+          z-index: 0;
+        }
+        .ai-processing-cell-content {
+          position: relative;
+          z-index: 1;
         }
       `}</style>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -304,7 +326,7 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
         </div>
 
         <div className="overflow-hidden rounded-md border border-border">
-          <Table className="min-w-[900px] table-fixed">
+          <Table className="min-w-[980px] table-fixed">
             <TableHeader className="bg-muted/40">
               {activityTable.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
@@ -320,8 +342,11 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
               {activityTable.getRowModel().rows.length ? activityTable.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} className={row.original.isActuallyProcessing ? "ai-processing-row" : ""}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="whitespace-normal">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    <TableCell key={cell.id} className="relative whitespace-normal overflow-hidden">
+                      {row.original.isActuallyProcessing && cell.column.id === "title" ? <span className="ai-processing-shimmer" /> : null}
+                      <div className="ai-processing-cell-content">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </div>
                     </TableCell>
                   ))}
                 </TableRow>
@@ -338,7 +363,7 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm font-semibold text-muted-foreground">
-            {filteredCount.toLocaleString("tr-TR")} kayıt
+            {filteredCount.toLocaleString("tr-TR")} / {payload.activityTotal.toLocaleString("tr-TR")} kayıt
           </p>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">
@@ -359,6 +384,34 @@ function Metric({ label, value, tone = "muted" }: { label: string; value: string
       <p className="text-xs font-semibold text-muted-foreground">{label}</p>
       <p className={tone === "danger" ? "mt-1 text-lg font-black text-destructive" : "mt-1 text-lg font-black"}>{value}</p>
     </div>
+  );
+}
+
+function GameActivityLink({ item }: { item: ActivityTableRow }) {
+  const content = (
+    <span className="flex min-w-0 items-center gap-2">
+      <span className="relative block h-9 w-12 shrink-0 overflow-hidden rounded-md bg-muted">
+        {item.thumbnailUrl ? (
+          <Image
+            src={item.thumbnailUrl}
+            alt=""
+            fill
+            unoptimized
+            sizes="48px"
+            className="object-cover"
+          />
+        ) : null}
+      </span>
+      <span className="block min-w-0 truncate font-semibold" title={item.title}>{item.title}</span>
+    </span>
+  );
+
+  if (!item.slug) return content;
+
+  return (
+    <Link href={`/oyun/${item.slug}`} className="block min-w-0 text-foreground transition hover:text-primary">
+      {content}
+    </Link>
   );
 }
 
@@ -399,4 +452,16 @@ function jobStatusText(status: AiTranslationJob["status"]) {
 
 function formatDate(value: string) {
   return dateFormatter.format(new Date(value));
+}
+
+function relativeTime(value: string, now: number) {
+  const diffSeconds = Math.max(0, Math.floor((now - new Date(value).getTime()) / 1000));
+  if (diffSeconds < 10) return "az önce";
+  if (diffSeconds < 60) return `${diffSeconds} sn önce`;
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  if (diffMinutes < 60) return `${diffMinutes} dk önce`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours} sa önce`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} gün önce`;
 }

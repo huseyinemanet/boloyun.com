@@ -86,6 +86,8 @@ export type AiTranslationActivity = {
   jobId: string;
   gameId: string;
   title: string;
+  slug: string | null;
+  thumbnailUrl: string | null;
   status: AiTranslationItemStatus;
   attempts: number;
   errorMessage: string | null;

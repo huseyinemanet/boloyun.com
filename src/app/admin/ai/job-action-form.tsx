@@ -9,6 +9,9 @@ type ProcessTranslationJobState = {
   status: "success" | "error";
   message: string;
   jobId?: string;
+  processed?: number;
+  failed?: number;
+  continued?: boolean;
   job?: {
     status: string;
     completed: number;
@@ -120,6 +123,7 @@ function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: 
 }
 
 function shouldContinueProcessing(state: ProcessTranslationJobState | null) {
+  if (typeof state?.continued === "boolean") return state.continued;
   const job = state?.job;
   if (!job) return false;
   if (job.status === "paused" || job.status === "cancelled" || job.status === "completed" || job.status === "failed") return false;
