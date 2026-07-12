@@ -25,11 +25,11 @@ function AdminCheckboxField({
   return (
     <Field
       orientation="horizontal"
-      className={cn("cursor-pointer rounded-none border-0 bg-transparent p-0 shadow-none", fieldClassName)}
+      className={cn("cursor-pointer items-center rounded-none border-0 bg-transparent p-0 shadow-none", fieldClassName)}
     >
-      <Checkbox id={checkboxId} className={cn("mt-0.5", className)} {...props} />
+      <Checkbox id={checkboxId} className={className} {...props} />
       <FieldContent>
-        <FieldLabel htmlFor={checkboxId}>{label}</FieldLabel>
+        <FieldLabel htmlFor={checkboxId} className="font-normal leading-5">{label}</FieldLabel>
         {description ? <FieldDescription>{description}</FieldDescription> : null}
       </FieldContent>
     </Field>
