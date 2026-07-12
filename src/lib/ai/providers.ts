@@ -1,5 +1,5 @@
 import type { AiRuntimeConfig, GameTranslationInput, TranslatedGameContent } from "./types";
-import { parseTranslatedContent, validateTranslatedContent } from "./quality";
+import { normalizeTranslatedContent, parseTranslatedContent, validateTranslatedContent } from "./quality";
 
 type ChatMessage = {
   role: "system" | "user";
@@ -23,11 +23,14 @@ type AnthropicResponse = {
 
 export async function translateGameContent(input: GameTranslationInput, config: AiRuntimeConfig): Promise<TranslatedGameContent> {
   const messages = buildTranslationMessages(input);
+  const startedAt = Date.now();
+  console.log("[ai-provider] translate.start", { provider: config.provider, model: config.model, title: input.title });
   const raw = config.provider === "claude"
     ? await callClaude(messages, config)
     : await callOpenAiCompatible(messages, config);
-  const output = parseTranslatedContent(raw);
+  const output = normalizeTranslatedContent(input, parseTranslatedContent(raw));
   validateTranslatedContent(input, output);
+  console.log("[ai-provider] translate.success", { provider: config.provider, model: config.model, title: input.title, durationMs: Date.now() - startedAt });
   return output;
 }
 
@@ -53,6 +56,7 @@ function buildTranslationMessages(input: GameTranslationInput): ChatMessage[] {
         "Oyun adını ve özel isimleri koru; title alanını çevirme veya yeniden adlandırma.",
         "Çocukların anlayacağı sade, akıcı Türkçe kullan.",
         "SEO spam yapma, bilinmeyen geliştirici/tarih/platform bilgisi uydurma.",
+        "Kaynakta kontroller veya özellikler boşsa gerçek dışı tuş uydurma; güvenli ve genel Türkçe ifade kullan.",
         "Sadece geçerli JSON döndür. Markdown, açıklama veya kod bloğu kullanma.",
       ].join(" "),
     },
@@ -77,6 +81,7 @@ function buildTranslationMessages(input: GameTranslationInput): ChatMessage[] {
 }
 
 async function callOpenAiCompatible(messages: ChatMessage[], config: AiRuntimeConfig) {
+  const startedAt = Date.now();
   const endpoint = config.provider === "deepseek" ? "https://api.deepseek.com/chat/completions" : "https://api.openai.com/v1/chat/completions";
   const body: Record<string, unknown> = {
     model: config.model,
@@ -95,6 +100,7 @@ async function callOpenAiCompatible(messages: ChatMessage[], config: AiRuntimeCo
     body: JSON.stringify(body),
   });
   const payload = await response.json().catch(() => null) as ChatCompletionResponse & { error?: { message?: string } } | null;
+  console.log("[ai-provider] http.response", { provider: config.provider, model: config.model, status: response.status, ok: response.ok, durationMs: Date.now() - startedAt });
   if (!response.ok) throw new Error(payload?.error?.message || `${config.provider} isteği başarısız: HTTP ${response.status}`);
   const content = payload?.choices?.[0]?.message?.content;
   if (!content) throw new Error(`${config.provider} boş içerik döndürdü.`);
@@ -102,6 +108,7 @@ async function callOpenAiCompatible(messages: ChatMessage[], config: AiRuntimeCo
 }
 
 async function callClaude(messages: ChatMessage[], config: AiRuntimeConfig) {
+  const startedAt = Date.now();
   const system = messages.find((message) => message.role === "system")?.content ?? "";
   const user = messages.find((message) => message.role === "user")?.content ?? "";
   const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -120,6 +127,7 @@ async function callClaude(messages: ChatMessage[], config: AiRuntimeConfig) {
     }),
   });
   const payload = await response.json().catch(() => null) as AnthropicResponse & { error?: { message?: string } } | null;
+  console.log("[ai-provider] http.response", { provider: config.provider, model: config.model, status: response.status, ok: response.ok, durationMs: Date.now() - startedAt });
   if (!response.ok) throw new Error(payload?.error?.message || `Claude isteği başarısız: HTTP ${response.status}`);
   const content = payload?.content?.find((item) => item.type === "text" && item.text)?.text;
   if (!content) throw new Error("Claude boş içerik döndürdü.");

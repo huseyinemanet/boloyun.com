@@ -50,7 +50,12 @@ export async function processTranslationJobAction(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("job_id") ?? "");
   if (!id) throw new Error("Çeviri işi eksik.");
-  await processTranslationJob(id);
+  try {
+    await processTranslationJob(id);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[ai-translation] action.process.failed", { jobId: id, error: message });
+  }
   revalidatePath("/admin/ai");
 }
 

@@ -66,6 +66,9 @@ type JobItemRow = {
   attempts: number | null;
 };
 
+const PROCESS_ITEMS_PER_CLICK = 5;
+const STALE_PROCESSING_MINUTES = 10;
+
 export async function getAiDashboardData() {
   const [configs, stats, jobs] = await Promise.all([
     listProviderConfigs(),
@@ -183,9 +186,14 @@ export async function createTranslationJob(input: { provider: AiProvider; batchS
 
 export async function processTranslationJob(jobId: string) {
   const supabase = requiredServiceClient();
+  logAi("job.process.start", { jobId });
   const job = await getJob(jobId);
-  if (job.status === "paused" || job.status === "cancelled" || job.status === "completed") return summarizeJob(jobId);
+  if (job.status === "paused" || job.status === "cancelled" || job.status === "completed") {
+    logAi("job.process.skip", { jobId, status: job.status });
+    return summarizeJob(jobId);
+  }
   const config = await getRuntimeConfig(job.provider, { requireEnabled: true });
+  await recoverStaleProcessingItems(jobId);
   await supabase.from("ai_translation_jobs").update({
     status: "running",
     started_at: job.startedAt ?? new Date().toISOString(),
@@ -198,16 +206,19 @@ export async function processTranslationJob(jobId: string) {
     .eq("job_id", jobId)
     .eq("status", "pending")
     .order("created_at", { ascending: true })
-    .limit(job.batchSize);
+    .limit(Math.min(job.batchSize, PROCESS_ITEMS_PER_CLICK));
   if (itemsError) throw new Error(`Çeviri iş kalemleri okunamadı: ${itemsError.message}`);
   const items = (itemsData ?? []) as JobItemRow[];
+  logAi("job.process.items", { jobId, selected: items.length, batchSize: job.batchSize, perClickLimit: PROCESS_ITEMS_PER_CLICK });
 
   for (const item of items) {
     await processTranslationItem(jobId, item, config);
+    await refreshJobCounts(jobId);
     await sleep(250);
   }
 
   await refreshJobCounts(jobId);
+  logAi("job.process.done", { jobId, processed: items.length });
   revalidateTag("games", "max");
   revalidatePath("/");
   return summarizeJob(jobId);
@@ -257,6 +268,7 @@ export async function listRecentJobs(limit = 8): Promise<AiTranslationJob[]> {
 async function processTranslationItem(jobId: string, item: JobItemRow, config: AiRuntimeConfig) {
   const supabase = requiredServiceClient();
   const attempts = Number(item.attempts ?? 0) + 1;
+  logAi("item.process.start", { jobId, itemId: item.id, gameId: item.game_id, attempts, provider: config.provider, model: config.model });
   await supabase.from("ai_translation_job_items").update({
     status: "processing",
     attempts,
@@ -277,6 +289,14 @@ async function processTranslationItem(jobId: string, item: JobItemRow, config: A
     const game = await getPublishedGame(item.game_id);
     if (!game) throw new Error("Yayınlı oyun bulunamadı.");
     const input = mapGameInput(game);
+    logAi("item.translate.request", {
+      jobId,
+      itemId: item.id,
+      gameId: item.game_id,
+      title: game.title,
+      hasControls: input.controls.length > 0,
+      hasFeatures: input.features.length > 0,
+    });
     const output = await translateGameContent(input, config);
     const sourceHash = sourceHashForGame(game);
     const { error: gameError } = await supabase.from("games").update({
@@ -309,8 +329,10 @@ async function processTranslationItem(jobId: string, item: JobItemRow, config: A
       completed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).eq("id", item.id);
+    logAi("item.process.completed", { jobId, itemId: item.id, gameId: item.game_id });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Bilinmeyen çeviri hatası";
+    logAiError("item.process.failed", error, { jobId, itemId: item.id, gameId: item.game_id, attempts });
     await supabase.from("game_translation_state").upsert({
       game_id: item.game_id,
       status: "failed",
@@ -377,12 +399,13 @@ async function getJob(jobId: string) {
 
 async function refreshJobCounts(jobId: string) {
   const supabase = requiredServiceClient();
-  const [completed, failed, pending] = await Promise.all([
+  const [completed, failed, pending, processing] = await Promise.all([
     countRows("ai_translation_job_items", { column: "job_id", value: jobId }, { column: "status", value: "completed" }),
     countRows("ai_translation_job_items", { column: "job_id", value: jobId }, { column: "status", value: "failed" }),
     countRows("ai_translation_job_items", { column: "job_id", value: jobId }, { column: "status", value: "pending" }),
+    countRows("ai_translation_job_items", { column: "job_id", value: jobId }, { column: "status", value: "processing" }),
   ]);
-  const status = pending > 0 ? "queued" : "completed";
+  const status = processing > 0 ? "running" : pending > 0 ? "queued" : "completed";
   const { error } = await supabase.from("ai_translation_jobs").update({
     completed_count: completed,
     failed_count: failed,
@@ -391,11 +414,30 @@ async function refreshJobCounts(jobId: string) {
     updated_at: new Date().toISOString(),
   }).eq("id", jobId);
   if (error) throw new Error(`Çeviri işi sayaçları güncellenemedi: ${error.message}`);
+  logAi("job.counts.refreshed", { jobId, completed, failed, pending, processing, status });
 }
 
 async function summarizeJob(jobId: string) {
   await refreshJobCounts(jobId);
   return getJob(jobId);
+}
+
+async function recoverStaleProcessingItems(jobId: string) {
+  const supabase = requiredServiceClient();
+  const staleBefore = new Date(Date.now() - STALE_PROCESSING_MINUTES * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("ai_translation_job_items")
+    .update({
+      status: "pending",
+      error_message: "Önceki işlem yarıda kaldı; tekrar sıraya alındı.",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("job_id", jobId)
+    .eq("status", "processing")
+    .lt("updated_at", staleBefore)
+    .select("id");
+  if (error) throw new Error(`Yarım kalan çeviri kalemleri toparlanamadı: ${error.message}`);
+  if (data?.length) logAi("job.processing.recovered", { jobId, count: data.length });
 }
 
 async function upsertPendingStates(candidates: CandidateRow[]) {
@@ -502,4 +544,13 @@ function requiredServiceClient() {
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function logAi(event: string, details: Record<string, unknown> = {}) {
+  console.log(`[ai-translation] ${event}`, details);
+}
+
+function logAiError(event: string, error: unknown, details: Record<string, unknown> = {}) {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`[ai-translation] ${event}`, { ...details, error: message });
 }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { looksMostlyEnglish, parseTranslatedContent, validateTranslatedContent } from "./quality";
+import { looksMostlyEnglish, normalizeTranslatedContent, parseTranslatedContent, validateTranslatedContent } from "./quality";
 import type { GameTranslationInput, TranslatedGameContent } from "./types";
 
 const input: GameTranslationInput = {
@@ -30,6 +30,12 @@ test("strict JSON çeviri çıktısı parse edilir", () => {
 
 test("başlığı değiştiren çıktı reddedilir", () => {
   assert.throws(() => validateTranslatedContent(input, { ...output, seo_title: "Araba Gösterisi Oyna" }), /oyun adını/);
+});
+
+test("kaynak kontroller boşsa güvenli fallback ile normalize edilir", () => {
+  const normalized = normalizeTranslatedContent({ ...input, controls: [], features: [] }, { ...output, controls: [], features: [] });
+  assert.deepEqual(normalized.controls, ["Kontroller oyun içinde gösterilir."]);
+  assert.ok(normalized.features[0]?.includes("oynanış"));
 });
 
 test("İngilizce ağırlıklı çıktı reddedilir", () => {

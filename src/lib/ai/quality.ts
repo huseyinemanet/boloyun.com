@@ -26,8 +26,15 @@ export function parseTranslatedContent(raw: string): TranslatedGameContent {
     seo_title: readString(record, "seo_title"),
     seo_description: readString(record, "seo_description"),
   };
-  validateTranslatedContent({ title: "", short_description: "", long_description: "", how_to_play: "", controls: [], features: [], seo_title: "", seo_description: "" }, output, { skipTitleCheck: true });
   return output;
+}
+
+export function normalizeTranslatedContent(input: GameTranslationInput, output: TranslatedGameContent): TranslatedGameContent {
+  return {
+    ...output,
+    controls: output.controls.length > 0 || input.controls.length > 0 ? output.controls : ["Kontroller oyun içinde gösterilir."],
+    features: output.features.length > 0 || input.features.length > 0 ? output.features : ["Kolayca başlayabileceğin sade ve eğlenceli oynanış."],
+  };
 }
 
 export function validateTranslatedContent(input: GameTranslationInput, output: TranslatedGameContent, options: { skipTitleCheck?: boolean } = {}) {
