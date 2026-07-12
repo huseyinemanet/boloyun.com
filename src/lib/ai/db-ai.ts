@@ -6,10 +6,12 @@ import { testAiProvider, translateGameContent } from "./providers";
 import {
   AI_PROVIDERS,
   DEFAULT_AI_MODELS,
+  type AiTranslationItemStatus,
   type AiBatchSize,
   type AiProvider,
   type AiProviderConfig,
   type AiRuntimeConfig,
+  type AiTranslationActivity,
   type AiTranslationJob,
   type AiTranslationStats,
   type GameTranslationInput,
@@ -66,16 +68,27 @@ type JobItemRow = {
   attempts: number | null;
 };
 
+type ActivityRow = JobItemRow & {
+  job_id: string;
+  status: AiTranslationActivity["status"];
+  error_message: string | null;
+  before_snapshot: Record<string, unknown> | null;
+  started_at: string | null;
+  completed_at: string | null;
+  updated_at: string;
+};
+
 const PROCESS_ITEMS_PER_CLICK = 5;
 const STALE_PROCESSING_MINUTES = 10;
 
 export async function getAiDashboardData() {
-  const [configs, stats, jobs] = await Promise.all([
+  const [configs, stats, jobs, activity] = await Promise.all([
     listProviderConfigs(),
     getTranslationStats(),
     listRecentJobs(),
+    listRecentTranslationActivity(),
   ]);
-  return { configs, stats, jobs };
+  return { configs, stats, jobs, activity };
 }
 
 export async function listProviderConfigs(): Promise<AiProviderConfig[]> {
@@ -263,6 +276,17 @@ export async function listRecentJobs(limit = 8): Promise<AiTranslationJob[]> {
     .limit(limit);
   if (error) throw new Error(`Çeviri işleri okunamadı: ${error.message}`);
   return ((data ?? []) as JobRow[]).map(mapJob);
+}
+
+export async function listRecentTranslationActivity(limit = 20): Promise<AiTranslationActivity[]> {
+  const supabase = requiredServiceClient();
+  const { data, error } = await supabase
+    .from("ai_translation_job_items")
+    .select("id, job_id, game_id, status, attempts, error_message, before_snapshot, started_at, completed_at, updated_at")
+    .order("updated_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(`AI işlem logları okunamadı: ${error.message}`);
+  return ((data ?? []) as ActivityRow[]).map(mapActivity);
 }
 
 async function processTranslationItem(jobId: string, item: JobItemRow, config: AiRuntimeConfig) {
@@ -491,6 +515,25 @@ function mapJob(row: JobRow): AiTranslationJob {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function mapActivity(row: ActivityRow): AiTranslationActivity {
+  return {
+    id: row.id,
+    jobId: row.job_id,
+    gameId: row.game_id,
+    title: typeof row.before_snapshot?.title === "string" ? row.before_snapshot.title : row.game_id,
+    status: isTranslationItemStatus(row.status) ? row.status : "failed",
+    attempts: row.attempts ?? 0,
+    errorMessage: row.error_message,
+    startedAt: row.started_at,
+    completedAt: row.completed_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function isTranslationItemStatus(value: string): value is AiTranslationItemStatus {
+  return ["pending", "processing", "completed", "failed", "skipped"].includes(value);
 }
 
 function candidateSnapshot(candidate: CandidateRow) {

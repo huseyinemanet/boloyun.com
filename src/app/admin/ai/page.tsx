@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { privatePageMetadata } from "@/lib/seo/metadata";
 import { getAiDashboardData } from "@/lib/ai/db-ai";
-import { AI_BATCH_SIZES, AI_PROVIDER_LABELS, DEFAULT_AI_MODELS, type AiProviderConfig, type AiTranslationJob, type AiTranslationStats } from "@/lib/ai/types";
+import { AI_BATCH_SIZES, AI_PROVIDER_LABELS, DEFAULT_AI_MODELS, type AiProviderConfig, type AiTranslationActivity, type AiTranslationJob, type AiTranslationStats } from "@/lib/ai/types";
 import { maskFingerprint } from "@/lib/ai/crypto";
+import { AiDebugConsole } from "./ai-debug-console";
 import {
   createTranslationJobAction,
   pauseTranslationJobAction,
@@ -17,6 +18,7 @@ import {
   saveAiProviderAction,
   testAiProviderAction,
 } from "./actions";
+import { JobActionForm } from "./job-action-form";
 
 export const dynamic = "force-dynamic";
 
@@ -26,11 +28,12 @@ export const metadata: Metadata = {
 };
 
 export default async function AiCenterPage() {
-  const { configs, stats, jobs } = await getAiDashboardData();
+  const { configs, stats, jobs, activity } = await getAiDashboardData();
   const activeConfig = configs.find((config) => config.enabled) ?? configs.find((config) => config.provider === "deepseek") ?? configs[0];
 
   return (
     <div className="space-y-4">
+      <AiDebugConsole jobs={jobs} activity={activity} />
       <AdminPageHeader
         title="AI Merkezi"
         description="Oyun metinlerini kontrollü batch işleriyle Türkçeleştir."
@@ -108,6 +111,8 @@ export default async function AiCenterPage() {
           </table>
         </div>
       </section>
+
+      <ActivityPanel activity={activity} />
     </div>
   );
 }
@@ -190,11 +195,47 @@ function JobRow({ job }: { job: AiTranslationJob }) {
 }
 
 function JobAction({ job, action, label, variant = "default" }: { job: AiTranslationJob; action: (formData: FormData) => Promise<void>; label: string; variant?: "default" | "outline" }) {
+  return <JobActionForm action={action} jobId={job.id} label={label} jobStatus={job.status} variant={variant} />;
+}
+
+function ActivityPanel({ activity }: { activity: AiTranslationActivity[] }) {
   return (
-    <form action={action}>
-      <input type="hidden" name="job_id" value={job.id} />
-      <Button type="submit" size="sm" variant={variant}>{label}</Button>
-    </form>
+    <section className="rounded-md border border-border bg-card p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold">Son AI İşlem Logları</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Bu tablo browser console’daki özetle aynıdır; son item durumlarını gösterir.</p>
+        </div>
+      </div>
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full min-w-[860px] text-left text-sm">
+          <thead className="border-b border-border text-xs text-muted-foreground">
+            <tr>
+              <th className="py-2 pr-3">Zaman</th>
+              <th className="py-2 pr-3">Durum</th>
+              <th className="py-2 pr-3">Oyun</th>
+              <th className="py-2 pr-3">Deneme</th>
+              <th className="py-2 pr-3">Hata</th>
+            </tr>
+          </thead>
+          <tbody>
+            {activity.length ? activity.map((item) => (
+              <tr key={item.id} className="border-b border-border/70 last:border-0">
+                <td className="py-3 pr-3 text-muted-foreground">{formatDate(item.updatedAt)}</td>
+                <td className="py-3 pr-3"><Badge variant={item.status === "completed" ? "default" : item.status === "failed" ? "destructive" : "outline"}>{itemStatusText(item.status)}</Badge></td>
+                <td className="max-w-[320px] truncate py-3 pr-3 font-semibold">{item.title}</td>
+                <td className="py-3 pr-3">{item.attempts}</td>
+                <td className="max-w-[360px] truncate py-3 pr-3 text-muted-foreground">{item.errorMessage ?? "-"}</td>
+              </tr>
+            )) : (
+              <tr>
+                <td colSpan={5} className="py-8 text-center font-semibold text-muted-foreground">Henüz item logu yok.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 
@@ -212,6 +253,17 @@ function jobStatusText(status: AiTranslationJob["status"]) {
     completed: "Tamamlandı",
     failed: "Başarısız",
     cancelled: "İptal",
+  };
+  return labels[status];
+}
+
+function itemStatusText(status: AiTranslationActivity["status"]) {
+  const labels: Record<AiTranslationActivity["status"], string> = {
+    pending: "Bekliyor",
+    processing: "İşleniyor",
+    completed: "Tamamlandı",
+    failed: "Hatalı",
+    skipped: "Atlandı",
   };
   return labels[status];
 }

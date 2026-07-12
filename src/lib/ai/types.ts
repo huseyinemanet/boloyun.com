@@ -81,6 +81,19 @@ export type AiTranslationStats = {
   pending: number;
 };
 
+export type AiTranslationActivity = {
+  id: string;
+  jobId: string;
+  gameId: string;
+  title: string;
+  status: AiTranslationItemStatus;
+  attempts: number;
+  errorMessage: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  updatedAt: string;
+};
+
 export function isAiProvider(value: string): value is AiProvider {
   return (AI_PROVIDERS as readonly string[]).includes(value);
 }
