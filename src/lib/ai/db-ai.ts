@@ -412,7 +412,7 @@ async function upsertPendingStates(candidates: CandidateRow[]) {
 
 async function countRows(table: "games" | "game_translation_state" | "ai_translation_job_items", ...filters: Array<{ column: string; value: string }>) {
   const supabase = requiredServiceClient();
-  let query = supabase.from(table).select("id", { count: "exact", head: true });
+  let query = supabase.from(table).select("*", { count: "exact", head: true });
   for (const filter of filters) query = query.eq(filter.column, filter.value);
   const { count, error } = await query;
   if (error) throw new Error(`Sayaç okunamadı: ${error.message}`);
