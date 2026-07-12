@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import {
+  createAdminUser,
   deleteAdminUsers,
   sendAdminPasswordReset,
   updateAdminUser,
@@ -12,6 +13,54 @@ import {
 } from "@/lib/db-users";
 import type { UserRole, UserStatus } from "@/lib/auth";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import {
+  normalizeAdminUserCreateRole,
+  validateAdminUserCreateValues,
+  type AdminUserCreateValues,
+} from "@/lib/admin-user-create-validation";
+
+export async function createUserAction(formData: FormData) {
+  const currentAdmin = await requireAdmin();
+  const values: AdminUserCreateValues = {
+    username: String(formData.get("username") ?? "").trim(),
+    email: String(formData.get("email") ?? "").trim(),
+    first_name: String(formData.get("first_name") ?? "").trim(),
+    last_name: String(formData.get("last_name") ?? "").trim(),
+    display_name: String(formData.get("display_name") ?? "").trim(),
+    password: String(formData.get("password") ?? ""),
+    role: normalizeAdminUserCreateRole(String(formData.get("role") ?? "member")),
+  };
+  const fieldErrors = validateAdminUserCreateValues(values);
+
+  if (Object.keys(fieldErrors).length) {
+    redirectWithCreateUserError(Object.values(fieldErrors)[0] ?? "Lütfen işaretli alanları kontrol edin.");
+  }
+
+  try {
+    const authUserId = await createAdminUser({
+      email: values.email,
+      password: values.password,
+      username: values.username,
+      firstName: values.first_name,
+      lastName: values.last_name,
+      displayName: values.display_name,
+      role: values.role,
+    });
+
+    await recordAdminAudit({
+      actorProfileId: currentAdmin.id,
+      action: "user.create",
+      targetType: "auth_user",
+      details: { authUserId, role: values.role },
+    });
+
+    revalidatePath("/admin/users");
+  } catch (error) {
+    redirectWithCreateUserError(error instanceof Error ? error.message : "Kullanıcı oluşturulamadı.");
+  }
+
+  redirect("/admin/users");
+}
 
 export async function updateUserAction(formData: FormData) {
   const currentAdmin = await requireAdmin();
@@ -80,4 +129,8 @@ function normalizeRole(value: string): UserRole {
 
 function normalizeStatus(value: string): UserStatus {
   return value === "blocked" ? "blocked" : "active";
+}
+
+function redirectWithCreateUserError(message: string): never {
+  redirect(`/admin/users/new?error=${encodeURIComponent(message)}`);
 }
