@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,8 @@ export function JobActionForm({ action, jobId, label, jobStatus, variant = "defa
 function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: string }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [stepCount, setStepCount] = useState(0);
+  const stopRequested = useRef(false);
 
   return (
     <form
@@ -62,33 +64,70 @@ function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: 
         event.preventDefault();
         if (pending) return;
         console.log("[ai-translation] action.submit", { jobId, label: "İşle", jobStatus, at: new Date().toISOString() });
+        stopRequested.current = false;
         setPending(true);
+        setStepCount(0);
         try {
-          const response = await fetch("/api/admin/ai/process", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ jobId }),
-          });
-          const state = await response.json().catch(() => null) as ProcessTranslationJobState | null;
-          console.groupCollapsed("[ai-translation] process.result");
-          console.log(state ?? { status: "error", message: `HTTP ${response.status}` });
-          if (state?.activity?.length) console.table(state.activity);
-          console.groupEnd();
-          if (!response.ok) throw new Error(state?.message || `HTTP ${response.status}`);
-          router.refresh();
+          let steps = 0;
+          while (!stopRequested.current) {
+            const response = await fetch("/api/admin/ai/process", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ jobId }),
+            });
+            const state = await response.json().catch(() => null) as ProcessTranslationJobState | null;
+            steps += 1;
+            setStepCount(steps);
+            console.groupCollapsed("[ai-translation] process.step.result");
+            console.log(state ?? { status: "error", message: `HTTP ${response.status}` });
+            if (state?.activity?.length) console.table(state.activity);
+            console.groupEnd();
+            if (!response.ok) throw new Error(state?.message || `HTTP ${response.status}`);
+            if (!shouldContinueProcessing(state)) {
+              console.log("[ai-translation] process.loop.done", { jobId, steps, job: state?.job });
+              break;
+            }
+            await sleep(500);
+          }
         } catch (error) {
           console.error("[ai-translation] process.client.failed", { jobId, error: error instanceof Error ? error.message : String(error) });
-          router.refresh();
         } finally {
           setPending(false);
+          stopRequested.current = false;
+          router.refresh();
         }
       }}
     >
-      <Button type="submit" size="sm" disabled={pending}>
-        {pending ? "İşleniyor..." : "İşle"}
-      </Button>
+      {pending ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            stopRequested.current = true;
+            console.log("[ai-translation] process.loop.stop_requested", { jobId, stepCount, at: new Date().toISOString() });
+          }}
+        >
+          {stepCount ? `Durdur (${stepCount})` : "Durdur"}
+        </Button>
+      ) : (
+        <Button type="submit" size="sm">
+          İşle
+        </Button>
+      )}
     </form>
   );
+}
+
+function shouldContinueProcessing(state: ProcessTranslationJobState | null) {
+  const job = state?.job;
+  if (!job) return false;
+  if (job.status === "paused" || job.status === "cancelled" || job.status === "completed" || job.status === "failed") return false;
+  return job.completed + job.failed < job.total;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function SubmitButton({ label, variant }: { label: string; variant: "default" | "outline" }) {
