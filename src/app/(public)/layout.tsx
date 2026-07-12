@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { Footer } from "@/components/layout/footer";
 import { Sidebar } from "@/components/layout/sidebar";
 import Link from "next/link";
 import { getPublicSettings } from "@/lib/db-settings";
@@ -16,7 +15,6 @@ export default async function PublicLayout({ children }: { children: ReactNode }
         <Sidebar />
         <main id="main-content" tabIndex={-1} className="min-w-0 scroll-mt-4">{children}</main>
       </div>
-      <Footer />
     </>
   );
 }
