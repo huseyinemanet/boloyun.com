@@ -60,12 +60,18 @@ const activityColumnWidths: Record<string, string> = {
   errorMessage: "w-[360px]",
 };
 
+const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
+  dateStyle: "short",
+  timeStyle: "short",
+  timeZone: "Europe/Istanbul",
+});
+
 export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivity }: RealtimeActivityPanelProps) {
   const [payload, setPayload] = useState<ActivityPayload>({
     stats: initialStats,
     jobs: initialJobs,
     activity: initialActivity,
-    serverTime: new Date().toISOString(),
+    serverTime: initialActivity[0]?.updatedAt ?? initialJobs[0]?.updatedAt ?? "1970-01-01T00:00:00.000Z",
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
@@ -379,5 +385,5 @@ function jobStatusText(status: AiTranslationJob["status"]) {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("tr-TR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+  return dateFormatter.format(new Date(value));
 }

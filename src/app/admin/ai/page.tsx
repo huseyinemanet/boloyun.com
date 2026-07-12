@@ -13,8 +13,6 @@ import { AiDebugConsole } from "./ai-debug-console";
 import { AiJobsTable } from "./ai-jobs-table";
 import {
   createTranslationJobAction,
-  pauseTranslationJobAction,
-  resumeTranslationJobAction,
   saveAiProviderAction,
   testAiProviderAction,
 } from "./actions";
@@ -90,7 +88,7 @@ export default async function AiCenterPage() {
             <p className="mt-1 text-sm text-muted-foreground">Batch işleri tek tek işlenir; yarıda kalan işi buradan devam ettirebilirsin.</p>
           </div>
         </div>
-        <AiJobsTable jobs={jobs} pauseAction={pauseTranslationJobAction} resumeAction={resumeTranslationJobAction} />
+        <AiJobsTable jobs={jobs} />
       </section>
 
       <RealtimeActivityPanel initialStats={stats} initialJobs={jobs} initialActivity={activity} />
@@ -163,5 +161,5 @@ function testStatusText(config: AiProviderConfig) {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("tr-TR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+  return new Intl.DateTimeFormat("tr-TR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Istanbul" }).format(new Date(value));
 }

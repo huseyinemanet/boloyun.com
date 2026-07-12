@@ -26,13 +26,18 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AI_PROVIDER_LABELS, type AiTranslationJob } from "@/lib/ai/types";
+import { pauseTranslationJobAction, resumeTranslationJobAction } from "./actions";
 import { JobActionForm } from "./job-action-form";
 
 type AiJobsTableProps = {
   jobs: AiTranslationJob[];
-  pauseAction: (formData: FormData) => Promise<void>;
-  resumeAction: (formData: FormData) => Promise<void>;
 };
+
+const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
+  dateStyle: "short",
+  timeStyle: "short",
+  timeZone: "Europe/Istanbul",
+});
 
 const columnLabels: Record<string, string> = {
   status: "Durum",
@@ -50,7 +55,7 @@ const columnWidths: Record<string, string> = {
   actions: "w-44 text-right",
 };
 
-export function AiJobsTable({ jobs, pauseAction, resumeAction }: AiJobsTableProps) {
+export function AiJobsTable({ jobs }: AiJobsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -105,16 +110,16 @@ export function AiJobsTable({ jobs, pauseAction, resumeAction }: AiJobsTableProp
         const job = row.original;
         return (
           <div className="flex justify-end gap-2">
-            {job.status === "paused" ? <JobActionForm action={resumeAction} jobId={job.id} label="Devam" jobStatus={job.status} /> : null}
+            {job.status === "paused" ? <JobActionForm action={resumeTranslationJobAction} jobId={job.id} label="Devam" jobStatus={job.status} /> : null}
             {job.status === "queued" || job.status === "running" ? <JobActionForm jobId={job.id} label="İşle" jobStatus={job.status} /> : null}
             {job.status === "queued" || job.status === "running" ? (
-              <JobActionForm action={pauseAction} jobId={job.id} label="Duraklat" jobStatus={job.status} variant="outline" />
+              <JobActionForm action={pauseTranslationJobAction} jobId={job.id} label="Duraklat" jobStatus={job.status} variant="outline" />
             ) : null}
           </div>
         );
       },
     },
-  ], [pauseAction, resumeAction]);
+  ], []);
 
   // TanStack Table exposes mutable functions that React Compiler intentionally does not memoize.
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -261,5 +266,5 @@ function jobStatusText(status: AiTranslationJob["status"]) {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("tr-TR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+  return dateFormatter.format(new Date(value));
 }
