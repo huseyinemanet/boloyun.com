@@ -70,13 +70,42 @@ function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: 
         setStepCount(0);
         try {
           let steps = 0;
+          let transientFailures = 0;
           while (!stopRequested.current) {
-            const response = await fetch("/api/admin/ai/process", {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ jobId }),
-            });
+            let response: Response;
+            try {
+              response = await fetch("/api/admin/ai/process", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ jobId }),
+              });
+            } catch (error) {
+              transientFailures += 1;
+              const retryDelay = transientRetryDelay(transientFailures);
+              console.warn("[ai-translation] process.transient_fetch_failed", {
+                jobId,
+                transientFailures,
+                retryDelay,
+                error: error instanceof Error ? error.message : String(error),
+              });
+              await sleep(retryDelay);
+              continue;
+            }
             const state = await response.json().catch(() => null) as ProcessTranslationJobState | null;
+            if (!response.ok && isTransientStatus(response.status)) {
+              transientFailures += 1;
+              const retryDelay = transientRetryDelay(transientFailures);
+              console.warn("[ai-translation] process.transient_http_failed", {
+                jobId,
+                status: response.status,
+                transientFailures,
+                retryDelay,
+                state,
+              });
+              await sleep(retryDelay);
+              continue;
+            }
+            transientFailures = 0;
             steps += 1;
             setStepCount(steps);
             console.groupCollapsed("[ai-translation] process.step.result");
@@ -141,6 +170,14 @@ function shouldContinueProcessing(state: ProcessTranslationJobState | null) {
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTransientStatus(status: number) {
+  return status === 408 || status === 429 || status === 502 || status === 503 || status === 504;
+}
+
+function transientRetryDelay(failures: number) {
+  return Math.min(30_000, 2_000 * 2 ** Math.min(failures - 1, 4));
 }
 
 function SubmitButton({ label, variant }: { label: string; variant: "default" | "outline" }) {
