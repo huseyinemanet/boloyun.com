@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
-import { listRecentTranslationActivity, processTranslationJob } from "@/lib/ai/db-ai";
+import { processTranslationJob } from "@/lib/ai/db-ai";
 
 export async function POST(request: Request) {
   await requireAdmin();
@@ -12,23 +11,6 @@ export async function POST(request: Request) {
   try {
     console.log("[ai-translation] api.process.start", { jobId });
     const job = await processTranslationJob(jobId, { limit: 1 });
-    let activity: Awaited<ReturnType<typeof listRecentTranslationActivity>> = [];
-    try {
-      activity = await listRecentTranslationActivity(12, jobId);
-    } catch (activityError) {
-      console.error("[ai-translation] api.process.activity_failed", {
-        jobId,
-        error: activityError instanceof Error ? activityError.message : String(activityError),
-      });
-    }
-    try {
-      revalidatePath("/admin/ai");
-    } catch (revalidateError) {
-      console.error("[ai-translation] api.process.revalidate_failed", {
-        jobId,
-        error: revalidateError instanceof Error ? revalidateError.message : String(revalidateError),
-      });
-    }
     const payload = {
       status: "success",
       message: `Adım tamamlandı: ${job.completedCount}/${job.totalCount}, hata ${job.failedCount}.`,
@@ -43,27 +25,12 @@ export async function POST(request: Request) {
         total: job.totalCount,
         updatedAt: job.updatedAt,
       },
-      activity: activity.map((item) => ({
-        title: item.title,
-        status: item.status,
-        attempts: item.attempts,
-        error: item.errorMessage,
-        updatedAt: item.updatedAt,
-      })),
     };
     console.log("[ai-translation] api.process.done", payload);
     return NextResponse.json(payload);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[ai-translation] api.process.failed", { jobId, error: message });
-    try {
-      revalidatePath("/admin/ai");
-    } catch (revalidateError) {
-      console.error("[ai-translation] api.process.failed_revalidate_failed", {
-        jobId,
-        error: revalidateError instanceof Error ? revalidateError.message : String(revalidateError),
-      });
-    }
     return NextResponse.json({ status: "error", message, jobId }, { status: 500 });
   }
 }

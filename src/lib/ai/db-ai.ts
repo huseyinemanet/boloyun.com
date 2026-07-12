@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import { revalidatePath, revalidateTag } from "next/cache";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 import { decryptApiKey, encryptApiKey, apiKeyFingerprint } from "./crypto";
 import { testAiProvider, translateGameContent } from "./providers";
@@ -89,6 +88,8 @@ type ActivityRow = JobItemRow & {
 
 const PROCESS_ITEMS_PER_CLICK = 5;
 const STALE_PROCESSING_MINUTES = 1;
+const DEFAULT_ACTIVITY_LIMIT = 50;
+const MAX_ACTIVITY_LIMIT = 100;
 
 export async function getAiDashboardData() {
   const [configs, stats, jobs] = await Promise.all([
@@ -97,7 +98,7 @@ export async function getAiDashboardData() {
     listRecentJobs(),
   ]);
   const activeJob = jobs.find((job) => job.status === "running") ?? jobs.find((job) => job.status === "queued") ?? jobs[0];
-  const activityLimit = Math.min(Math.max(activeJob?.totalCount ?? 20, 20), 500);
+  const activityLimit = Math.min(Math.max(activeJob?.totalCount ?? DEFAULT_ACTIVITY_LIMIT, DEFAULT_ACTIVITY_LIMIT), MAX_ACTIVITY_LIMIT);
   const [activity, activityTotal] = await Promise.all([
     listRecentTranslationActivity(activityLimit, activeJob?.id),
     countTranslationActivity(activeJob?.id),
@@ -244,15 +245,11 @@ export async function processTranslationJob(jobId: string, options: { limit?: nu
     const result = await processTranslationItem(jobId, item, config);
     if (result === "failed") failed += 1;
     else processed += 1;
-    await refreshJobCounts(jobId);
     await sleep(250);
   }
 
-  await refreshJobCounts(jobId);
   logAi("job.process.done", { jobId, processed: items.length });
-  revalidateTag("games", "max");
-  revalidatePath("/");
-  return Object.assign(await summarizeJob(jobId), { processed, failedStep: failed });
+  return Object.assign(await refreshJobCounts(jobId), { processed, failedStep: failed });
 }
 
 export async function pauseTranslationJob(jobId: string) {
@@ -318,13 +315,14 @@ export async function listRecentJobs(limit = 8): Promise<AiTranslationJob[]> {
   return ((data ?? []) as JobRow[]).map(mapJob);
 }
 
-export async function listRecentTranslationActivity(limit = 20, jobId?: string): Promise<AiTranslationActivity[]> {
+export async function listRecentTranslationActivity(limit = DEFAULT_ACTIVITY_LIMIT, jobId?: string): Promise<AiTranslationActivity[]> {
   const supabase = requiredServiceClient();
+  const safeLimit = Math.max(1, Math.min(limit, MAX_ACTIVITY_LIMIT));
   let query = supabase
     .from("ai_translation_job_items")
     .select("id, job_id, game_id, status, attempts, error_message, before_snapshot, started_at, completed_at, updated_at, games(title, slug, thumbnail_url)")
     .order("updated_at", { ascending: false })
-    .limit(limit);
+    .limit(safeLimit);
   if (jobId) query = query.eq("job_id", jobId);
   const { data, error } = await query;
   if (error) throw new Error(`AI işlem logları okunamadı: ${error.message}`);
@@ -499,6 +497,14 @@ async function refreshJobCounts(jobId: string) {
   }).eq("id", jobId);
   if (error) throw new Error(`Çeviri işi sayaçları güncellenemedi: ${error.message}`);
   logAi("job.counts.refreshed", { jobId, completed, failed, pending, processing, status });
+  return {
+    ...job,
+    completedCount: completed,
+    failedCount: failed,
+    status,
+    completedAt: status === "completed" ? new Date().toISOString() : null,
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 async function summarizeJob(jobId: string) {

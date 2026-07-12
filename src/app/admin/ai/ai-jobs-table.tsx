@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -56,6 +56,7 @@ const columnWidths: Record<string, string> = {
 };
 
 export function AiJobsTable({ jobs }: AiJobsTableProps) {
+  const [liveJobs, setLiveJobs] = useState(jobs);
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -121,10 +122,43 @@ export function AiJobsTable({ jobs }: AiJobsTableProps) {
     },
   ], []);
 
+  useEffect(() => {
+    setLiveJobs(jobs);
+  }, [jobs]);
+
+  useEffect(() => {
+    function handleJobsUpdate(event: Event) {
+      const detail = (event as CustomEvent<{ jobs?: AiTranslationJob[] }>).detail;
+      if (Array.isArray(detail?.jobs)) setLiveJobs(detail.jobs);
+    }
+    function handleJobPatch(event: Event) {
+      const detail = (event as CustomEvent<Partial<AiTranslationJob> & { jobId?: string }>).detail;
+      if (!detail?.jobId) return;
+      setLiveJobs((current) => current.map((job) => (
+        job.id === detail.jobId
+          ? {
+              ...job,
+              status: detail.status ?? job.status,
+              completedCount: detail.completedCount ?? job.completedCount,
+              failedCount: detail.failedCount ?? job.failedCount,
+              totalCount: detail.totalCount ?? job.totalCount,
+              updatedAt: detail.updatedAt ?? job.updatedAt,
+            }
+          : job
+      )));
+    }
+    window.addEventListener("ai-translation:jobs", handleJobsUpdate);
+    window.addEventListener("ai-translation:jobs:patch", handleJobPatch);
+    return () => {
+      window.removeEventListener("ai-translation:jobs", handleJobsUpdate);
+      window.removeEventListener("ai-translation:jobs:patch", handleJobPatch);
+    };
+  }, []);
+
   // TanStack Table exposes mutable functions that React Compiler intentionally does not memoize.
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
-    data: jobs,
+    data: liveJobs,
     columns,
     getRowId: (row) => row.id,
     state: { sorting, columnFilters, columnVisibility, globalFilter },
@@ -229,7 +263,7 @@ export function AiJobsTable({ jobs }: AiJobsTableProps) {
             )) : (
               <TableRow>
                 <TableCell colSpan={table.getVisibleLeafColumns().length} className="h-28 text-center font-semibold text-muted-foreground">
-                  {jobs.length === 0 ? "Henüz çeviri işi yok." : "Filtrelerle eşleşen iş bulunamadı."}
+                  {liveJobs.length === 0 ? "Henüz çeviri işi yok." : "Filtrelerle eşleşen iş bulunamadı."}
                 </TableCell>
               </TableRow>
             )}

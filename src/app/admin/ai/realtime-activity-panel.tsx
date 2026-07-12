@@ -30,10 +30,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { AiTranslationActivity, AiTranslationJob, AiTranslationStats } from "@/lib/ai/types";
 
 type ActivityPayload = {
-  stats: AiTranslationStats;
+  stats?: AiTranslationStats;
   jobs: AiTranslationJob[];
   activity: AiTranslationActivity[];
   activityTotal: number;
+  activityLimit?: number;
   serverTime: string;
   error?: string;
 };
@@ -175,6 +176,38 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
   }, []);
 
   useEffect(() => {
+    function handleJobPatch(event: Event) {
+      const detail = (event as CustomEvent<{
+        jobId?: string;
+        status?: AiTranslationJob["status"];
+        completedCount?: number;
+        failedCount?: number;
+        totalCount?: number;
+        updatedAt?: string;
+      }>).detail;
+      if (!detail?.jobId) return;
+      setPayload((current) => ({
+        ...current,
+        jobs: current.jobs.map((job) => (
+          job.id === detail.jobId
+            ? {
+                ...job,
+                status: detail.status ?? job.status,
+                completedCount: detail.completedCount ?? job.completedCount,
+                failedCount: detail.failedCount ?? job.failedCount,
+                totalCount: detail.totalCount ?? job.totalCount,
+                updatedAt: detail.updatedAt ?? job.updatedAt,
+              }
+            : job
+        )),
+        serverTime: detail.updatedAt ?? current.serverTime,
+      }));
+    }
+    window.addEventListener("ai-translation:jobs:patch", handleJobPatch);
+    return () => window.removeEventListener("ai-translation:jobs:patch", handleJobPatch);
+  }, []);
+
+  useEffect(() => {
     let disposed = false;
     let timeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -183,17 +216,18 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
       const controller = new AbortController();
       const abortTimeout = setTimeout(() => controller.abort(), 8000);
       try {
-        const response = await fetch("/api/admin/ai/activity", { cache: "no-store", signal: controller.signal });
+        const response = await fetch("/api/admin/ai/activity?limit=50", { cache: "no-store", signal: controller.signal });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const next = await response.json() as ActivityPayload;
         if (next.error) throw new Error(next.error);
-        if (!Array.isArray(next.jobs) || !Array.isArray(next.activity) || !next.stats || typeof next.activityTotal !== "number") {
+        if (!Array.isArray(next.jobs) || !Array.isArray(next.activity) || typeof next.activityTotal !== "number") {
           throw new Error("Aktivite yanıtı eksik döndü.");
         }
         if (disposed) return;
         logTransitions(previousStatuses.current, next.activity);
         previousStatuses.current = new Map(next.activity.map((item) => [item.id, item.status]));
-        setPayload(next);
+        window.dispatchEvent(new CustomEvent("ai-translation:jobs", { detail: { jobs: next.jobs } }));
+        setPayload((current) => ({ ...next, stats: next.stats ?? current.stats }));
         consecutiveErrors.current = 0;
         setLastError(null);
       } catch (error) {
@@ -225,28 +259,16 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
     <section className="rounded-md border border-border bg-card p-4">
       <style>{`
         @keyframes ai-row-shimmer {
-          0% { transform: translateX(-120%); opacity: 0; }
-          20% { opacity: 1; }
-          100% { transform: translateX(160%); opacity: 0; }
+          0% { background-position: 0 0, -65% 0; }
+          100% { background-position: 0 0, 165% 0; }
         }
         .ai-processing-row {
-          position: relative;
-          overflow: hidden;
-          background: color-mix(in srgb, var(--primary) 10%, transparent);
-        }
-        .ai-processing-shimmer {
-          content: "";
-          position: absolute;
-          inset: 0;
-          width: 55%;
-          background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--primary) 30%, white 30%), transparent);
+          background-image:
+            linear-gradient(color-mix(in srgb, var(--primary) 10%, transparent), color-mix(in srgb, var(--primary) 10%, transparent)),
+            linear-gradient(90deg, transparent, color-mix(in srgb, var(--primary) 30%, white 30%), transparent);
+          background-repeat: no-repeat;
+          background-size: 100% 100%, 45% 100%;
           animation: ai-row-shimmer 1.35s ease-in-out infinite;
-          pointer-events: none;
-          z-index: 0;
-        }
-        .ai-processing-cell-content {
-          position: relative;
-          z-index: 1;
         }
       `}</style>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -342,11 +364,8 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
               {activityTable.getRowModel().rows.length ? activityTable.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} className={row.original.isActuallyProcessing ? "ai-processing-row" : ""}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="relative whitespace-normal overflow-hidden">
-                      {row.original.isActuallyProcessing && cell.column.id === "title" ? <span className="ai-processing-shimmer" /> : null}
-                      <div className="ai-processing-cell-content">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </div>
+                    <TableCell key={cell.id} className="whitespace-normal">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>

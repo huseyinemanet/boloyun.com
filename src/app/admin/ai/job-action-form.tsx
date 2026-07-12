@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 
@@ -56,7 +55,6 @@ export function JobActionForm({ action, jobId, label, jobStatus, variant = "defa
 }
 
 function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: string }) {
-  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [stepCount, setStepCount] = useState(0);
   const stopRequested = useRef(false);
@@ -86,6 +84,18 @@ function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: 
             if (state?.activity?.length) console.table(state.activity);
             console.groupEnd();
             if (!response.ok) throw new Error(state?.message || `HTTP ${response.status}`);
+            if (state?.job) {
+              window.dispatchEvent(new CustomEvent("ai-translation:jobs:patch", {
+                detail: {
+                  jobId,
+                  status: state.job.status,
+                  completedCount: state.job.completed,
+                  failedCount: state.job.failed,
+                  totalCount: state.job.total,
+                  updatedAt: state.job.updatedAt,
+                },
+              }));
+            }
             if (!shouldContinueProcessing(state)) {
               console.log("[ai-translation] process.loop.done", { jobId, steps, job: state?.job });
               break;
@@ -97,7 +107,6 @@ function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: 
         } finally {
           setPending(false);
           stopRequested.current = false;
-          router.refresh();
         }
       }}
     >
