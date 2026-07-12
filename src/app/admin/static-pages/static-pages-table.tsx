@@ -149,8 +149,6 @@ export function StaticPagesTable({ pages }: { pages: StaticPageListItem[] }) {
                 <TableCell className="whitespace-nowrap px-3 py-2 text-muted-foreground"><time dateTime={page.updated_at ?? undefined} title={formatFullDate(page.updated_at)}>{formatRelativeDate(page.updated_at)}</time></TableCell>
                 <TableCell className="px-3 py-2 text-right">
                   <div className="inline-flex items-center gap-1 text-xs font-semibold">
-                    <Link href={`/admin/static-pages/${page.id}/edit`} className="text-primary hover:underline">Düzenle</Link>
-                    <span className="text-muted-foreground">|</span>
                     <Link href={`/sayfa/${page.slug}`} target="_blank" className="text-primary hover:underline">Görüntüle</Link>
                     <span className="text-muted-foreground">|</span>
                     <AlertDialog>
