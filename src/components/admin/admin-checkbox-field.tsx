@@ -23,7 +23,10 @@ function AdminCheckboxField({
   const checkboxId = id ?? generatedId;
 
   return (
-    <Field orientation="horizontal" className={cn("cursor-pointer", fieldClassName)}>
+    <Field
+      orientation="horizontal"
+      className={cn("cursor-pointer rounded-none border-0 bg-transparent p-0 shadow-none", fieldClassName)}
+    >
       <Checkbox id={checkboxId} className={cn("mt-0.5", className)} {...props} />
       <FieldContent>
         <FieldLabel htmlFor={checkboxId}>{label}</FieldLabel>
