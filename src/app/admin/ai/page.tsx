@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { AlertTriangleIcon } from "lucide-react";
-import { IconArtificialIntelligenceFillDuo18, IconBrainSparkleFillDuo18, IconCircleCheckFillDuo18 } from "nucleo-ui-fill-duo-18";
+import { IconArtificialIntelligenceFillDuo18, IconBrainSparkleFillDuo18, IconCircleCheckFillDuo18, IconTriangleWarningFillDuo18 } from "nucleo-ui-fill-duo-18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { privatePageMetadata } from "@/lib/seo/metadata";
 import { getAiDashboardData } from "@/lib/ai/db-ai";
 import { AI_BATCH_SIZES, AI_PROVIDER_LABELS, DEFAULT_AI_MODELS, type AiProviderConfig, type AiTranslationStats } from "@/lib/ai/types";
@@ -52,27 +53,37 @@ export default async function AiCenterPage() {
           </Badge>
         </div>
 
-        <form action={createTranslationJobAction} className="mt-4 grid gap-3 rounded-md border border-border bg-background/40 p-3 md:grid-cols-[1fr_140px_auto_auto]">
+        <form action={createTranslationJobAction} className="mt-4 grid items-end gap-3 md:grid-cols-[1fr_140px_auto_auto]">
           <label className="grid gap-1 text-sm font-bold">
             Provider
-            <select name="provider" defaultValue={activeConfig?.provider ?? "deepseek"} className="h-10 rounded-lg border border-input bg-background px-3 text-sm">
-              {configs.map((config) => (
-                <option key={config.provider} value={config.provider}>{AI_PROVIDER_LABELS[config.provider]}</option>
-              ))}
-            </select>
+            <Select name="provider" defaultValue={activeConfig?.provider ?? "deepseek"}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Provider seç" />
+              </SelectTrigger>
+              <SelectContent>
+                {configs.map((config) => (
+                  <SelectItem key={config.provider} value={config.provider}>{AI_PROVIDER_LABELS[config.provider]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
           <label className="grid gap-1 text-sm font-bold">
             Batch
-            <select name="batch_size" defaultValue="25" className="h-10 rounded-lg border border-input bg-background px-3 text-sm">
-              {AI_BATCH_SIZES.map((size) => <option key={size} value={size}>{size} oyun</option>)}
-            </select>
+            <Select name="batch_size" defaultValue="25">
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Batch seç" />
+              </SelectTrigger>
+              <SelectContent>
+                {AI_BATCH_SIZES.map((size) => <SelectItem key={size} value={String(size)}>{size} oyun</SelectItem>)}
+              </SelectContent>
+            </Select>
           </label>
-          <label className="flex items-end gap-2 pb-2 text-sm font-semibold text-muted-foreground">
-            <input type="checkbox" name="retry_failed_only" className="size-4 accent-primary" />
+          <label className="flex h-10 items-center gap-2 text-sm font-semibold text-muted-foreground">
+            <Checkbox name="retry_failed_only" />
             Sadece hatalılar
           </label>
-          <div className="flex items-end">
-            <Button type="submit" className="w-full">Yeni Batch Başlat</Button>
+          <div>
+            <Button type="submit" variant="outline" className="w-full">Yeni Batch Başlat</Button>
           </div>
         </form>
       </section>
@@ -101,7 +112,7 @@ function StatsGrid({ stats }: { stats: AiTranslationStats }) {
     { label: "Yayınlı oyun", value: stats.totalPublished, icon: IconArtificialIntelligenceFillDuo18 },
     { label: "Türkçeleştirilen", value: stats.completed, icon: IconCircleCheckFillDuo18 },
     { label: "Bekleyen", value: stats.pending, icon: IconBrainSparkleFillDuo18 },
-    { label: "Hatalı", value: stats.failed, icon: AlertTriangleIcon },
+    { label: "Hatalı", value: stats.failed, icon: IconTriangleWarningFillDuo18 },
   ];
   return (
     <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -142,12 +153,12 @@ function ProviderConfigCard({ config }: { config: AiProviderConfig }) {
           <Input name="api_key" type="password" placeholder={config.hasApiKey ? "Mevcut key korunur" : "API key gir"} autoComplete="off" />
         </label>
         <label className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-          <input type="checkbox" name="enabled" defaultChecked={config.enabled} className="size-4 accent-primary" />
+          <Checkbox name="enabled" defaultChecked={config.enabled} />
           Bu provider aktif olsun
         </label>
-        <div className="flex gap-2">
-          <Button type="submit" className="flex-1">Kaydet</Button>
-          <Button formAction={testAiProviderAction} variant="outline" type="submit">Test Et</Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button type="submit" variant="outline" className="w-full">Kaydet</Button>
+          <Button formAction={testAiProviderAction} variant="outline" type="submit" className="w-full">Test Et</Button>
         </div>
       </form>
     </section>

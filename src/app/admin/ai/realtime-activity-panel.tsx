@@ -169,6 +169,7 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
   });
   const statusFilter = String(activityTable.getColumn("status")?.getFilterValue() ?? "all");
   const filteredCount = activityTable.getFilteredRowModel().rows.length;
+  const pageCount = activityTable.getPageCount();
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 30000);
@@ -384,13 +385,15 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
           <p className="text-sm font-semibold text-muted-foreground">
             {filteredCount.toLocaleString("tr-TR")} / {payload.activityTotal.toLocaleString("tr-TR")} kayıt
           </p>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">
-              Sayfa {activityTable.getState().pagination.pageIndex + 1} / {Math.max(activityTable.getPageCount(), 1)}
-            </span>
-            <Button variant="outline" size="sm" onClick={() => activityTable.previousPage()} disabled={!activityTable.getCanPreviousPage()}>Önceki</Button>
-            <Button variant="outline" size="sm" onClick={() => activityTable.nextPage()} disabled={!activityTable.getCanNextPage()}>Sonraki</Button>
-          </div>
+          {pageCount > 1 ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">
+                Sayfa {activityTable.getState().pagination.pageIndex + 1} / {pageCount}
+              </span>
+              <Button variant="outline" size="sm" onClick={() => activityTable.previousPage()} disabled={!activityTable.getCanPreviousPage()}>Önceki</Button>
+              <Button variant="outline" size="sm" onClick={() => activityTable.nextPage()} disabled={!activityTable.getCanNextPage()}>Sonraki</Button>
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

@@ -152,7 +152,7 @@ function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: 
           {stepCount ? `Durdur (${stepCount})` : "Durdur"}
         </Button>
       ) : (
-        <Button type="submit" size="sm">
+        <Button type="submit" size="sm" variant="outline">
           İşle
         </Button>
       )}
@@ -183,7 +183,7 @@ function transientRetryDelay(failures: number) {
 function SubmitButton({ label, variant }: { label: string; variant: "default" | "outline" }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" size="sm" variant={variant} disabled={pending}>
+    <Button type="submit" size="sm" variant={variant === "default" ? "outline" : variant} disabled={pending}>
       {pending ? "İşleniyor..." : label}
     </Button>
   );

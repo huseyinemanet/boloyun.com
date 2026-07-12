@@ -57,6 +57,7 @@ const columnWidths: Record<string, string> = {
 
 export function AiJobsTable({ jobs }: AiJobsTableProps) {
   const [liveJobs, setLiveJobs] = useState(jobs);
+  const [now, setNow] = useState(() => Date.now());
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -100,7 +101,11 @@ export function AiJobsTable({ jobs }: AiJobsTableProps) {
     {
       accessorKey: "createdAt",
       header: "Oluşturma",
-      cell: ({ row }) => <span className="text-muted-foreground">{formatDate(row.original.createdAt)}</span>,
+      cell: ({ row }) => (
+        <time className="text-muted-foreground" dateTime={row.original.createdAt} title={formatDate(row.original.createdAt)}>
+          {relativeTime(row.original.createdAt, now)}
+        </time>
+      ),
     },
     {
       id: "actions",
@@ -120,7 +125,12 @@ export function AiJobsTable({ jobs }: AiJobsTableProps) {
         );
       },
     },
-  ], []);
+  ], [now]);
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     setLiveJobs(jobs);
@@ -188,6 +198,7 @@ export function AiJobsTable({ jobs }: AiJobsTableProps) {
 
   const statusFilter = String(table.getColumn("status")?.getFilterValue() ?? "all");
   const filteredCount = table.getFilteredRowModel().rows.length;
+  const pageCount = table.getPageCount();
 
   return (
     <div className="mt-4 space-y-3">
@@ -275,13 +286,15 @@ export function AiJobsTable({ jobs }: AiJobsTableProps) {
         <p className="text-sm font-semibold text-muted-foreground">
           {filteredCount.toLocaleString("tr-TR")} kayıt
         </p>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">
-            Sayfa {table.getState().pagination.pageIndex + 1} / {Math.max(table.getPageCount(), 1)}
-          </span>
-          <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>Önceki</Button>
-          <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>Sonraki</Button>
-        </div>
+        {pageCount > 1 ? (
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">
+              Sayfa {table.getState().pagination.pageIndex + 1} / {pageCount}
+            </span>
+            <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>Önceki</Button>
+            <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>Sonraki</Button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -301,4 +314,16 @@ function jobStatusText(status: AiTranslationJob["status"]) {
 
 function formatDate(value: string) {
   return dateFormatter.format(new Date(value));
+}
+
+function relativeTime(value: string, now: number) {
+  const diffSeconds = Math.max(0, Math.floor((now - new Date(value).getTime()) / 1000));
+  if (diffSeconds < 10) return "az önce";
+  if (diffSeconds < 60) return `${diffSeconds} sn önce`;
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  if (diffMinutes < 60) return `${diffMinutes} dk önce`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours} sa önce`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} gün önce`;
 }
