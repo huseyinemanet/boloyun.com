@@ -89,11 +89,9 @@ export function StaticPagesTable({ pages }: { pages: StaticPageListItem[] }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-1 text-sm font-semibold">
+        <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
           <FilterLink active={status === "all"} onClick={() => setStatus("all")}>Tümü ({counts.all})</FilterLink>
-          <span className="text-muted-foreground">|</span>
           <FilterLink active={status === "published"} onClick={() => setStatus("published")}>Yayında ({counts.published})</FilterLink>
-          <span className="text-muted-foreground">|</span>
           <FilterLink active={status === "draft"} onClick={() => setStatus("draft")}>Taslak ({counts.draft})</FilterLink>
         </div>
         <div className="flex w-full items-center gap-2 sm:w-auto">
