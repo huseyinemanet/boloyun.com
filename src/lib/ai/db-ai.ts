@@ -103,8 +103,8 @@ export async function saveProviderConfig(input: { provider: AiProvider; model: s
   const model = input.model.trim() || DEFAULT_AI_MODELS[input.provider];
   const apiKey = input.apiKey?.trim() ?? "";
   if (input.enabled && !apiKey && !existing?.encrypted_api_key) throw new Error("Provider aktif edilecekse API key gerekli.");
-  const encrypted = apiKey ? encryptApiKey(apiKey) : existing?.encrypted_api_key ?? null;
-  const fingerprint = apiKey ? apiKeyFingerprint(apiKey) : existing?.key_fingerprint ?? null;
+  const encrypted = apiKey ? await encryptApiKey(apiKey) : existing?.encrypted_api_key ?? null;
+  const fingerprint = apiKey ? await apiKeyFingerprint(apiKey) : existing?.key_fingerprint ?? null;
   const { error } = await supabase
     .from("ai_provider_configs")
     .upsert({
@@ -349,7 +349,7 @@ async function getRuntimeConfig(provider: AiProvider, options: { requireEnabled:
   return {
     provider,
     model: row.model || DEFAULT_AI_MODELS[provider],
-    apiKey: decryptApiKey(row.encrypted_api_key),
+    apiKey: await decryptApiKey(row.encrypted_api_key),
   };
 }
 
