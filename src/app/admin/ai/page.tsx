@@ -13,7 +13,6 @@ import { AiDebugConsole } from "./ai-debug-console";
 import {
   createTranslationJobAction,
   pauseTranslationJobAction,
-  processTranslationJobAction,
   resumeTranslationJobAction,
   saveAiProviderAction,
   testAiProviderAction,
@@ -186,7 +185,7 @@ function JobRow({ job }: { job: AiTranslationJob }) {
       <td className="py-3 pr-3">
         <div className="flex justify-end gap-2">
           {job.status === "paused" ? <JobAction job={job} action={resumeTranslationJobAction} label="Devam" /> : null}
-          {job.status === "queued" || job.status === "running" ? <JobAction job={job} action={processTranslationJobAction} label="İşle" /> : null}
+          {job.status === "queued" || job.status === "running" ? <JobAction job={job} label="İşle" /> : null}
           {job.status === "queued" || job.status === "running" ? <JobAction job={job} action={pauseTranslationJobAction} label="Duraklat" variant="outline" /> : null}
         </div>
       </td>
@@ -194,7 +193,7 @@ function JobRow({ job }: { job: AiTranslationJob }) {
   );
 }
 
-function JobAction({ job, action, label, variant = "default" }: { job: AiTranslationJob; action: (formData: FormData) => Promise<void>; label: string; variant?: "default" | "outline" }) {
+function JobAction({ job, action, label, variant = "default" }: { job: AiTranslationJob; action?: (formData: FormData) => Promise<void>; label: string; variant?: "default" | "outline" }) {
   return <JobActionForm action={action} jobId={job.id} label={label} jobStatus={job.status} variant={variant} />;
 }
 
