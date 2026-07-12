@@ -241,6 +241,28 @@ export async function pauseTranslationJob(jobId: string) {
   const supabase = requiredServiceClient();
   const { error } = await supabase.from("ai_translation_jobs").update({ status: "paused", updated_at: new Date().toISOString() }).eq("id", jobId).in("status", ["queued", "running"]);
   if (error) throw new Error(`Çeviri işi duraklatılamadı: ${error.message}`);
+  const { data: processingItems, error: processingReadError } = await supabase
+    .from("ai_translation_job_items")
+    .select("game_id")
+    .eq("job_id", jobId)
+    .eq("status", "processing");
+  if (processingReadError) throw new Error(`İşlenen çeviri kalemleri okunamadı: ${processingReadError.message}`);
+  const { error: itemsError } = await supabase.from("ai_translation_job_items").update({
+    status: "pending",
+    error_message: "İş duraklatıldı; devam ettirildiğinde tekrar işlenecek.",
+    updated_at: new Date().toISOString(),
+  }).eq("job_id", jobId).eq("status", "processing");
+  if (itemsError) throw new Error(`İşlenen çeviri kalemleri duraklatılamadı: ${itemsError.message}`);
+  const gameIds = (processingItems ?? []).map((item) => (item as { game_id: string }).game_id);
+  if (gameIds.length) {
+    const { error: statesError } = await supabase.from("game_translation_state").update({
+      status: "pending",
+      last_error: "İş duraklatıldı; devam ettirildiğinde tekrar işlenecek.",
+      updated_at: new Date().toISOString(),
+    }).in("game_id", gameIds).eq("status", "processing");
+    if (statesError) throw new Error(`Çeviri durumları duraklatılamadı: ${statesError.message}`);
+  }
+  await refreshJobCounts(jobId);
 }
 
 export async function resumeTranslationJob(jobId: string) {
@@ -423,13 +445,20 @@ async function getJob(jobId: string) {
 
 async function refreshJobCounts(jobId: string) {
   const supabase = requiredServiceClient();
-  const [completed, failed, pending, processing] = await Promise.all([
+  const [job, completed, failed, pending, processing] = await Promise.all([
+    getJob(jobId),
     countRows("ai_translation_job_items", { column: "job_id", value: jobId }, { column: "status", value: "completed" }),
     countRows("ai_translation_job_items", { column: "job_id", value: jobId }, { column: "status", value: "failed" }),
     countRows("ai_translation_job_items", { column: "job_id", value: jobId }, { column: "status", value: "pending" }),
     countRows("ai_translation_job_items", { column: "job_id", value: jobId }, { column: "status", value: "processing" }),
   ]);
-  const status = processing > 0 ? "running" : pending > 0 ? "queued" : "completed";
+  const status = job.status === "paused" || job.status === "cancelled"
+    ? job.status
+    : processing > 0
+      ? "running"
+      : pending > 0
+        ? "queued"
+        : "completed";
   const { error } = await supabase.from("ai_translation_jobs").update({
     completed_count: completed,
     failed_count: failed,

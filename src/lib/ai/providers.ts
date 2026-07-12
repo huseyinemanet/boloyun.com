@@ -21,6 +21,8 @@ type AnthropicResponse = {
   }>;
 };
 
+const AI_REQUEST_TIMEOUT_MS = 25_000;
+
 export async function translateGameContent(input: GameTranslationInput, config: AiRuntimeConfig): Promise<TranslatedGameContent> {
   const messages = buildTranslationMessages(input);
   const startedAt = Date.now();
@@ -82,6 +84,8 @@ function buildTranslationMessages(input: GameTranslationInput): ChatMessage[] {
 
 async function callOpenAiCompatible(messages: ChatMessage[], config: AiRuntimeConfig) {
   const startedAt = Date.now();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
   const endpoint = config.provider === "deepseek" ? "https://api.deepseek.com/chat/completions" : "https://api.openai.com/v1/chat/completions";
   const body: Record<string, unknown> = {
     model: config.model,
@@ -91,45 +95,63 @@ async function callOpenAiCompatible(messages: ChatMessage[], config: AiRuntimeCo
     response_format: { type: "json_object" },
   };
   if (config.provider === "deepseek") body.thinking = { type: "disabled" };
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify(body),
-  });
-  const payload = await response.json().catch(() => null) as ChatCompletionResponse & { error?: { message?: string } } | null;
-  console.log("[ai-provider] http.response", { provider: config.provider, model: config.model, status: response.status, ok: response.ok, durationMs: Date.now() - startedAt });
-  if (!response.ok) throw new Error(payload?.error?.message || `${config.provider} isteği başarısız: HTTP ${response.status}`);
-  const content = payload?.choices?.[0]?.message?.content;
-  if (!content) throw new Error(`${config.provider} boş içerik döndürdü.`);
-  return content;
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const payload = await response.json().catch(() => null) as ChatCompletionResponse & { error?: { message?: string } } | null;
+    console.log("[ai-provider] http.response", { provider: config.provider, model: config.model, status: response.status, ok: response.ok, durationMs: Date.now() - startedAt });
+    if (!response.ok) throw new Error(payload?.error?.message || `${config.provider} isteği başarısız: HTTP ${response.status}`);
+    const content = payload?.choices?.[0]?.message?.content;
+    if (!content) throw new Error(`${config.provider} boş içerik döndürdü.`);
+    return content;
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") throw new Error(`${config.provider} isteği zaman aşımına uğradı.`);
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function callClaude(messages: ChatMessage[], config: AiRuntimeConfig) {
   const startedAt = Date.now();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
   const system = messages.find((message) => message.role === "system")?.content ?? "";
   const user = messages.find((message) => message.role === "user")?.content ?? "";
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": config.apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: config.model,
-      max_tokens: 1800,
-      temperature: 0.2,
-      system,
-      messages: [{ role: "user", content: user }],
-    }),
-  });
-  const payload = await response.json().catch(() => null) as AnthropicResponse & { error?: { message?: string } } | null;
-  console.log("[ai-provider] http.response", { provider: config.provider, model: config.model, status: response.status, ok: response.ok, durationMs: Date.now() - startedAt });
-  if (!response.ok) throw new Error(payload?.error?.message || `Claude isteği başarısız: HTTP ${response.status}`);
-  const content = payload?.content?.find((item) => item.type === "text" && item.text)?.text;
-  if (!content) throw new Error("Claude boş içerik döndürdü.");
-  return content;
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": config.apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: config.model,
+        max_tokens: 1800,
+        temperature: 0.2,
+        system,
+        messages: [{ role: "user", content: user }],
+      }),
+      signal: controller.signal,
+    });
+    const payload = await response.json().catch(() => null) as AnthropicResponse & { error?: { message?: string } } | null;
+    console.log("[ai-provider] http.response", { provider: config.provider, model: config.model, status: response.status, ok: response.ok, durationMs: Date.now() - startedAt });
+    if (!response.ok) throw new Error(payload?.error?.message || `Claude isteği başarısız: HTTP ${response.status}`);
+    const content = payload?.content?.find((item) => item.type === "text" && item.text)?.text;
+    if (!content) throw new Error("Claude boş içerik döndürdü.");
+    return content;
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") throw new Error("Claude isteği zaman aşımına uğradı.");
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }

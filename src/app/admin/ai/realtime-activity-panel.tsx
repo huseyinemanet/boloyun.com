@@ -28,10 +28,10 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
   const [lastError, setLastError] = useState<string | null>(null);
   const previousStatuses = useRef(new Map(initialActivity.map((item) => [item.id, item.status])));
 
-  const hasActiveWork = useMemo(
-    () => payload.jobs.some((job) => job.status === "queued" || job.status === "running") || payload.activity.some((item) => item.status === "processing"),
-    [payload.activity, payload.jobs],
-  );
+  const runningJobIds = useMemo(() => new Set(payload.jobs.filter((job) => job.status === "running").map((job) => job.id)), [payload.jobs]);
+  const hasRunningWork = runningJobIds.size > 0;
+  const hasQueuedWork = payload.jobs.some((job) => job.status === "queued");
+  const activityLabel = hasRunningWork ? "İşleniyor" : hasQueuedWork ? "Hazır" : "Durakladı";
 
   useEffect(() => {
     let disposed = false;
@@ -53,7 +53,7 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
       } finally {
         if (!disposed) {
           setIsRefreshing(false);
-          timeout = setTimeout(refresh, hasActiveWork ? 1200 : 3500);
+          timeout = setTimeout(refresh, hasRunningWork ? 1200 : 3500);
         }
       }
     }
@@ -63,7 +63,7 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
       disposed = true;
       if (timeout) clearTimeout(timeout);
     };
-  }, [hasActiveWork]);
+  }, [hasRunningWork]);
 
   const activeJob = payload.jobs.find((job) => job.status === "running") ?? payload.jobs.find((job) => job.status === "queued") ?? payload.jobs[0];
 
@@ -93,14 +93,14 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold">Son AI İşlem Logları</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Canlı takip açık; işlenen satır parlayarak gösterilir.</p>
+          <p className="mt-1 text-sm text-muted-foreground">İşlenen satır parlayarak gösterilir; duraklatılan işlerde animasyon durur.</p>
         </div>
         <div className="flex items-center gap-3 text-xs font-semibold text-muted-foreground">
           <span className="relative flex items-center gap-2">
-            <span className={hasActiveWork ? "size-2 rounded-full bg-success shadow-[0_0_0_4px_color-mix(in_srgb,var(--success)_20%,transparent)]" : "size-2 rounded-full bg-muted-foreground/50"} />
-            {hasActiveWork ? "Canlı takip" : "Beklemede"}
+            <span className={hasRunningWork ? "size-2 rounded-full bg-success" : "size-2 rounded-full bg-muted-foreground/50"} />
+            {activityLabel}
           </span>
-          <span>{isRefreshing ? "Güncelleniyor..." : formatDate(payload.serverTime)}</span>
+          <span>{isRefreshing ? "Yenileniyor..." : formatDate(payload.serverTime)}</span>
         </div>
       </div>
 
@@ -131,15 +131,17 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
             </tr>
           </thead>
           <tbody>
-            {payload.activity.length ? payload.activity.map((item) => (
-              <tr key={item.id} className={`${item.status === "processing" ? "ai-processing-row" : ""} border-b border-border/70 transition-colors last:border-0`}>
+            {payload.activity.length ? payload.activity.map((item) => {
+              const isActuallyProcessing = item.status === "processing" && runningJobIds.has(item.jobId);
+              return (
+              <tr key={item.id} className={`${isActuallyProcessing ? "ai-processing-row" : ""} border-b border-border/70 transition-colors last:border-0`}>
                 <td className="py-3 pr-3 text-muted-foreground">{formatDate(item.updatedAt)}</td>
-                <td className="py-3 pr-3"><Badge variant={item.status === "completed" ? "default" : item.status === "failed" ? "destructive" : "outline"}>{itemStatusText(item.status)}</Badge></td>
+                <td className="py-3 pr-3"><Badge variant={item.status === "completed" ? "default" : item.status === "failed" ? "destructive" : "outline"}>{itemStatusText(item.status, isActuallyProcessing)}</Badge></td>
                 <td className="max-w-[320px] truncate py-3 pr-3 font-semibold">{item.title}</td>
                 <td className="py-3 pr-3">{item.attempts}</td>
                 <td className="max-w-[360px] truncate py-3 pr-3 text-muted-foreground">{item.errorMessage ?? "-"}</td>
               </tr>
-            )) : (
+            );}) : (
               <tr>
                 <td colSpan={5} className="py-8 text-center font-semibold text-muted-foreground">Henüz item logu yok.</td>
               </tr>
@@ -171,7 +173,8 @@ function logTransitions(previous: Map<string, AiTranslationActivity["status"]>, 
   }
 }
 
-function itemStatusText(status: AiTranslationActivity["status"]) {
+function itemStatusText(status: AiTranslationActivity["status"], isActuallyProcessing: boolean) {
+  if (status === "processing" && !isActuallyProcessing) return "Yarım kaldı";
   const labels: Record<AiTranslationActivity["status"], string> = {
     pending: "Bekliyor",
     processing: "İşleniyor",
