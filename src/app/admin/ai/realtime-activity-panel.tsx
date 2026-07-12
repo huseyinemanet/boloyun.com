@@ -32,6 +32,7 @@ type ActivityPayload = {
   jobs: AiTranslationJob[];
   activity: AiTranslationActivity[];
   serverTime: string;
+  error?: string;
 };
 
 type RealtimeActivityPanelProps = {
@@ -80,6 +81,7 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
   const previousStatuses = useRef(new Map(initialActivity.map((item) => [item.id, item.status])));
+  const consecutiveErrors = useRef(0);
 
   const runningJobIds = useMemo(() => new Set(payload.jobs.filter((job) => job.status === "running").map((job) => job.id)), [payload.jobs]);
   const hasRunningWork = runningJobIds.size > 0;
@@ -163,21 +165,32 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
 
     async function refresh() {
       setIsRefreshing(true);
+      const controller = new AbortController();
+      const abortTimeout = setTimeout(() => controller.abort(), 8000);
       try {
-        const response = await fetch("/api/admin/ai/activity", { cache: "no-store" });
+        const response = await fetch("/api/admin/ai/activity", { cache: "no-store", signal: controller.signal });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const next = await response.json() as ActivityPayload;
+        if (next.error) throw new Error(next.error);
+        if (!Array.isArray(next.jobs) || !Array.isArray(next.activity) || !next.stats) throw new Error("Aktivite yanıtı eksik döndü.");
         if (disposed) return;
         logTransitions(previousStatuses.current, next.activity);
         previousStatuses.current = new Map(next.activity.map((item) => [item.id, item.status]));
         setPayload(next);
+        consecutiveErrors.current = 0;
         setLastError(null);
       } catch (error) {
-        if (!disposed) setLastError(error instanceof Error ? error.message : "Aktivite okunamadı.");
+        if (!disposed) {
+          consecutiveErrors.current += 1;
+          setLastError(error instanceof Error ? error.message : "Aktivite okunamadı.");
+        }
       } finally {
+        clearTimeout(abortTimeout);
         if (!disposed) {
           setIsRefreshing(false);
-          timeout = setTimeout(refresh, hasRunningWork ? 1200 : 3500);
+          const errorDelay = Math.min(30000, 5000 * Math.max(1, consecutiveErrors.current));
+          const nextDelay = consecutiveErrors.current ? errorDelay : hasRunningWork ? 2500 : 5000;
+          timeout = setTimeout(refresh, nextDelay);
         }
       }
     }
