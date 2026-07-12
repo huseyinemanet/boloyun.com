@@ -11,6 +11,7 @@ import { IconMagnifierSparkle2FillDuo18 } from "nucleo-ui-fill-duo-18/components
 import { IconMegaphoneFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMegaphoneFillDuo18";
 import { IconMsgs2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMsgs2FillDuo18";
 import { IconFilesContentFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconFilesContentFillDuo18";
+import { IconArtificialIntelligenceFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconArtificialIntelligenceFillDuo18";
 import { IconSlidersVerticalFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconSlidersVerticalFillDuo18";
 import { IconTag2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconTag2FillDuo18";
 import { IconUsersFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconUsersFillDuo18";
@@ -19,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 const adminLinks = [
   { href: "/admin", label: "Genel Bakış", icon: IconHouseDashboard2FillDuo18 },
+  { href: "/ai", label: "AI Merkezi", icon: IconArtificialIntelligenceFillDuo18 },
   { href: "/admin/crawler", label: "Yeni Oyun Tara", icon: IconMagnifierSparkle2FillDuo18 },
   { href: "/admin/imports", label: "Onay Kuyruğu", icon: IconListCheckbox2FillDuo18 },
   { href: "/admin/games", label: "Oyunlar", icon: IconGamepadFillDuo18 },
