@@ -50,7 +50,7 @@ export default async function Home({ searchParams }: HomeProps) {
   return (
     <div className="space-y-5">
       {settings.seo.structuredDataEnabled ? <JsonLd data={[websiteJsonLd(), organizationJsonLd(), itemListJsonLd(`${settings.general.siteName}'daki oyunlar`, visibleGames.map((game) => `/oyun/${game.slug}`))]} /> : null}
-      <section className="overflow-hidden rounded-lg border border-border bg-card p-5 text-card-foreground">
+      <section className="py-4 text-card-foreground">
         <div className="max-w-3xl">
           <h1 className="text-2xl font-black sm:text-3xl">{settings.appearance.heroTitle}</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
