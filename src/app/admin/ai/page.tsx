@@ -35,17 +35,29 @@ export default async function AiCenterPage() {
       <AiDebugConsole jobs={jobs} activity={activity} />
       <AdminPageHeader
         title="AI Merkezi"
-        description="Oyun metinlerini kontrollü batch işleriyle Türkçeleştir."
+        description="Türkçeleştirme durumunu izle, işleri devam ettir ve AI sağlayıcılarını yönet."
       />
 
       <StatsGrid stats={stats} />
 
       <section className="rounded-md border border-border bg-card p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold">Çeviri İşleri</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Başlatılan batch işleri burada takip edilir; yarıda kalan işleri buradan devam ettirebilirsin.</p>
+          </div>
+        </div>
+        <AiJobsTable jobs={jobs} />
+      </section>
+
+      <RealtimeActivityPanel initialStats={stats} initialJobs={jobs} initialActivity={activity} initialActivityTotal={activityTotal} />
+
+      <section className="rounded-md border border-border bg-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold">Toplu Türkçeleştirme</h2>
+            <h2 className="text-lg font-bold">Yeni Batch Oluştur</h2>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Her batch sıradaki yayınlı oyunları seçer. Oyun adları korunur, açıklama ve SEO metinleri Türkçeleştirilir.
+              Sıradaki yayınlı oyunlardan yeni bir iş listesi hazırla. Oyun adları korunur; açıklama, oynanış ve SEO metinleri Türkçeleştirilir.
             </p>
           </div>
           <Badge variant={activeConfig?.enabled ? "default" : "outline"}>
@@ -88,21 +100,15 @@ export default async function AiCenterPage() {
         </form>
       </section>
 
-      <section className="grid gap-3 lg:grid-cols-3">
-        {configs.map((config) => <ProviderConfigCard key={config.provider} config={config} />)}
-      </section>
-
-      <section className="rounded-md border border-border bg-card p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold">Son Çeviri İşleri</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Batch işleri tek tek işlenir; yarıda kalan işi buradan devam ettirebilirsin.</p>
-          </div>
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-lg font-bold">AI Sağlayıcıları</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Model ve API key ayarlarını buradan yönet. Kaydedilen key düz metin olarak gösterilmez.</p>
         </div>
-        <AiJobsTable jobs={jobs} />
+        <div className="grid gap-3 lg:grid-cols-3">
+          {configs.map((config) => <ProviderConfigCard key={config.provider} config={config} />)}
+        </div>
       </section>
-
-      <RealtimeActivityPanel initialStats={stats} initialJobs={jobs} initialActivity={activity} initialActivityTotal={activityTotal} />
     </div>
   );
 }
@@ -110,8 +116,8 @@ export default async function AiCenterPage() {
 function StatsGrid({ stats }: { stats: AiTranslationStats }) {
   const items = [
     { label: "Yayınlı oyun", value: stats.totalPublished, icon: IconArtificialIntelligenceFillDuo18 },
-    { label: "Türkçeleştirilen", value: stats.completed, icon: IconCircleCheckFillDuo18 },
-    { label: "Bekleyen", value: stats.pending, icon: IconBrainSparkleFillDuo18 },
+    { label: "Tamamlanan", value: stats.completed, icon: IconCircleCheckFillDuo18 },
+    { label: "Sırada", value: stats.pending, icon: IconBrainSparkleFillDuo18 },
     { label: "Hatalı", value: stats.failed, icon: IconTriangleWarningFillDuo18 },
   ];
   return (
