@@ -94,10 +94,9 @@ export function UsersTable({ users, counts, activeFilter }: { users: AdminUser[]
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-1 text-sm font-semibold">
-          {filters.map((filter, index) => (
-            <span key={filter.key} className="flex items-center gap-1">
-              {index > 0 ? <span className="text-muted-foreground">|</span> : null}
+        <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+          {filters.map((filter) => (
+            <span key={filter.key} className="flex items-center">
               <Link href={filter.key === "all" ? "/admin/users" : `/admin/users?role=${filter.key}`} className={filter.key === activeFilter ? "text-foreground" : "text-primary hover:underline"}>
                 {filter.label} <span className="text-muted-foreground">({counts[filter.key]})</span>
               </Link>
