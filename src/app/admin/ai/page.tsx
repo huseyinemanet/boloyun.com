@@ -121,16 +121,16 @@ function StatsGrid({ stats }: { stats: AiTranslationStats }) {
     { label: "Hatalı", value: stats.failed, icon: IconTriangleWarningFillDuo18 },
   ];
   return (
-    <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
       {items.map((item) => {
         const Icon = item.icon;
         return (
-          <div key={item.label} className="rounded-md border border-border bg-card p-4">
-            <div className="flex items-center justify-between gap-3">
+          <div key={item.label} className="rounded-md border border-border bg-card p-3">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-sm font-semibold text-muted-foreground">{item.label}</span>
               <Icon className="size-5 text-primary" />
             </div>
-            <p className="mt-3 text-2xl font-black">{item.value.toLocaleString("tr-TR")}</p>
+            <p className="mt-2 text-2xl font-black">{item.value.toLocaleString("tr-TR")}</p>
           </div>
         );
       })}
