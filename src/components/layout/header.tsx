@@ -19,6 +19,12 @@ import { Button } from "@/components/ui/button";
 import { SearchAutocomplete } from "@/components/layout/search-autocomplete";
 import { getPublicSettings } from "@/lib/db-settings";
 
+const sectionLinks = [
+  { href: "/#yeni-oyunlar", label: "Yeni Oyunlar" },
+  { href: "/#populer-oyunlar", label: "Popüler Oyunlar" },
+  { href: "/#trend-oyunlar", label: "Trend Oyunlar" },
+] as const;
+
 export async function Header() {
   const [profile, settings] = await Promise.all([getCurrentProfile(), getPublicSettings()]);
   const displayName = profile ? getDisplayName(profile) : "";
@@ -39,6 +45,18 @@ export async function Header() {
 
         <SearchAutocomplete />
 
+        <nav aria-label="Oyun bölümleri" className="hidden shrink-0 items-center gap-1 lg:flex">
+          {sectionLinks.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="rounded-md px-2.5 py-2 text-sm font-bold text-muted-foreground transition hover:bg-accent hover:text-foreground"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
         <Button asChild size="lg" className="hidden shrink-0 md:inline-flex">
           <Link href="/rastgele">
             <IconShuffleFillDuo18 className="size-[18px]" aria-hidden="true" />
@@ -56,7 +74,7 @@ export async function Header() {
                 <AvatarFallback>{profile.username.slice(0, 2).toLocaleUpperCase("tr")}</AvatarFallback>
               </Avatar>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56 border-border/70 bg-popover/80 shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-popover/70">
               <div className="px-3 py-2">
                 <p className="truncate font-semibold text-foreground">{displayName}</p>
                 {profile.email ? <p className="truncate text-xs text-muted-foreground">{profile.email}</p> : null}

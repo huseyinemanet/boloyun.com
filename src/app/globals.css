@@ -149,9 +149,10 @@ select {
   fill: currentColor !important;
 }
 
-.category-icon svg[stroke]:not([stroke="none"]),
-.category-icon svg [stroke]:not([stroke="none"]) {
-  stroke: currentColor !important;
+.category-icon svg,
+.category-icon svg * {
+  stroke: none !important;
+  stroke-width: 0 !important;
 }
 
 .sr-only {

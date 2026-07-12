@@ -4,17 +4,6 @@ import type { CategoryRow } from "@/lib/db-categories";
 import { sanitizeSvgInput } from "@/lib/sanitize/html";
 import { cn } from "@/lib/utils";
 
-const CATEGORY_ICON_COLORS = [
-  "oklch(0.795 0.184 86.047)",
-  "oklch(0.681 0.162 75.834)",
-  "oklch(0.769 0.188 70.08)",
-  "oklch(0.666 0.179 58.318)",
-  "oklch(0.554 0.135 66.442)",
-  "oklch(0.476 0.114 61.907)",
-  "oklch(0.421 0.095 57.708)",
-  "oklch(0.852 0.199 91.936)",
-] as const;
-
 type CategoryIconProps = {
   category: CategoryRow;
   size?: "sm" | "md";
@@ -28,7 +17,7 @@ type CategoryIconStyle = CSSProperties & {
 export function CategoryIcon({ category, size = "sm", className }: CategoryIconProps) {
   const iconSvg = category.icon_svg ? sanitizeSvgInput(category.icon_svg) : "";
   const style: CategoryIconStyle = {
-    "--category-icon-color": getCategoryIconColor(category),
+    "--category-icon-color": "var(--primary)",
   };
   const frameClassName = cn(
     "category-icon grid shrink-0 place-items-center overflow-hidden rounded-md bg-[color-mix(in_oklch,var(--category-icon-color),transparent_86%)] text-[var(--category-icon-color)] ring-1 ring-inset ring-[color-mix(in_oklch,var(--category-icon-color),transparent_72%)] transition-colors group-hover:bg-[color-mix(in_oklch,var(--category-icon-color),transparent_78%)]",
@@ -77,15 +66,4 @@ export function CategoryIcon({ category, size = "sm", className }: CategoryIconP
       <CategoryNucleoIcon category={category} className={size === "sm" ? "size-[18px]" : "size-5"} />
     </span>
   );
-}
-
-function getCategoryIconColor(category: CategoryRow) {
-  const key = category.slug || category.name;
-  let hash = 0;
-
-  for (const character of key) {
-    hash = (hash * 31 + character.codePointAt(0)!) >>> 0;
-  }
-
-  return CATEGORY_ICON_COLORS[hash % CATEGORY_ICON_COLORS.length];
 }
