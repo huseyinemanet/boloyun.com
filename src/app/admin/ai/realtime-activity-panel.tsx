@@ -83,6 +83,7 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
   const [now, setNow] = useState(() => Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [processLoopActive, setProcessLoopActive] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([{ id: "updatedAt", desc: true }]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -204,8 +205,16 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
         serverTime: detail.updatedAt ?? current.serverTime,
       }));
     }
+    function handleProcessLoop(event: Event) {
+      const detail = (event as CustomEvent<{ active?: boolean }>).detail;
+      setProcessLoopActive(Boolean(detail?.active));
+    }
     window.addEventListener("ai-translation:jobs:patch", handleJobPatch);
-    return () => window.removeEventListener("ai-translation:jobs:patch", handleJobPatch);
+    window.addEventListener("ai-translation:process-loop", handleProcessLoop);
+    return () => {
+      window.removeEventListener("ai-translation:jobs:patch", handleJobPatch);
+      window.removeEventListener("ai-translation:process-loop", handleProcessLoop);
+    };
   }, []);
 
   useEffect(() => {
@@ -215,9 +224,9 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
     async function refresh() {
       setIsRefreshing(true);
       const controller = new AbortController();
-      const abortTimeout = setTimeout(() => controller.abort(), 8000);
+      const abortTimeout = setTimeout(() => controller.abort(), 6000);
       try {
-        const response = await fetch("/api/admin/ai/activity?limit=50", { cache: "no-store", signal: controller.signal });
+        const response = await fetch("/api/admin/ai/activity?limit=20", { cache: "no-store", signal: controller.signal });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const next = await response.json() as ActivityPayload;
         if (next.error) throw new Error(next.error);
@@ -234,25 +243,27 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
       } catch (error) {
         if (!disposed) {
           consecutiveErrors.current += 1;
-          setLastError(error instanceof Error ? error.message : "Aktivite okunamadı.");
+          if (consecutiveErrors.current >= 2) {
+            setLastError(error instanceof Error ? error.message : "Aktivite okunamadı.");
+          }
         }
       } finally {
         clearTimeout(abortTimeout);
         if (!disposed) {
           setIsRefreshing(false);
-          const errorDelay = Math.min(30000, 5000 * Math.max(1, consecutiveErrors.current));
-          const nextDelay = consecutiveErrors.current ? errorDelay : hasRunningWork ? 2500 : 5000;
+          const errorDelay = Math.min(45000, 15000 * Math.max(1, consecutiveErrors.current));
+          const nextDelay = consecutiveErrors.current ? errorDelay : processLoopActive ? 12000 : hasRunningWork ? 10000 : 15000;
           timeout = setTimeout(refresh, nextDelay);
         }
       }
     }
 
-    timeout = setTimeout(refresh, 900);
+    timeout = setTimeout(refresh, processLoopActive ? 8000 : 2500);
     return () => {
       disposed = true;
       if (timeout) clearTimeout(timeout);
     };
-  }, [hasRunningWork]);
+  }, [hasRunningWork, processLoopActive]);
 
   const activeJob = payload.jobs.find((job) => job.status === "running") ?? payload.jobs.find((job) => job.status === "queued") ?? payload.jobs[0];
 

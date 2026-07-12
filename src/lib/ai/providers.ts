@@ -21,7 +21,7 @@ type AnthropicResponse = {
   }>;
 };
 
-const AI_REQUEST_TIMEOUT_MS = 18_000;
+const AI_REQUEST_TIMEOUT_MS = 12_000;
 
 export async function translateGameContent(input: GameTranslationInput, config: AiRuntimeConfig): Promise<TranslatedGameContent> {
   const messages = buildTranslationMessages(input);

@@ -65,6 +65,7 @@ function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: 
         event.preventDefault();
         if (pending) return;
         console.log("[ai-translation] action.submit", { jobId, label: "İşle", jobStatus, at: new Date().toISOString() });
+        window.dispatchEvent(new CustomEvent("ai-translation:process-loop", { detail: { active: true, jobId } }));
         stopRequested.current = false;
         setPending(true);
         setStepCount(0);
@@ -73,11 +74,14 @@ function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: 
           let transientFailures = 0;
           while (!stopRequested.current) {
             let response: Response;
+            const controller = new AbortController();
+            const abortTimeout = setTimeout(() => controller.abort(), 22_000);
             try {
               response = await fetch("/api/admin/ai/process", {
                 method: "POST",
                 headers: { "content-type": "application/json" },
                 body: JSON.stringify({ jobId }),
+                signal: controller.signal,
               });
             } catch (error) {
               transientFailures += 1;
@@ -90,6 +94,8 @@ function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: 
               });
               await sleep(retryDelay);
               continue;
+            } finally {
+              clearTimeout(abortTimeout);
             }
             const state = await response.json().catch(() => null) as ProcessTranslationJobState | null;
             if (!response.ok && isTransientStatus(response.status)) {
@@ -129,13 +135,14 @@ function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: 
               console.log("[ai-translation] process.loop.done", { jobId, steps, job: state?.job });
               break;
             }
-            await sleep(500);
+            await sleep(1250);
           }
         } catch (error) {
           console.error("[ai-translation] process.client.failed", { jobId, error: error instanceof Error ? error.message : String(error) });
         } finally {
           setPending(false);
           stopRequested.current = false;
+          window.dispatchEvent(new CustomEvent("ai-translation:process-loop", { detail: { active: false, jobId } }));
         }
       }}
     >
@@ -177,7 +184,7 @@ function isTransientStatus(status: number) {
 }
 
 function transientRetryDelay(failures: number) {
-  return Math.min(30_000, 2_000 * 2 ** Math.min(failures - 1, 4));
+  return Math.min(30_000, 5_000 * 2 ** Math.min(failures - 1, 3));
 }
 
 function SubmitButton({ label, variant }: { label: string; variant: "default" | "outline" }) {
