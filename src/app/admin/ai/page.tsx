@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { privatePageMetadata } from "@/lib/seo/metadata";
 import { getAiDashboardData } from "@/lib/ai/db-ai";
-import { AI_BATCH_SIZES, AI_PROVIDER_LABELS, DEFAULT_AI_MODELS, type AiProviderConfig, type AiTranslationJob, type AiTranslationStats } from "@/lib/ai/types";
+import { AI_BATCH_SIZES, AI_PROVIDER_LABELS, DEFAULT_AI_MODELS, type AiProviderConfig, type AiTranslationStats } from "@/lib/ai/types";
 import { maskFingerprint } from "@/lib/ai/crypto";
 import { AiDebugConsole } from "./ai-debug-console";
+import { AiJobsTable } from "./ai-jobs-table";
 import {
   createTranslationJobAction,
   pauseTranslationJobAction,
@@ -17,7 +18,6 @@ import {
   saveAiProviderAction,
   testAiProviderAction,
 } from "./actions";
-import { JobActionForm } from "./job-action-form";
 import { RealtimeActivityPanel } from "./realtime-activity-panel";
 
 export const dynamic = "force-dynamic";
@@ -90,26 +90,7 @@ export default async function AiCenterPage() {
             <p className="mt-1 text-sm text-muted-foreground">Batch işleri tek tek işlenir; yarıda kalan işi buradan devam ettirebilirsin.</p>
           </div>
         </div>
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="border-b border-border text-xs text-muted-foreground">
-              <tr>
-                <th className="py-2 pr-3">Durum</th>
-                <th className="py-2 pr-3">Provider</th>
-                <th className="py-2 pr-3">İlerleme</th>
-                <th className="py-2 pr-3">Oluşturma</th>
-                <th className="py-2 pr-3 text-right">İşlem</th>
-              </tr>
-            </thead>
-            <tbody>
-              {jobs.length ? jobs.map((job) => <JobRow key={job.id} job={job} />) : (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center font-semibold text-muted-foreground">Henüz çeviri işi yok.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <AiJobsTable jobs={jobs} pauseAction={pauseTranslationJobAction} resumeAction={resumeTranslationJobAction} />
       </section>
 
       <RealtimeActivityPanel initialStats={stats} initialJobs={jobs} initialActivity={activity} />
@@ -175,45 +156,10 @@ function ProviderConfigCard({ config }: { config: AiProviderConfig }) {
   );
 }
 
-function JobRow({ job }: { job: AiTranslationJob }) {
-  const progress = `${job.completedCount.toLocaleString("tr-TR")} / ${job.totalCount.toLocaleString("tr-TR")}`;
-  return (
-    <tr className="border-b border-border/70 last:border-0">
-      <td className="py-3 pr-3"><Badge variant={job.status === "completed" ? "default" : job.status === "failed" ? "destructive" : "outline"}>{jobStatusText(job.status)}</Badge></td>
-      <td className="py-3 pr-3 font-semibold">{AI_PROVIDER_LABELS[job.provider]} <span className="text-xs text-muted-foreground">{job.model}</span></td>
-      <td className="py-3 pr-3">{progress}{job.failedCount ? <span className="ml-2 text-xs font-semibold text-destructive">Hata: {job.failedCount}</span> : null}</td>
-      <td className="py-3 pr-3 text-muted-foreground">{formatDate(job.createdAt)}</td>
-      <td className="py-3 pr-3">
-        <div className="flex justify-end gap-2">
-          {job.status === "paused" ? <JobAction job={job} action={resumeTranslationJobAction} label="Devam" /> : null}
-          {job.status === "queued" || job.status === "running" ? <JobAction job={job} label="İşle" /> : null}
-          {job.status === "queued" || job.status === "running" ? <JobAction job={job} action={pauseTranslationJobAction} label="Duraklat" variant="outline" /> : null}
-        </div>
-      </td>
-    </tr>
-  );
-}
-
-function JobAction({ job, action, label, variant = "default" }: { job: AiTranslationJob; action?: (formData: FormData) => Promise<void>; label: string; variant?: "default" | "outline" }) {
-  return <JobActionForm action={action} jobId={job.id} label={label} jobStatus={job.status} variant={variant} />;
-}
-
 function testStatusText(config: AiProviderConfig) {
   if (config.lastTestStatus === "success") return `Başarılı${config.lastTestAt ? `, ${formatDate(config.lastTestAt)}` : ""}`;
   if (config.lastTestStatus === "failed") return config.lastTestError || "Başarısız";
   return "Henüz test edilmedi";
-}
-
-function jobStatusText(status: AiTranslationJob["status"]) {
-  const labels: Record<AiTranslationJob["status"], string> = {
-    queued: "Sırada",
-    running: "Çalışıyor",
-    paused: "Durakladı",
-    completed: "Tamamlandı",
-    failed: "Başarısız",
-    cancelled: "İptal",
-  };
-  return labels[status];
 }
 
 function formatDate(value: string) {

@@ -1,7 +1,30 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type ColumnFiltersState,
+  type SortingState,
+  type VisibilityState,
+} from "@tanstack/react-table";
+import { ChevronDownIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { AiTranslationActivity, AiTranslationJob, AiTranslationStats } from "@/lib/ai/types";
 
 type ActivityPayload = {
@@ -17,6 +40,26 @@ type RealtimeActivityPanelProps = {
   initialActivity: AiTranslationActivity[];
 };
 
+type ActivityTableRow = AiTranslationActivity & {
+  isActuallyProcessing: boolean;
+};
+
+const activityColumnLabels: Record<string, string> = {
+  updatedAt: "Zaman",
+  status: "Durum",
+  title: "Oyun",
+  attempts: "Deneme",
+  errorMessage: "Hata",
+};
+
+const activityColumnWidths: Record<string, string> = {
+  updatedAt: "w-44",
+  status: "w-36",
+  title: "w-[320px]",
+  attempts: "w-28",
+  errorMessage: "w-[360px]",
+};
+
 export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivity }: RealtimeActivityPanelProps) {
   const [payload, setPayload] = useState<ActivityPayload>({
     stats: initialStats,
@@ -26,12 +69,87 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "updatedAt", desc: true }]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [globalFilter, setGlobalFilter] = useState("");
   const previousStatuses = useRef(new Map(initialActivity.map((item) => [item.id, item.status])));
 
   const runningJobIds = useMemo(() => new Set(payload.jobs.filter((job) => job.status === "running").map((job) => job.id)), [payload.jobs]);
   const hasRunningWork = runningJobIds.size > 0;
   const hasQueuedWork = payload.jobs.some((job) => job.status === "queued");
   const activityLabel = hasRunningWork ? "İşleniyor" : hasQueuedWork ? "Hazır" : "Durakladı";
+  const activityRows = useMemo<ActivityTableRow[]>(
+    () => payload.activity.map((item) => ({
+      ...item,
+      isActuallyProcessing: item.status === "processing" && runningJobIds.has(item.jobId),
+    })),
+    [payload.activity, runningJobIds],
+  );
+  const activityColumns = useMemo<ColumnDef<ActivityTableRow>[]>(() => [
+    {
+      accessorKey: "updatedAt",
+      header: "Zaman",
+      cell: ({ row }) => <span className="text-muted-foreground">{formatDate(row.original.updatedAt)}</span>,
+    },
+    {
+      accessorKey: "status",
+      header: "Durum",
+      cell: ({ row }) => (
+        <Badge variant={row.original.status === "completed" ? "default" : row.original.status === "failed" ? "destructive" : "outline"}>
+          {itemStatusText(row.original.status, row.original.isActuallyProcessing)}
+        </Badge>
+      ),
+      filterFn: (row, columnId, filterValue) => filterValue === "all" || row.getValue(columnId) === filterValue,
+    },
+    {
+      accessorKey: "title",
+      header: "Oyun",
+      cell: ({ row }) => <span className="block truncate font-semibold">{row.original.title}</span>,
+    },
+    {
+      accessorKey: "attempts",
+      header: "Deneme",
+      cell: ({ row }) => row.original.attempts,
+    },
+    {
+      accessorKey: "errorMessage",
+      header: "Hata",
+      cell: ({ row }) => <span className="block truncate text-muted-foreground">{row.original.errorMessage ?? "-"}</span>,
+    },
+  ], []);
+
+  // TanStack Table exposes mutable functions that React Compiler intentionally does not memoize.
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const activityTable = useReactTable({
+    data: activityRows,
+    columns: activityColumns,
+    getRowId: (row) => row.id,
+    state: { sorting, columnFilters, columnVisibility, globalFilter },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: (row, _columnId, filterValue) => {
+      const query = String(filterValue).trim().toLocaleLowerCase("tr");
+      if (!query) return true;
+
+      const item = row.original;
+      return [
+        item.title,
+        itemStatusText(item.status, item.isActuallyProcessing),
+        item.status,
+        item.errorMessage ?? "",
+      ].join(" ").toLocaleLowerCase("tr").includes(query);
+    },
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: 15 } },
+  });
+  const statusFilter = String(activityTable.getColumn("status")?.getFilterValue() ?? "all");
+  const filteredCount = activityTable.getFilteredRowModel().rows.length;
 
   useEffect(() => {
     let disposed = false;
@@ -119,35 +237,98 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
         </p>
       ) : null}
 
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[860px] text-left text-sm">
-          <thead className="border-b border-border text-xs text-muted-foreground">
-            <tr>
-              <th className="py-2 pr-3">Zaman</th>
-              <th className="py-2 pr-3">Durum</th>
-              <th className="py-2 pr-3">Oyun</th>
-              <th className="py-2 pr-3">Deneme</th>
-              <th className="py-2 pr-3">Hata</th>
-            </tr>
-          </thead>
-          <tbody>
-            {payload.activity.length ? payload.activity.map((item) => {
-              const isActuallyProcessing = item.status === "processing" && runningJobIds.has(item.jobId);
-              return (
-              <tr key={item.id} className={`${isActuallyProcessing ? "ai-processing-row" : ""} border-b border-border/70 transition-colors last:border-0`}>
-                <td className="py-3 pr-3 text-muted-foreground">{formatDate(item.updatedAt)}</td>
-                <td className="py-3 pr-3"><Badge variant={item.status === "completed" ? "default" : item.status === "failed" ? "destructive" : "outline"}>{itemStatusText(item.status, isActuallyProcessing)}</Badge></td>
-                <td className="max-w-[320px] truncate py-3 pr-3 font-semibold">{item.title}</td>
-                <td className="py-3 pr-3">{item.attempts}</td>
-                <td className="max-w-[360px] truncate py-3 pr-3 text-muted-foreground">{item.errorMessage ?? "-"}</td>
-              </tr>
-            );}) : (
-              <tr>
-                <td colSpan={5} className="py-8 text-center font-semibold text-muted-foreground">Henüz item logu yok.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="mt-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <Input
+              type="search"
+              value={globalFilter}
+              onChange={(event) => setGlobalFilter(event.target.value)}
+              placeholder="Loglarda ara..."
+              aria-label="AI işlem loglarında ara"
+              className="w-full sm:max-w-sm"
+            />
+            <Select value={statusFilter} onValueChange={(value) => activityTable.getColumn("status")?.setFilterValue(value === "all" ? undefined : value)}>
+              <SelectTrigger className="w-[170px]" aria-label="Log durumunu filtrele">
+                <SelectValue placeholder="Tüm durumlar" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm durumlar</SelectItem>
+                <SelectItem value="pending">Bekliyor</SelectItem>
+                <SelectItem value="processing">İşleniyor</SelectItem>
+                <SelectItem value="completed">Tamamlandı</SelectItem>
+                <SelectItem value="failed">Hatalı</SelectItem>
+                <SelectItem value="skipped">Atlandı</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                Sütunlar
+                <ChevronDownIcon />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              {activityTable.getAllColumns().filter((column) => column.getCanHide()).map((column) => (
+                <DropdownMenuCheckboxItem
+                  key={column.id}
+                  checked={column.getIsVisible()}
+                  onCheckedChange={(checked) => column.toggleVisibility(Boolean(checked))}
+                >
+                  {activityColumnLabels[column.id] ?? column.id}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <div className="overflow-hidden rounded-md border border-border">
+          <Table className="min-w-[900px] table-fixed">
+            <TableHeader className="bg-muted/40">
+              {activityTable.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id} className={activityColumnWidths[header.column.id]}>
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {activityTable.getRowModel().rows.length ? activityTable.getRowModel().rows.map((row) => (
+                <TableRow key={row.id} className={row.original.isActuallyProcessing ? "ai-processing-row" : ""}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className="whitespace-normal">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={activityTable.getVisibleLeafColumns().length} className="h-28 text-center font-semibold text-muted-foreground">
+                    {payload.activity.length === 0 ? "Henüz item logu yok." : "Filtrelerle eşleşen log bulunamadı."}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-muted-foreground">
+            {filteredCount.toLocaleString("tr-TR")} kayıt
+          </p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">
+              Sayfa {activityTable.getState().pagination.pageIndex + 1} / {Math.max(activityTable.getPageCount(), 1)}
+            </span>
+            <Button variant="outline" size="sm" onClick={() => activityTable.previousPage()} disabled={!activityTable.getCanPreviousPage()}>Önceki</Button>
+            <Button variant="outline" size="sm" onClick={() => activityTable.nextPage()} disabled={!activityTable.getCanNextPage()}>Sonraki</Button>
+          </div>
+        </div>
       </div>
     </section>
   );
