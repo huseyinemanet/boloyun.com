@@ -57,34 +57,29 @@ export default async function EditGamePage({ params }: Props) {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <main className="space-y-4">
           <section className="space-y-3 rounded-md border border-border bg-card p-4">
+            <h2 className="font-bold">Ana içerik</h2>
             <Field label="Başlık" name="title" defaultValue={game.title} inputClassName="h-12 text-lg font-semibold" />
-            <div className="grid gap-1">
-              <label className="text-sm font-bold" htmlFor="game-slug">Slug</label>
-              <Input id="game-slug" name="slug" defaultValue={game.slug} className="h-10" />
-              <p className="text-xs font-semibold text-muted-foreground">
-                Kalıcı bağlantı: {absoluteUrl(`/oyun/${game.slug}`)}
-              </p>
-            </div>
+            <TextArea label="Kısa açıklama" name="short_description" defaultValue={game.shortDescription} rows={4} />
+            <TextArea label="Uzun açıklama" name="long_description" defaultValue={game.longDescription} rows={9} />
           </section>
 
-          <MetaBox title="İçerik">
-            <TextArea label="Uzun açıklama" name="long_description" defaultValue={game.longDescription} rows={10} />
-          </MetaBox>
-
-          <MetaBox title="Özet">
-            <TextArea label="Kısa açıklama" name="short_description" defaultValue={game.shortDescription} rows={4} />
-          </MetaBox>
-
-          <MetaBox title="Oyun Bilgileri">
+          <DetailsBox title="Oyun metinleri" description="Nasıl oynanır, kontroller ve özellikler gibi destek metinleri.">
             <div className="grid gap-4">
               <TextArea label="Nasıl oynanır?" name="how_to_play" defaultValue={game.howToPlay} rows={6} />
               <TextArea label="Kontroller - her satır bir madde" name="controls" defaultValue={game.controls.join("\n")} rows={4} />
               <TextArea label="Özellikler - her satır bir madde" name="features" defaultValue={game.features.join("\n")} rows={4} />
             </div>
-          </MetaBox>
+          </DetailsBox>
 
-          <MetaBox title="Oynatıcı">
+          <DetailsBox title="Teknik oynatıcı" description="Slug, oyun tipi, kaynak URL'leri ve geliştirici bilgisi.">
             <div className="grid gap-4">
+              <div className="grid gap-1">
+                <label className="text-sm font-bold" htmlFor="game-slug">Slug</label>
+                <Input id="game-slug" name="slug" defaultValue={game.slug} className="h-10" />
+                <p className="text-xs font-semibold text-muted-foreground">
+                  Kalıcı bağlantı: {absoluteUrl(`/oyun/${game.slug}`)}
+                </p>
+              </div>
               <label className="block text-sm font-bold">
                 Oynatma türü
                 <Select name="game_type" defaultValue={game.gameType}>
@@ -105,18 +100,10 @@ export default async function EditGamePage({ params }: Props) {
               <Field label="HTML5 URL" name="html5_url" defaultValue={game.html5Url ?? ""} />
               <Field label="External URL" name="external_url" defaultValue={game.externalUrl ?? ""} />
             </div>
-          </MetaBox>
+          </DetailsBox>
 
-          <details className="group rounded-md border border-border bg-card p-4">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-              <span>
-                <span className="block text-lg font-bold">SEO</span>
-                <span className="mt-1 block text-sm text-muted-foreground">Arama sonucu, canonical ve yapılandırılmış veri ayarları.</span>
-              </span>
-              <span className="shrink-0 text-sm font-semibold text-muted-foreground group-open:hidden">Aç</span>
-              <span className="hidden shrink-0 text-sm font-semibold text-muted-foreground group-open:inline">Kapat</span>
-            </summary>
-            <div className="mt-4 space-y-3">
+          <DetailsBox title="SEO" description="Arama sonucu, canonical ve yapılandırılmış veri ayarları.">
+            <div className="space-y-3">
               <div className={`rounded-md p-3 text-sm font-bold ${audit.publishable ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>
                 SEO Skoru: {audit.score}/{audit.total}
                 {!audit.publishable ? <p className="mt-1 text-xs font-semibold">Eksikler: {audit.criticalErrors.join(", ")}</p> : null}
@@ -153,7 +140,7 @@ export default async function EditGamePage({ params }: Props) {
                 }), null, 2)}</pre>
               </details>
             </div>
-          </details>
+          </DetailsBox>
         </main>
 
         <aside className="space-y-4">
@@ -179,10 +166,15 @@ export default async function EditGamePage({ params }: Props) {
             <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-muted">
               <Image src={game.thumbnailUrl} alt={game.title} fill sizes="320px" unoptimized className="object-cover" />
             </div>
-            <Field label="Thumbnail URL" name="thumbnail_url" defaultValue={game.thumbnailUrl} />
+            <details className="group rounded-md border border-border p-3">
+              <summary className="cursor-pointer text-sm font-bold">Görsel URL</summary>
+              <div className="mt-3">
+                <Field label="Thumbnail URL" name="thumbnail_url" defaultValue={game.thumbnailUrl} />
+              </div>
+            </details>
           </MetaBox>
 
-          <MetaBox title="Kategoriler" className="p-4">
+          <DetailsBox title="Sınıflandırma" description="Kategori ve etiket ilişkileri." className="p-4">
             <div className="relative -mx-1">
               <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-6 bg-gradient-to-b from-card to-transparent" />
               <div className="grid max-h-72 gap-2 overflow-y-auto px-1 py-4">
@@ -198,14 +190,37 @@ export default async function EditGamePage({ params }: Props) {
               </div>
               <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-6 bg-gradient-to-t from-card to-transparent" />
             </div>
-          </MetaBox>
-
-          <MetaBox title="Etiketler" className="p-4">
-            <TextArea label="Virgül veya satır ile ayır" name="tags" defaultValue={taxonomy.tags.join(", ")} rows={5} />
-          </MetaBox>
+            <TextArea label="Etiketler - virgül veya satır ile ayır" name="tags" defaultValue={taxonomy.tags.join(", ")} rows={5} />
+          </DetailsBox>
         </aside>
       </div>
     </form>
+  );
+}
+
+function DetailsBox({
+  title,
+  description,
+  children,
+  className = "p-4",
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <details className={`group rounded-md border border-border bg-card ${className}`}>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+        <span>
+          <span className="block text-lg font-bold">{title}</span>
+          <span className="mt-1 block text-sm text-muted-foreground">{description}</span>
+        </span>
+        <span className="shrink-0 text-sm font-semibold text-muted-foreground group-open:hidden">Aç</span>
+        <span className="hidden shrink-0 text-sm font-semibold text-muted-foreground group-open:inline">Kapat</span>
+      </summary>
+      <div className="mt-4 space-y-3">{children}</div>
+    </details>
   );
 }
 
