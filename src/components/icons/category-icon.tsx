@@ -20,7 +20,7 @@ export function CategoryIcon({ category, size = "sm", className }: CategoryIconP
     "--category-icon-color": "var(--primary)",
   };
   const frameClassName = cn(
-    "category-icon grid shrink-0 place-items-center overflow-hidden rounded-md bg-[color-mix(in_oklch,var(--category-icon-color),transparent_86%)] text-[var(--category-icon-color)] transition-colors group-hover:bg-[color-mix(in_oklch,var(--category-icon-color),transparent_78%)]",
+    "category-icon grid shrink-0 place-items-center overflow-hidden rounded-sm bg-[color-mix(in_oklch,var(--category-icon-color),transparent_86%)] text-[var(--category-icon-color)] transition-colors group-hover:bg-[color-mix(in_oklch,var(--category-icon-color),transparent_78%)]",
     size === "sm"
       ? "size-6 [&_svg]:size-[18px] [&_svg]:max-h-[18px] [&_svg]:max-w-[18px]"
       : "size-9 [&_svg]:size-5 [&_svg]:max-h-5 [&_svg]:max-w-5",
