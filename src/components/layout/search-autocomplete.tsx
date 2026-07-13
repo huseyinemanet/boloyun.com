@@ -13,6 +13,7 @@ type SearchResponse = {
 };
 
 const MINIMUM_QUERY_LENGTH = 2;
+const POPULAR_CACHE_KEY = "__popular__";
 
 export function SearchAutocomplete() {
   const router = useRouter();
@@ -24,7 +25,8 @@ export function SearchAutocomplete() {
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const normalizedQuery = query.trim();
-  const showPanel = open && normalizedQuery.length >= MINIMUM_QUERY_LENGTH;
+  const showingPopular = normalizedQuery.length < MINIMUM_QUERY_LENGTH;
+  const showPanel = open && (normalizedQuery.length >= MINIMUM_QUERY_LENGTH || results.length > 0 || loading);
 
   useEffect(() => {
     const searchTerm = query.trim();
@@ -68,9 +70,11 @@ export function SearchAutocomplete() {
     setActiveIndex(-1);
 
     if (searchTerm.length < MINIMUM_QUERY_LENGTH) {
-      setResults([]);
+      const popularResults = cache.current.get(POPULAR_CACHE_KEY);
+      setResults(popularResults ?? []);
       setLoading(false);
-      setOpen(false);
+      setOpen(true);
+      if (!popularResults) void loadPopularSuggestions();
       return;
     }
 
@@ -119,6 +123,33 @@ export function SearchAutocomplete() {
     }
   }
 
+  async function loadPopularSuggestions() {
+    const cachedResults = cache.current.get(POPULAR_CACHE_KEY);
+    if (cachedResults) {
+      setResults(cachedResults);
+      setOpen(true);
+      return;
+    }
+
+    setLoading(true);
+    setOpen(true);
+    setActiveIndex(-1);
+
+    try {
+      const response = await fetch("/api/search?popular=1");
+      if (!response.ok) throw new Error("Popüler oyunlar yüklenemedi.");
+
+      const data = await response.json() as SearchResponse;
+      const items = Array.isArray(data.items) ? data.items : [];
+      cache.current.set(POPULAR_CACHE_KEY, items);
+      setResults(items);
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <form
       action="/arama"
@@ -139,6 +170,7 @@ export function SearchAutocomplete() {
           onChange={(event) => handleQueryChange(event.target.value)}
           onFocus={() => {
             if (normalizedQuery.length >= MINIMUM_QUERY_LENGTH) setOpen(true);
+            else void loadPopularSuggestions();
           }}
           onKeyDown={handleKeyDown}
           placeholder="Oyun ara..."
@@ -163,7 +195,7 @@ export function SearchAutocomplete() {
           className="absolute inset-x-0 top-[calc(100%+0.5rem)] z-50 max-h-[min(420px,70vh)] overflow-y-auto rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {loading && results.length === 0 ? (
-            <p className="px-3 py-6 text-center text-sm text-muted-foreground">Oyunlar aranıyor...</p>
+            <p className="px-3 py-6 text-center text-sm text-muted-foreground">{showingPopular ? "Popüler oyunlar yükleniyor..." : "Oyunlar aranıyor..."}</p>
           ) : results.length ? (
             results.map((game, index) => (
               <Link
@@ -188,10 +220,10 @@ export function SearchAutocomplete() {
               </Link>
             ))
           ) : (
-            <p className="px-3 py-6 text-center text-sm text-muted-foreground">Bu aramayla eşleşen oyun bulunamadı.</p>
+            <p className="px-3 py-6 text-center text-sm text-muted-foreground">{showingPopular ? "Popüler oyun bulunamadı." : "Bu aramayla eşleşen oyun bulunamadı."}</p>
           )}
 
-          {!loading ? (
+          {!loading && !showingPopular ? (
             <Link
               href={`/arama?q=${encodeURIComponent(normalizedQuery)}`}
               onClick={() => setOpen(false)}

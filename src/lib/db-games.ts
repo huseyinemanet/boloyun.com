@@ -682,6 +682,35 @@ export async function searchPublishedGameSuggestions(query: string, limit = 6): 
   }));
 }
 
+export async function getPopularGameSuggestions(limit = 5): Promise<GameSearchSuggestion[]> {
+  const safeLimit = Math.min(Math.max(limit, 1), 10);
+  const fallbackMatches = fallbackGames
+    .filter((game) => game.status === "published")
+    .sort((left, right) => right.playCount - left.playCount)
+    .slice(0, safeLimit)
+    .map(mapGameSearchSuggestion);
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return fallbackMatches;
+
+  const { data, error } = await measuredQuery("games.search.popular_suggestions", supabase
+    .from("games")
+    .select("id, title, slug, thumbnail_url, short_description")
+    .eq("status", "published")
+    .order("play_count", { ascending: false })
+    .order("updated_at", { ascending: false })
+    .limit(safeLimit));
+
+  if (error || !data) return fallbackMatches;
+
+  return (data as GameSearchSuggestionRow[]).map((game) => ({
+    id: game.id,
+    title: game.title,
+    slug: game.slug,
+    thumbnailUrl: game.thumbnail_url ?? "/thumbnails/space.svg",
+    shortDescription: game.short_description ?? "",
+  }));
+}
+
 export async function getPublishedGamesByIds(ids: string[]): Promise<Game[]> {
   const supabase = createSupabaseServiceClient();
   if (!supabase || ids.length === 0) return [];
