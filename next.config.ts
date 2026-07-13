@@ -3,6 +3,23 @@ import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 initOpenNextCloudflareForDev();
 
+const isDevelopment = process.env.NODE_ENV === "development";
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""} https:`,
+  "style-src 'self' 'unsafe-inline' https:",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data: https:",
+  "connect-src 'self' https:",
+  "frame-src https:",
+  "object-src 'self' https:",
+  "worker-src 'self' blob:",
+  ...(!isDevelopment ? ["upgrade-insecure-requests"] : []),
+].join("; ");
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   async redirects() {
@@ -17,7 +34,7 @@ const nextConfig: NextConfig = {
         { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
         { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
         { key: "X-Frame-Options", value: "SAMEORIGIN" },
-        { key: "Content-Security-Policy", value: "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src https:; object-src 'self' https:; worker-src 'self' blob:; upgrade-insecure-requests" },
+        { key: "Content-Security-Policy", value: contentSecurityPolicy },
       ],
     }];
   },
