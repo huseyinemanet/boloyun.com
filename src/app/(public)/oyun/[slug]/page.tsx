@@ -22,7 +22,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { getApprovedCommentsForGame, getTopCommentsForGame, type GameComment } from "@/lib/db-comments";
 import { getGameVoteForSession, type GameVote } from "@/lib/db-game-reactions";
 import { getPublishedGameDetailBySlug, getPublishedGamesByCategorySlug, getRelatedPublishedGames, type GameTaxonomyLink } from "@/lib/db-games";
@@ -34,7 +33,8 @@ import { getPublicSettings } from "@/lib/db-settings";
 import { isGameSourceAllowed } from "@/lib/settings/game-security";
 import { renderSeoTemplate } from "@/lib/settings/validation";
 import { getPublishedGames } from "@/lib/db-games";
-import { createCommentAction, recordGamePlayAction, toggleFavoriteAction, voteGameAction } from "./actions";
+import { recordGamePlayAction, toggleFavoriteAction, voteGameAction } from "./actions";
+import { CommentForm } from "./comment-form";
 import { CommentsTabs } from "./comments-tabs";
 
 export const dynamic = "force-dynamic";
@@ -407,20 +407,7 @@ function CommentsSection({
       {commentStatus ? <CommentNotice status={commentStatus} /> : null}
 
       {canWriteComment && isLoggedIn ? (
-        <form action={createCommentAction} className="mt-4 space-y-3">
-          <input type="hidden" name="game_id" value={gameId} />
-          <input type="hidden" name="slug" value={slug} />
-          <Textarea
-            name="body"
-            required
-            minLength={3}
-            maxLength={1000}
-            rows={4}
-            placeholder="Bu oyun hakkındaki yorumunu yaz..."
-            className="resize-y p-3 font-normal leading-6 placeholder:text-muted-foreground"
-          />
-          <Button type="submit">Yorum Gönder</Button>
-        </form>
+        <CommentForm gameId={gameId} slug={slug} />
       ) : !isLoggedIn ? (
         <p className="mt-4 rounded-md bg-muted/40 p-4 text-sm font-semibold text-muted-foreground">
           Yorum yazmak için <Link href="/giris" className="text-primary hover:underline">giriş yap</Link> veya <Link href="/kayit" className="text-primary hover:underline">kayıt ol</Link>.
