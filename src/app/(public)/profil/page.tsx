@@ -82,7 +82,7 @@ function GameList({ id, title, empty, games }: { id?: string; title: string; emp
               <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-muted">
                 <Image src={game.thumbnailUrl} alt={game.title} fill sizes="180px" unoptimized className="object-cover transition group-hover:scale-105" />
               </div>
-              <h3 className="mt-2 truncate text-sm font-black" title={game.title}>{game.title}</h3>
+              <h3 className="mt-2 truncate text-sm font-semibold" title={game.title}>{game.title}</h3>
             </Link>
           ))}
         </div>
