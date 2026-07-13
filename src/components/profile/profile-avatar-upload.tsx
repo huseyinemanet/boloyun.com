@@ -3,8 +3,9 @@
 import { useRef, useState } from "react";
 import { UploadIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-export function ProfileAvatarUpload() {
+export function ProfileAvatarUpload({ className }: { className?: string }) {
   const input = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -24,5 +25,5 @@ export function ProfileAvatarUpload() {
       setPending(false);
     }
   }
-  return <div className="mt-3"><input ref={input} type="file" className="hidden" accept="image/png,image/jpeg,image/webp" onChange={(event) => upload(event.target.files?.[0])} /><Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => input.current?.click()}><UploadIcon />{pending ? "Yükleniyor…" : "Fotoğrafı Değiştir"}</Button>{message ? <p className="mt-2 text-xs font-semibold text-destructive">{message}</p> : null}</div>;
+  return <div className={cn("mt-3", className)}><input ref={input} type="file" className="hidden" accept="image/png,image/jpeg,image/webp" onChange={(event) => upload(event.target.files?.[0])} /><Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => input.current?.click()}><UploadIcon />{pending ? "Yükleniyor…" : "Fotoğrafı Değiştir"}</Button>{message ? <p className="mt-2 text-xs font-semibold text-destructive">{message}</p> : null}</div>;
 }
