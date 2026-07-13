@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { BotProtectionFields } from "@/components/security/bot-protection-fields";
 import { getCurrentProfile } from "@/lib/auth";
 import { safeLocalPath } from "@/lib/security/navigation";
 import { redirect } from "next/navigation";
+import { LoginForm } from "./login-form";
 
 type Props = {
   searchParams: Promise<{ error?: string; notice?: string; next?: string; challenge?: string }>;
@@ -43,35 +42,7 @@ export default async function LoginPage({ searchParams }: Props) {
           <span className="h-px flex-1 bg-border" />
         </div>
 
-        <form action="/auth/signin" method="post" className="space-y-3">
-          <BotProtectionFields challenge={challenge === "1"} action="login" />
-          <input type="hidden" name="next" value={next} />
-          <label className="block text-sm font-bold">
-            E-posta
-            <Input
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              aria-invalid={hasFieldError}
-              aria-describedby={hasFieldError ? "login-form-error" : undefined}
-              className="mt-1 h-10"
-            />
-          </label>
-          <label className="block text-sm font-bold">
-            Şifre
-            <Input
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              aria-invalid={hasFieldError}
-              aria-describedby={hasFieldError ? "login-form-error" : undefined}
-              className="mt-1 h-10"
-            />
-          </label>
-          <Button className="h-10 w-full px-4 text-sm font-black">Giriş Yap</Button>
-        </form>
+        <LoginForm next={next} challenge={challenge === "1"} hasServerFieldError={hasFieldError} />
 
         <div className="mt-4 flex flex-wrap justify-between gap-2 text-sm font-semibold">
           <Link href="/kayit" className="text-primary hover:underline">Kayıt Ol</Link>
