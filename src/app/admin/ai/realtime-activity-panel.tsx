@@ -26,10 +26,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { AiTranslationActivity, AiTranslationJob, AiTranslationStats } from "@/lib/ai/types";
+import type { AiTranslationActivity, AiTranslationAutomation, AiTranslationJob, AiTranslationStats } from "@/lib/ai/types";
 
 type ActivityPayload = {
   stats?: AiTranslationStats;
+  automation?: AiTranslationAutomation;
   jobs: AiTranslationJob[];
   activity: AiTranslationActivity[];
   activityTotal: number;
@@ -236,6 +237,14 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
         logTransitions(previousStatuses.current, next.activity);
         previousStatuses.current = new Map(next.activity.map((item) => [item.id, item.status]));
         window.dispatchEvent(new CustomEvent("ai-translation:jobs", { detail: { jobs: next.jobs } }));
+        window.dispatchEvent(new CustomEvent("ai-translation:dashboard", {
+          detail: {
+            stats: next.stats,
+            automation: next.automation,
+            jobs: next.jobs,
+            serverTime: next.serverTime,
+          },
+        }));
         setPayload((current) => ({ ...next, stats: next.stats ?? current.stats }));
         consecutiveErrors.current = 0;
         setLastError(null);

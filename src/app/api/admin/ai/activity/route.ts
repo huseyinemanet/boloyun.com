@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth";
-import { countTranslationActivity, listRecentJobs, listRecentTranslationActivity } from "@/lib/ai/db-ai";
+import {
+  countTranslationActivity,
+  getTranslationAutomation,
+  getTranslationStats,
+  listRecentJobs,
+  listRecentTranslationActivity,
+} from "@/lib/ai/db-ai";
 
 export const dynamic = "force-dynamic";
 const DEFAULT_ACTIVITY_LIMIT = 50;
@@ -19,13 +25,15 @@ export async function GET(request: Request) {
       : DEFAULT_ACTIVITY_LIMIT;
     const jobs = await listRecentJobs();
     const activeJob = jobs.find((job) => job.status === "running") ?? jobs.find((job) => job.status === "queued") ?? jobs[0];
-    const [activity, activityTotal] = await Promise.all([
+    const [activity, activityTotal, stats, automation] = await Promise.all([
       listRecentTranslationActivity(activityLimit, activeJob?.id),
       countTranslationActivity(activeJob?.id),
+      getTranslationStats(),
+      getTranslationAutomation(),
     ]);
 
     return NextResponse.json(
-      { jobs, activity, activityTotal, activityLimit, serverTime: new Date().toISOString() },
+      { stats, jobs, activity, activityTotal, activityLimit, automation, serverTime: new Date().toISOString() },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {

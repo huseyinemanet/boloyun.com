@@ -5,16 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 import { privatePageMetadata } from "@/lib/seo/metadata";
 import { getAiDashboardData } from "@/lib/ai/db-ai";
-import { AI_PROVIDER_LABELS, DEFAULT_AI_MODELS, type AiProviderConfig, type AiTranslationAutomation, type AiTranslationStats } from "@/lib/ai/types";
+import { AI_PROVIDER_LABELS, DEFAULT_AI_MODELS, type AiProviderConfig } from "@/lib/ai/types";
 import { maskFingerprint } from "@/lib/ai/crypto";
+import { AutomationProgressPanel } from "./automation-progress-panel";
 import { AiDebugConsole } from "./ai-debug-console";
 import { AiJobsTable } from "./ai-jobs-table";
 import {
   saveAiProviderAction,
-  saveTranslationAutomationAction,
   testAiProviderAction,
 } from "./actions";
 import { RealtimeActivityPanel } from "./realtime-activity-panel";
@@ -38,7 +37,7 @@ export default async function AiCenterPage() {
         description="Otomatik çeviriyi aç, günlük hedefi izle ve gerektiğinde müdahale et."
       />
 
-      <AutomationPanel automation={automation} stats={stats} />
+      <AutomationProgressPanel automation={automation} stats={stats} />
 
       <RealtimeActivityPanel initialStats={stats} initialJobs={jobs} initialActivity={activity} initialActivityTotal={activityTotal} />
 
@@ -56,60 +55,6 @@ export default async function AiCenterPage() {
         {deepSeekConfig ? <ProviderConfigCard config={deepSeekConfig} /> : null}
       </DetailsSection>
     </div>
-  );
-}
-
-function AutomationPanel({ automation, stats }: { automation: AiTranslationAutomation; stats: AiTranslationStats }) {
-  const todayProgress = `${automation.todayCompleted.toLocaleString("tr-TR")} / ${automation.dailyTarget.toLocaleString("tr-TR")}`;
-  const totalProgress = `${stats.completed.toLocaleString("tr-TR")} / ${stats.totalPublished.toLocaleString("tr-TR")}`;
-  const isDone = stats.totalPublished > 0 && stats.completed >= stats.totalPublished;
-  const totalPercent = isDone ? 100 : stats.totalPublished > 0 ? Math.floor((stats.completed / stats.totalPublished) * 100) : 0;
-  return (
-    <section className="rounded-md border border-border bg-card p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold">Otomatik Çeviri</h2>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Açıkken cron arka planda çalışır. Günlük hedef dolunca o gün durur, ertesi gün kaldığı yerden devam eder.
-          </p>
-        </div>
-        <Badge variant={automation.enabled ? "default" : "outline"}>{isDone ? "Tüm çeviriler tamamlandı" : automationStatusText(automation)}</Badge>
-      </div>
-
-      <Progress value={totalPercent} className="mt-4">
-        <div className="flex items-center justify-between gap-3">
-          <ProgressLabel>Genel ilerleme</ProgressLabel>
-          <ProgressValue />
-        </div>
-      </Progress>
-
-      <p className="mt-2 text-sm text-muted-foreground">
-        {totalProgress} tamamlandı · Bugün {todayProgress}
-      </p>
-
-      {automation.lastError ? (
-        <p className="mt-3 rounded-md bg-destructive/10 px-3 py-2 text-sm font-semibold text-destructive">
-          Son hata: {automation.lastError}
-        </p>
-      ) : stats.failed ? (
-        <p className="mt-2 text-sm font-semibold text-destructive">
-          {stats.failed.toLocaleString("tr-TR")} oyun hatalı bekliyor; sistem diğer oyunlara devam eder.
-        </p>
-      ) : null}
-
-      <form action={saveTranslationAutomationAction} className="mt-4 grid items-end gap-3 md:grid-cols-[180px_auto_1fr]">
-        <label className="grid gap-1 text-sm font-bold">
-          Günlük hedef
-          <Input name="daily_target" type="number" min={1} max={5000} defaultValue={automation.dailyTarget} />
-        </label>
-        <label className="flex h-10 items-center gap-2 text-sm font-semibold text-muted-foreground">
-          <Checkbox name="enabled" defaultChecked={automation.enabled} />
-          Açık
-        </label>
-        <input type="hidden" name="retry_failed" value="on" />
-        <Button type="submit" variant="outline" className="w-full md:w-auto">Kaydet</Button>
-      </form>
-    </section>
   );
 }
 
@@ -170,12 +115,4 @@ function testStatusText(config: AiProviderConfig) {
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("tr-TR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Istanbul" }).format(new Date(value));
-}
-
-function automationStatusText(automation: AiTranslationAutomation) {
-  if (!automation.enabled) return "Kapalı";
-  if (automation.status === "running") return "Çalışıyor";
-  if (automation.status === "error") return "Hata var";
-  if (automation.todayCompleted >= automation.dailyTarget) return "Günlük hedef doldu";
-  return "Açık";
 }
