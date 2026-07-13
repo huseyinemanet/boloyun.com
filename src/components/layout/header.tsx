@@ -103,10 +103,10 @@ export async function Header() {
           </DropdownMenu>
         ) : (
           <div className="flex shrink-0 items-center gap-2">
-            <Link href="/giris" className="h-10 rounded-md border border-border px-3 py-2 text-sm font-semibold">
+            <Link href="/giris" className="inline-flex h-10 items-center justify-center rounded-md border border-border px-3 text-sm font-semibold leading-none">
               Giriş Yap
             </Link>
-            {settings.general.registrationsEnabled && settings.community.registrationsEnabled ? <Link href="/kayit" className="hidden h-10 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground sm:inline-flex">Kayıt Ol</Link> : null}
+            {settings.general.registrationsEnabled && settings.community.registrationsEnabled ? <Link href="/kayit" className="hidden h-10 items-center justify-center rounded-md bg-primary px-3 text-sm font-semibold leading-none text-primary-foreground sm:inline-flex">Kayıt Ol</Link> : null}
           </div>
         )}
       </div>
