@@ -17,7 +17,7 @@ export function GameCard({ game }: { game: Game }) {
           />
         </div>
         <div className="min-w-0 p-3">
-          <h3 className="truncate text-sm font-black" title={game.title}>{game.title}</h3>
+          <h3 className="truncate text-sm font-semibold" title={game.title}>{game.title}</h3>
         </div>
       </Link>
     </article>
