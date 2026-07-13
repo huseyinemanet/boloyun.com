@@ -27,18 +27,24 @@ async function runAiTranslationCron(event, env, ctx) {
 
   const siteUrl = env.SITE_URL || "https://boloyun.com";
   const url = new URL("/api/admin/ai/automation", siteUrl);
-  const response = await openNextWorker.fetch(new Request(url, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${secret}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      source: "cron",
-      cron: event.cron,
-      scheduledTime: event.scheduledTime,
-    }),
-  }), env, ctx);
+  let response;
+  try {
+    response = await openNextWorker.fetch(new Request(url, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${secret}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        source: "cron",
+        cron: event.cron,
+        scheduledTime: event.scheduledTime,
+      }),
+    }), env, ctx);
+  } catch (error) {
+    console.error("[ai-translation] cron.exception", { error: error instanceof Error ? error.message : String(error) });
+    return;
+  }
 
   if (!response.ok) {
     const body = await response.text().catch(() => "");

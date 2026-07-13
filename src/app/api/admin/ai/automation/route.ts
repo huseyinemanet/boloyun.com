@@ -14,12 +14,11 @@ export async function POST(request: Request) {
   try {
     console.log("[ai-translation] automation.api.start", { source });
     const result = await runTranslationAutomationTick(source);
-    const status = result.status === "error" ? 500 : 200;
     console.log("[ai-translation] automation.api.done", result);
-    return NextResponse.json(result, { status });
+    return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[ai-translation] automation.api.failed", { source, error: message });
-    return NextResponse.json({ status: "error", message }, { status: 500 });
+    return NextResponse.json({ status: "error", message });
   }
 }

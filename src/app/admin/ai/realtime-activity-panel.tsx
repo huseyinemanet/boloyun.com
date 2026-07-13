@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -421,23 +420,7 @@ function Metric({ label, value, tone = "muted" }: { label: string; value: string
 }
 
 function GameActivityLink({ item }: { item: ActivityTableRow }) {
-  const content = (
-    <span className="flex min-w-0 items-center gap-2">
-      <span className="relative block h-9 w-12 shrink-0 overflow-hidden rounded-md bg-muted">
-        {item.thumbnailUrl ? (
-          <Image
-            src={item.thumbnailUrl}
-            alt=""
-            fill
-            unoptimized
-            sizes="48px"
-            className="object-cover"
-          />
-        ) : null}
-      </span>
-      <span className="block min-w-0 truncate font-semibold" title={item.title}>{item.title}</span>
-    </span>
-  );
+  const content = <span className="block min-w-0 truncate font-semibold" title={item.title}>{item.title}</span>;
 
   if (!item.slug) return content;
 

@@ -1,4 +1,4 @@
-export const AI_PROVIDERS = ["deepseek", "openai", "claude"] as const;
+export const AI_PROVIDERS = ["deepseek"] as const;
 export type AiProvider = (typeof AI_PROVIDERS)[number];
 
 export const AI_BATCH_SIZES = [10, 25, 50, 100] as const;
@@ -6,14 +6,10 @@ export type AiBatchSize = (typeof AI_BATCH_SIZES)[number];
 
 export const DEFAULT_AI_MODELS: Record<AiProvider, string> = {
   deepseek: "deepseek-v4-flash",
-  openai: "gpt-4.1-mini",
-  claude: "claude-3-5-haiku-latest",
 };
 
 export const AI_PROVIDER_LABELS: Record<AiProvider, string> = {
   deepseek: "DeepSeek",
-  openai: "OpenAI",
-  claude: "Claude",
 };
 
 export type AiProviderConfig = {
@@ -104,7 +100,6 @@ export type AiTranslationActivity = {
   gameId: string;
   title: string;
   slug: string | null;
-  thumbnailUrl: string | null;
   status: AiTranslationItemStatus;
   attempts: number;
   errorMessage: string | null;

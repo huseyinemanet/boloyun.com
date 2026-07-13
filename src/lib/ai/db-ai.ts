@@ -80,11 +80,9 @@ type ActivityRow = JobItemRow & {
   games?: {
     title?: string | null;
     slug?: string | null;
-    thumbnail_url?: string | null;
   } | Array<{
     title?: string | null;
     slug?: string | null;
-    thumbnail_url?: string | null;
   }> | null;
 };
 
@@ -320,9 +318,8 @@ export async function getTranslationAutomation(): Promise<AiTranslationAutomatio
 
 export async function saveTranslationAutomation(input: {
   enabled: boolean;
-  provider: AiProvider;
   dailyTarget: number;
-  perRunLimit: number;
+  perRunLimit?: number;
   retryFailed: boolean;
 }) {
   const supabase = requiredServiceClient();
@@ -331,7 +328,7 @@ export async function saveTranslationAutomation(input: {
   const { error } = await supabase.from("ai_translation_automation").upsert({
     id: "default",
     enabled: input.enabled,
-    provider: input.provider,
+    provider: "deepseek",
     daily_target: dailyTarget,
     per_run_limit: perRunLimit,
     retry_failed: input.retryFailed,
@@ -455,7 +452,7 @@ export async function listRecentTranslationActivity(limit = DEFAULT_ACTIVITY_LIM
   const safeLimit = Math.max(1, Math.min(limit, MAX_ACTIVITY_LIMIT));
   let query = supabase
     .from("ai_translation_job_items")
-    .select("id, job_id, game_id, status, attempts, error_message, before_snapshot, started_at, completed_at, updated_at, games(title, slug, thumbnail_url)")
+    .select("id, job_id, game_id, status, attempts, error_message, before_snapshot, started_at, completed_at, updated_at, games(title, slug)")
     .order("updated_at", { ascending: false })
     .limit(safeLimit);
   if (jobId) query = query.eq("job_id", jobId);
@@ -726,7 +723,7 @@ async function resolveAutomationJob(automation: AiTranslationAutomation) {
     }
   }
   const jobId = await createTranslationJob({
-    provider: automation.provider,
+    provider: "deepseek",
     batchSize: AUTOMATION_JOB_BATCH_SIZE,
     createdBy: null,
     retryFailedOnly: false,
@@ -782,10 +779,9 @@ async function recordAutomationRun(input: {
 }
 
 function mapAutomation(row: AutomationRow, todayCompleted: number): AiTranslationAutomation {
-  const provider = row.provider && isAiProvider(row.provider) ? row.provider : "deepseek";
   return {
     enabled: Boolean(row.enabled),
-    provider,
+    provider: "deepseek",
     dailyTarget: clampInteger(row.daily_target, 1, 5000, 1000),
     perRunLimit: clampInteger(row.per_run_limit, 1, 5, 2),
     retryFailed: row.retry_failed ?? true,
@@ -856,7 +852,6 @@ function mapActivity(row: ActivityRow): AiTranslationActivity {
     gameId: row.game_id,
     title: game?.title || (typeof row.before_snapshot?.title === "string" ? row.before_snapshot.title : row.game_id),
     slug: game?.slug ?? null,
-    thumbnailUrl: game?.thumbnail_url ?? null,
     status: isTranslationItemStatus(row.status) ? row.status : "failed",
     attempts: row.attempts ?? 0,
     errorMessage: row.error_message,

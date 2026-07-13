@@ -58,10 +58,8 @@ export async function testAiProviderAction(formData: FormData) {
 
 export async function createTranslationJobAction(formData: FormData) {
   const admin = await requireAdmin();
-  const provider = String(formData.get("provider") ?? "");
-  if (!isAiProvider(provider)) throw new Error("Geçersiz AI provider.");
   await createTranslationJob({
-    provider,
+    provider: "deepseek",
     batchSize: parseBatchSize(String(formData.get("batch_size") ?? "")),
     createdBy: admin.id,
     retryFailedOnly: formData.get("retry_failed_only") === "on",
@@ -71,13 +69,10 @@ export async function createTranslationJobAction(formData: FormData) {
 
 export async function saveTranslationAutomationAction(formData: FormData) {
   await requireAdmin();
-  const provider = String(formData.get("provider") ?? "");
-  if (!isAiProvider(provider)) throw new Error("Geçersiz AI provider.");
   await saveTranslationAutomation({
     enabled: formData.get("enabled") === "on",
-    provider,
     dailyTarget: Number(formData.get("daily_target") ?? 1000),
-    perRunLimit: Number(formData.get("per_run_limit") ?? 2),
+    perRunLimit: 2,
     retryFailed: formData.get("retry_failed") === "on",
   });
   revalidatePath("/admin/ai");
