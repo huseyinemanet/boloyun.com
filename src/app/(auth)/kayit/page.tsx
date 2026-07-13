@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { getPublicSettings } from "@/lib/db-settings";
 import { BotProtectionFields } from "@/components/security/bot-protection-fields";
 import { getCurrentProfile } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { AuthCard, AuthMessage } from "../auth-card";
+import { ValidatedAuthForm, ValidatedInput } from "../validated-auth-form";
 
 type Props = {
   searchParams: Promise<{ error?: string; challenge?: string }>;
@@ -27,73 +29,55 @@ export default async function RegisterPage({ searchParams }: Props) {
   const hasTermsError = error === "terms" || error === "form";
 
   return (
-    <main className="mx-auto w-full max-w-md px-3 py-10">
-      <section className="rounded-md border border-border bg-card p-5">
-        <h1 className="text-2xl font-black">Kayıt Ol</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Oyunlarını favorilere eklemek ve yorum yazmak için ücretsiz hesap oluştur.</p>
-        {!registrationsEnabled ? <p className="mt-3 rounded-md bg-warning/10 p-3 text-sm font-semibold text-warning">Yeni üyelikler şu anda kapalı. Mevcut hesabınla giriş yapabilirsin.</p> : null}
-        {error ? <p id="register-form-error" role="alert" className="mt-3 rounded-md bg-destructive/10 p-3 text-sm font-semibold text-destructive">{registerError}</p> : null}
-        {registrationsEnabled ? <form action="/auth/signup" method="post" className="mt-4 space-y-3">
+    <AuthCard title="Kayıt Ol" description="Oyunlarını favorilere eklemek ve yorum yazmak için ücretsiz hesap oluştur.">
+      {!registrationsEnabled ? <AuthMessage type="error">Yeni üyelikler şu anda kapalı. Mevcut hesabınla giriş yapabilirsin.</AuthMessage> : null}
+      {error ? <AuthMessage id="register-form-error" type="error">{registerError}</AuthMessage> : null}
+      {registrationsEnabled ? (
+        <ValidatedAuthForm action="/auth/signup" className="mt-4">
           <BotProtectionFields challenge={challenge === "1"} action="signup" />
-          <label className="block text-sm font-bold">
-            Kullanıcı adı
-            <Input
-              name="username"
-              autoComplete="username"
-              required
-              minLength={community.usernameMinLength}
-              maxLength={community.usernameMaxLength}
-              aria-invalid={hasUsernameError}
-              aria-describedby={hasUsernameError ? errorDescription : undefined}
-              className="mt-1 h-10"
-            />
-          </label>
-          {community.minimumAge > 0 ? <label className="block text-sm font-bold">Doğum yılı<Input name="birth_year" type="number" autoComplete="bday-year" required min={1900} max={new Date().getFullYear() - community.minimumAge} aria-invalid={hasAgeError} aria-describedby={hasAgeError ? errorDescription : undefined} className="mt-1 h-10" /></label> : null}
-          <label className="block text-sm font-bold">
-            E-posta
-            <Input
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              aria-invalid={hasEmailError}
-              aria-describedby={hasEmailError ? errorDescription : undefined}
-              className="mt-1 h-10"
-            />
-          </label>
-          <label className="block text-sm font-bold">
-            Şifre
-            <Input
-              name="password"
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={8}
-              aria-invalid={hasPasswordError}
-              aria-describedby={hasPasswordError ? errorDescription : undefined}
-              className="mt-1 h-10"
-            />
-          </label>
-          <div className="flex items-start gap-2 text-sm font-semibold">
-            <Checkbox id="terms_accepted" name="terms_accepted" required aria-invalid={hasTermsError} aria-describedby={hasTermsError ? errorDescription : undefined} aria-label="Kullanım şartlarını ve gizlilik politikasını kabul ediyorum" className="mt-1" />
-            <p>
-              <Link href="/sayfa/kullanim-sartlari" className="text-primary hover:underline">Kullanım şartlarını</Link>
-              {" ve "}
-              <Link href="/sayfa/gizlilik-politikasi" className="text-primary hover:underline">gizlilik politikasını</Link>
-              {" kabul ediyorum."}
-            </p>
-          </div>
-          <label className="flex items-start gap-2 text-sm text-muted-foreground">
-            <Checkbox name="marketing_emails_accepted" className="mt-1" />
-            <span>Yeni oyunlar ve duyurular için e-posta almak istiyorum.</span>
-          </label>
-          <Button className="h-10 w-full px-4 text-sm font-black">Kayıt Ol</Button>
-        </form> : null}
-        <p className="mt-4 text-sm font-semibold">
-          Zaten hesabın var mı? <Link href="/giris" className="text-primary hover:underline">Giriş Yap</Link>
-        </p>
-      </section>
-    </main>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="register-username">Kullanıcı adı</FieldLabel>
+              <ValidatedInput id="register-username" name="username" autoComplete="username" required minLength={community.usernameMinLength} maxLength={community.usernameMaxLength} serverInvalid={hasUsernameError} aria-describedby={hasUsernameError ? errorDescription : undefined} />
+            </Field>
+            {community.minimumAge > 0 ? (
+              <Field>
+                <FieldLabel htmlFor="register-birth-year">Doğum yılı</FieldLabel>
+                <ValidatedInput id="register-birth-year" name="birth_year" type="number" autoComplete="bday-year" required min={1900} max={new Date().getFullYear() - community.minimumAge} serverInvalid={hasAgeError} aria-describedby={hasAgeError ? errorDescription : undefined} />
+              </Field>
+            ) : null}
+            <Field>
+              <FieldLabel htmlFor="register-email">E-posta</FieldLabel>
+              <ValidatedInput id="register-email" name="email" type="email" autoComplete="email" required serverInvalid={hasEmailError} aria-describedby={hasEmailError ? errorDescription : undefined} />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="register-password">Şifre</FieldLabel>
+              <ValidatedInput id="register-password" name="password" type="password" autoComplete="new-password" required minLength={8} serverInvalid={hasPasswordError} aria-describedby={hasPasswordError ? errorDescription : undefined} />
+              <FieldDescription>En az 8 karakter olmalı.</FieldDescription>
+            </Field>
+            <Field orientation="horizontal" className="items-center bg-transparent p-0">
+              <Checkbox id="terms_accepted" name="terms_accepted" required aria-invalid={hasTermsError} aria-describedby={hasTermsError ? errorDescription : undefined} aria-label="Kullanım şartlarını ve gizlilik politikasını kabul ediyorum" />
+              <p className="text-sm font-semibold leading-5">
+                <Link href="/sayfa/kullanim-sartlari" className="text-primary hover:underline">Kullanım şartlarını</Link>
+                {" ve "}
+                <Link href="/sayfa/gizlilik-politikasi" className="text-primary hover:underline">gizlilik politikasını</Link>
+                {" kabul ediyorum."}
+              </p>
+            </Field>
+            <Field orientation="horizontal" className="items-center bg-transparent p-0">
+              <Checkbox name="marketing_emails_accepted" />
+              <span className="text-sm leading-5 text-muted-foreground">Yeni oyunlar ve duyurular için e-posta almak istiyorum.</span>
+            </Field>
+            <Field>
+              <Button className="h-10 w-full px-4 text-sm font-black">Kayıt Ol</Button>
+            </Field>
+          </FieldGroup>
+        </ValidatedAuthForm>
+      ) : null}
+      <p className="mt-4 text-sm font-semibold">
+        Zaten hesabın var mı? <Link href="/giris" className="text-primary hover:underline">Giriş Yap</Link>
+      </p>
+    </AuthCard>
   );
 }
 

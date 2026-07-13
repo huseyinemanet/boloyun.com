@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
+import { AuthCard, AuthMessage } from "../auth-card";
+import { ValidatedAuthForm, ValidatedInput } from "../validated-auth-form";
 
 type Props = {
   searchParams: Promise<{ error?: string }>;
@@ -15,26 +17,33 @@ export default async function UpdatePasswordPage({ searchParams }: Props) {
   const recoveryPending = (await cookies()).get("password_recovery_pending")?.value === "1";
 
   return (
-    <main className="mx-auto w-full max-w-md px-3 py-10">
-      <section className="rounded-md border border-border bg-card p-5">
-        <h1 className="text-2xl font-black">Yeni Şifre Belirle</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Hesabın için en az 8 karakterli yeni bir şifre seç.</p>
-        {error ? <p role="alert" className="mt-3 rounded-md bg-destructive/10 p-3 text-sm font-semibold text-destructive">{getPasswordError(error)}</p> : null}
-        {data.user && recoveryPending ? (
-          <form action="/auth/update-password" method="post" className="mt-4 space-y-3">
+    <AuthCard title="Yeni Şifre Belirle" description="Hesabın için en az 8 karakterli yeni bir şifre seç.">
+      {error ? <AuthMessage id="password-form-error" type="error">{getPasswordError(error)}</AuthMessage> : null}
+      {data.user && recoveryPending ? (
+          <ValidatedAuthForm action="/auth/update-password" className="mt-4">
             <input type="email" name="username" autoComplete="username" value={data.user.email ?? ""} readOnly className="sr-only" tabIndex={-1} aria-hidden="true" />
-            <label className="block text-sm font-bold">Yeni şifre<Input name="password" type="password" autoComplete="new-password" required minLength={8} className="mt-1 h-10" /></label>
-            <label className="block text-sm font-bold">Yeni şifre tekrar<Input name="password_confirmation" type="password" autoComplete="new-password" required minLength={8} className="mt-1 h-10" /></label>
-            <Button className="h-10 w-full px-4 text-sm font-black">Şifreyi Güncelle</Button>
-          </form>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="new-password">Yeni şifre</FieldLabel>
+                <ValidatedInput id="new-password" name="password" type="password" autoComplete="new-password" required minLength={8} serverInvalid={error === "weak" || error === "mismatch" || error === "form"} aria-describedby={error ? "password-form-error" : undefined} />
+                <FieldDescription>En az 8 karakter olmalı.</FieldDescription>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="new-password-confirmation">Yeni şifre tekrar</FieldLabel>
+                <ValidatedInput id="new-password-confirmation" name="password_confirmation" type="password" autoComplete="new-password" required minLength={8} serverInvalid={error === "mismatch" || error === "form"} aria-describedby={error ? "password-form-error" : undefined} />
+              </Field>
+              <Field>
+                <Button className="h-10 w-full px-4 text-sm font-black">Şifreyi Güncelle</Button>
+              </Field>
+            </FieldGroup>
+          </ValidatedAuthForm>
         ) : (
           <div className="mt-4">
-            <p role="alert" className="rounded-md bg-destructive/10 p-3 text-sm font-semibold text-destructive">Şifre yenileme bağlantısı geçersiz veya süresi dolmuş.</p>
+            <AuthMessage type="error">Şifre yenileme bağlantısı geçersiz veya süresi dolmuş.</AuthMessage>
             <Link href="/sifremi-unuttum" className="mt-4 inline-block text-sm font-semibold text-primary hover:underline">Yeni bağlantı iste</Link>
           </div>
         )}
-      </section>
-    </main>
+    </AuthCard>
   );
 }
 

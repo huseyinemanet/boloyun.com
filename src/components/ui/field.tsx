@@ -23,6 +23,10 @@ function Field({
   );
 }
 
+function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
+  return <div data-slot="field-group" className={cn("grid gap-4", className)} {...props} />;
+}
+
 function FieldContent({ className, ...props }: React.ComponentProps<"div">) {
   return <div data-slot="field-content" className={cn("grid min-w-0 gap-0.5", className)} {...props} />;
 }
@@ -35,4 +39,18 @@ function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
   return <p data-slot="field-description" className={cn("text-xs leading-5 text-muted-foreground", className)} {...props} />;
 }
 
-export { Field, FieldContent, FieldDescription, FieldLabel };
+function FieldSeparator({ className, children, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="field-separator"
+      className={cn("flex items-center gap-3 text-xs font-bold text-muted-foreground", className)}
+      {...props}
+    >
+      <span className="h-px flex-1 bg-border" />
+      {children ? <span data-slot="field-separator-content">{children}</span> : null}
+      <span className="h-px flex-1 bg-border" />
+    </div>
+  );
+}
+
+export { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel, FieldSeparator };
