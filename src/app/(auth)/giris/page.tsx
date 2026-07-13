@@ -17,6 +17,8 @@ export default async function LoginPage({ searchParams }: Props) {
     const target = safeLocalPath(next, "/profil");
     redirect(target === "/giris" || target === "/kayit" ? "/profil" : target);
   }
+  const loginError = error ? getLoginError(error) : "";
+  const hasFieldError = error === "invalid" || error === "form";
 
   return (
     <main className="mx-auto w-full max-w-md px-3 py-10">
@@ -26,7 +28,7 @@ export default async function LoginPage({ searchParams }: Props) {
         {notice === "created" ? <Message type="success">Hesabın oluşturuldu. Şimdi giriş yapabilirsin.</Message> : null}
         {notice === "verify-email" ? <Message type="success">Hesabın oluşturuldu. E-postandaki doğrulama bağlantısını açtıktan sonra giriş yapabilirsin.</Message> : null}
         {notice === "password-updated" ? <Message type="success">Şifren güncellendi. Yeni şifrenle giriş yapabilirsin.</Message> : null}
-        {error ? <Message type="error">{getLoginError(error)}</Message> : null}
+        {error ? <Message id="login-form-error" type="error">{loginError}</Message> : null}
 
         <Button asChild variant="outline" className="mt-4 h-10 w-full px-4 text-sm font-black">
           <Link href={`/auth/google?next=${encodeURIComponent(next)}`}>
@@ -45,11 +47,27 @@ export default async function LoginPage({ searchParams }: Props) {
           <input type="hidden" name="next" value={next} />
           <label className="block text-sm font-bold">
             E-posta
-            <Input name="email" type="email" autoComplete="email" required className="mt-1 h-10" />
+            <Input
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              aria-invalid={hasFieldError}
+              aria-describedby={hasFieldError ? "login-form-error" : undefined}
+              className="mt-1 h-10"
+            />
           </label>
           <label className="block text-sm font-bold">
             Şifre
-            <Input name="password" type="password" autoComplete="current-password" required className="mt-1 h-10" />
+            <Input
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              aria-invalid={hasFieldError}
+              aria-describedby={hasFieldError ? "login-form-error" : undefined}
+              className="mt-1 h-10"
+            />
           </label>
           <Button className="h-10 w-full px-4 text-sm font-black">Giriş Yap</Button>
         </form>
@@ -63,8 +81,8 @@ export default async function LoginPage({ searchParams }: Props) {
   );
 }
 
-function Message({ type, children }: { type: "success" | "error"; children: React.ReactNode }) {
-  return <p role={type === "error" ? "alert" : "status"} className={`mt-3 rounded-md p-3 text-sm font-semibold ${type === "success" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>{children}</p>;
+function Message({ id, type, children }: { id?: string; type: "success" | "error"; children: React.ReactNode }) {
+  return <p id={id} role={type === "error" ? "alert" : "status"} className={`mt-3 rounded-md p-3 text-sm font-semibold ${type === "success" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>{children}</p>;
 }
 
 function getLoginError(error: string) {
