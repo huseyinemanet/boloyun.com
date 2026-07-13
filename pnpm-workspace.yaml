@@ -1,6 +1,3 @@
-packages:
-  - apps/*
-
 allowBuilds:
   esbuild: true
   nucleo-ui-fill-duo-18: false

@@ -7,7 +7,6 @@ import type { HomepageSectionInput } from "@/lib/db-homepage-sections";
 import { SETTINGS_SECTIONS, type SettingsSection } from "@/lib/settings/types";
 import { validateSettingsSection } from "@/lib/settings/validation";
 import { recordAdminAudit } from "@/lib/admin-audit";
-import { requestPublicSiteRebuild } from "@/lib/public-site-rebuild";
 
 type SaveInput = {
   section: SettingsSection;
@@ -26,7 +25,6 @@ export async function saveSettingsAction(input: SaveInput) {
   await recordAdminAudit({ actorProfileId: admin.id, action: "settings.save", targetType: "site_settings", details: { section: input.section, version: saved.version } });
 
   refreshSettingsRoutes(input.section);
-  await requestPublicSiteRebuild(`settings.save:${input.section}`, admin.id);
   return { ok: true as const, record: saved };
 }
 
@@ -47,7 +45,6 @@ export async function restoreSettingsAction(section: SettingsSection, revisionId
   });
   await recordAdminAudit({ actorProfileId: admin.id, action: "settings.restore", targetType: "site_settings", targetIds: [revisionId], details: { section, version: saved.version } });
   refreshSettingsRoutes(section);
-  await requestPublicSiteRebuild(`settings.restore:${section}`, admin.id);
   return { ok: true as const, record: saved };
 }
 

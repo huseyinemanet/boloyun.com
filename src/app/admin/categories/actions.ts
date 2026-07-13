@@ -3,7 +3,6 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { upsertAdminCategory } from "@/lib/db-categories";
 import { requireAdmin } from "@/lib/auth";
-import { publicRebuildMessage, requestPublicSiteRebuild } from "@/lib/public-site-rebuild";
 
 export type CategoryFormState = {
   status: "idle" | "error" | "success";
@@ -15,7 +14,7 @@ export type CategoryFormState = {
 };
 
 export async function saveCategoryAction(_previousState: CategoryFormState, formData: FormData): Promise<CategoryFormState> {
-  const admin = await requireAdmin();
+  await requireAdmin();
 
   const name = String(formData.get("name") ?? "").trim();
   const slug = String(formData.get("slug") ?? "").trim();
@@ -47,12 +46,10 @@ export async function saveCategoryAction(_previousState: CategoryFormState, form
   revalidateTag("categories", "max");
   revalidatePath("/");
   revalidatePath(`/kategori/${slug}`);
-  const rebuild = await requestPublicSiteRebuild(`category.save:${slug}`, admin.id);
-  const rebuildMessage = publicRebuildMessage(rebuild);
 
   return {
     status: "success",
-    message: rebuildMessage || "Kategori kaydedildi.",
+    message: "Kategori kaydedildi.",
     fieldErrors: {},
   };
 }
