@@ -5,8 +5,11 @@
   "compatibility_date": "2026-07-11",
   "compatibility_flags": ["nodejs_compat"],
   "routes": [
-    { "pattern": "boloyun.com/*", "zone_name": "boloyun.com" },
-    { "pattern": "www.boloyun.com/*", "zone_name": "boloyun.com" }
+    { "pattern": "boloyun.com/admin*", "zone_name": "boloyun.com" },
+    { "pattern": "boloyun.com/api*", "zone_name": "boloyun.com" },
+    { "pattern": "boloyun.com/auth*", "zone_name": "boloyun.com" },
+    { "pattern": "boloyun.com/profil*", "zone_name": "boloyun.com" },
+    { "pattern": "boloyun.com/rastgele*", "zone_name": "boloyun.com" }
   ],
   "assets": {
     "directory": ".open-next/assets",

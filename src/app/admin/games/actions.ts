@@ -7,9 +7,10 @@ import type { GameType, PublishStatus } from "@/types/game";
 import { requireAdmin } from "@/lib/auth";
 import { auditGameSeo } from "@/lib/seo/audit";
 import { isCdnCoverUrl, mirrorGameCover } from "@/import/covers/mirror-cover";
+import { requestPublicSiteRebuild } from "@/lib/public-site-rebuild";
 
 export async function updateGameAction(formData: FormData) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
@@ -73,6 +74,9 @@ export async function updateGameAction(formData: FormData) {
   }
   if (input.status !== "published" || input.is_broken) input.is_indexable = false;
   await updateAdminGame(id, input);
+  if (input.status === "published" || currentGame.status === "published") {
+    await requestPublicSiteRebuild(`game.update:${id}`, admin.id);
+  }
 
   revalidatePath("/");
   revalidateTag("games", "max");

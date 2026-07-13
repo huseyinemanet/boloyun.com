@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { upsertAdminAd, upsertAdminAdSlot } from "@/lib/db-ads";
+import { publicRebuildMessage, requestPublicSiteRebuild } from "@/lib/public-site-rebuild";
 
 export type AdSlotFormState = {
   status: "idle" | "error" | "success";
@@ -27,7 +28,7 @@ export type AdFormState = {
 };
 
 export async function saveAdSlotAction(_previousState: AdSlotFormState, formData: FormData): Promise<AdSlotFormState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const name = String(formData.get("name") ?? "").trim();
   const key = String(formData.get("key") ?? "").trim();
@@ -56,15 +57,17 @@ export async function saveAdSlotAction(_previousState: AdSlotFormState, formData
   }
 
   revalidatePath("/admin/ads");
+  const rebuild = await requestPublicSiteRebuild(`ad_slot.save:${key}`, admin.id);
+  const rebuildMessage = publicRebuildMessage(rebuild);
   return {
     status: "success",
-    message: "Reklam slotu kaydedildi.",
+    message: rebuildMessage || "Reklam slotu kaydedildi.",
     fieldErrors: {},
   };
 }
 
 export async function saveAdAction(_previousState: AdFormState, formData: FormData): Promise<AdFormState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const slotId = String(formData.get("slot_id") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
@@ -103,9 +106,11 @@ export async function saveAdAction(_previousState: AdFormState, formData: FormDa
   revalidatePath("/admin/ads");
   revalidatePath("/");
   revalidatePath("/oyun/[slug]", "page");
+  const rebuild = await requestPublicSiteRebuild(`ad.save:${slotId}`, admin.id);
+  const rebuildMessage = publicRebuildMessage(rebuild);
   return {
     status: "success",
-    message: "Reklam kaydedildi.",
+    message: rebuildMessage || "Reklam kaydedildi.",
     fieldErrors: {},
   };
 }

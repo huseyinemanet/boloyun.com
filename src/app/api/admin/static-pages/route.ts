@@ -7,9 +7,10 @@ import {
   normalizeAdminStaticPageValues,
   validateAdminStaticPageValues,
 } from "@/lib/admin-static-page-validation";
+import { publicRebuildMessage, requestPublicSiteRebuild } from "@/lib/public-site-rebuild";
 
 export async function POST(request: Request) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const body = await request.json().catch(() => ({}));
   const input = body && typeof body === "object" && !Array.isArray(body) ? body as Record<string, unknown> : {};
   const values = normalizeAdminStaticPageValues(input);
@@ -28,7 +29,8 @@ export async function POST(request: Request) {
     revalidateTag("static-pages", "max");
     if (values.slug) revalidatePath(`/sayfa/${values.slug}`);
     revalidatePath("/sitemap.xml");
-    return NextResponse.json({ ok: true });
+    const rebuild = await requestPublicSiteRebuild(`static_page.save:${values.slug}`, admin.id);
+    return NextResponse.json({ ok: true, message: publicRebuildMessage(rebuild) || "Sayfa kaydedildi." });
   } catch (error) {
     return NextResponse.json(
       { message: error instanceof Error ? error.message : "Sayfa kaydedilemedi.", fieldErrors: {}, values },

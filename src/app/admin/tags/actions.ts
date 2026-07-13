@@ -3,6 +3,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { saveAdminTag } from "@/lib/db-tags";
+import { publicRebuildMessage, requestPublicSiteRebuild } from "@/lib/public-site-rebuild";
 
 export type TagFormState = {
   status: "idle" | "error" | "success";
@@ -15,7 +16,7 @@ export type TagFormState = {
 };
 
 export async function saveTagAction(_previousState: TagFormState, formData: FormData): Promise<TagFormState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const name = String(formData.get("name") ?? "").trim();
   const slug = String(formData.get("slug") ?? "").trim();
   const ogImageUrl = String(formData.get("og_image_url") ?? "").trim();
@@ -49,10 +50,12 @@ export async function saveTagAction(_previousState: TagFormState, formData: Form
   revalidateTag("tags", "max");
   if (slug) revalidatePath(`/etiket/${slug}`);
   revalidatePath("/sitemap.xml");
+  const rebuild = await requestPublicSiteRebuild(`tag.save:${slug}`, admin.id);
+  const rebuildMessage = publicRebuildMessage(rebuild);
 
   return {
     status: "success",
-    message: "Etiket kaydedildi.",
+    message: rebuildMessage || "Etiket kaydedildi.",
     fieldErrors: {},
   };
 }
