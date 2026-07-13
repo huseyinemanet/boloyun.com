@@ -60,11 +60,11 @@ export default async function EditGamePage({ params }: Props) {
           <section className="space-y-3 rounded-md border border-border bg-card p-4">
             <Field label="Başlık" name="title" defaultValue={game.title} inputClassName="h-12 text-lg font-semibold" />
             <div className="grid gap-1">
-              <label className="text-sm font-semibold text-muted-foreground" htmlFor="game-slug">Kalıcı bağlantı</label>
-              <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm">
-                <span className="text-muted-foreground">{absoluteUrl("/oyun/")}</span>
-                <Input id="game-slug" name="slug" defaultValue={game.slug} className="h-8 min-w-52 flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" />
-              </div>
+              <label className="text-sm font-bold" htmlFor="game-slug">Slug</label>
+              <Input id="game-slug" name="slug" defaultValue={game.slug} className="h-10" />
+              <p className="text-xs font-semibold text-muted-foreground">
+                Kalıcı bağlantı: {absoluteUrl(`/oyun/${game.slug}`)}
+              </p>
             </div>
           </section>
 
@@ -89,16 +89,16 @@ export default async function EditGamePage({ params }: Props) {
           <MetaBox title="Oynatıcı">
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block text-sm font-bold">
-                Game type
+                Oynatma türü
                 <Select name="game_type" defaultValue={game.gameType}>
                   <SelectTrigger className="mt-1 h-10 w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="iframe">iframe</SelectItem>
-                    <SelectItem value="swf">swf</SelectItem>
-                    <SelectItem value="html5">html5</SelectItem>
-                    <SelectItem value="external">external</SelectItem>
+                    <SelectItem value="iframe">Iframe ile gömülü oyun</SelectItem>
+                    <SelectItem value="swf">Flash / SWF oyun</SelectItem>
+                    <SelectItem value="html5">HTML5 oyun dosyası</SelectItem>
+                    <SelectItem value="external">Dış bağlantı</SelectItem>
                   </SelectContent>
                 </Select>
               </label>
@@ -160,11 +160,8 @@ export default async function EditGamePage({ params }: Props) {
         </main>
 
         <aside className="space-y-4">
-          <section className="sticky top-24 space-y-3 rounded-md border border-border bg-card p-4">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-bold">Yayınla</h2>
-              <Button type="submit" size="sm">Güncelle</Button>
-            </div>
+          <section className="space-y-3 rounded-md border border-border bg-card p-4">
+            <h2 className="font-bold">Yayınla</h2>
             <label className="block text-sm font-bold">
               Durum
               <Select name="status" defaultValue={game.status}>
@@ -179,11 +176,10 @@ export default async function EditGamePage({ params }: Props) {
               </Select>
             </label>
             <AdminCheckboxField name="is_broken" label="Oyun kırık" defaultChecked={game.isBroken} />
-            <div className="flex items-center justify-between gap-2 border-t border-border pt-3 text-sm">
+            <div className="border-t border-border pt-3">
               <Button type="button" variant="outline" size="sm" asChild>
                 <Link href={`/oyun/${game.slug}`} target="_blank" rel="noreferrer">Önizle</Link>
               </Button>
-              <span className="text-muted-foreground">ID: {game.id.slice(0, 8)}</span>
             </div>
           </section>
 
