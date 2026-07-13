@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -32,38 +32,49 @@ type ProfileRow = {
 };
 
 export const getCurrentProfile = cache(async function getCurrentProfile(): Promise<CurrentProfile | null> {
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) return null;
+  try {
+    const supabase = await createSupabaseServerClient();
+    if (!supabase) return null;
 
-  const { data: userResult } = await supabase.auth.getUser();
-  const user = userResult.user;
-  if (!user?.id) return null;
+    const { data: userResult } = await supabase.auth.getUser();
+    const user = userResult.user;
+    if (!user?.id) return null;
 
-  const service = createSupabaseServiceClient();
-  if (!service) return null;
+    const service = createSupabaseServiceClient();
+    if (!service) return null;
 
-  const { data: profile } = await service
-    .from("profiles")
-    .select("id, user_id, username, avatar_url, first_name, last_name, display_name, role, status")
-    .eq("user_id", user.id)
-    .maybeSingle();
+    const { data: profile } = await service
+      .from("profiles")
+      .select("id, user_id, username, avatar_url, first_name, last_name, display_name, role, status")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-  if (!profile) return null;
+    if (!profile) return null;
 
-  const row = profile as ProfileRow;
-  return {
-    id: row.id,
-    userId: row.user_id,
-    username: row.username,
-    email: user.email ?? "",
-    avatarUrl: row.avatar_url,
-    firstName: row.first_name,
-    lastName: row.last_name,
-    displayName: row.display_name,
-    role: row.role ?? "member",
-    status: row.status ?? "active",
-  };
+    const row = profile as ProfileRow;
+    return {
+      id: row.id,
+      userId: row.user_id,
+      username: row.username,
+      email: user.email ?? "",
+      avatarUrl: row.avatar_url,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      displayName: row.display_name,
+      role: row.role ?? "member",
+      status: row.status ?? "active",
+    };
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[auth] current profile could not be read", toLogError(error));
+    return null;
+  }
 });
+
+function toLogError(error: unknown) {
+  if (error instanceof Error) return { name: error.name, message: error.message };
+  return { message: String(error) };
+}
 
 export async function requireProfile() {
   const profile = await getCurrentProfile();

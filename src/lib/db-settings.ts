@@ -161,7 +161,12 @@ const getCachedPublicSettings = unstable_cache(async (): Promise<PublicSettings>
 }, ["public-site-settings-v1"], { tags: ["site-settings"], revalidate: 300 });
 
 export async function getPublicSettings() {
-  return getCachedPublicSettings();
+  try {
+    return await getCachedPublicSettings();
+  } catch (error) {
+    console.error("[settings] public settings could not be read", toLogError(error));
+    return publicDefaults(true);
+  }
 }
 
 export async function getAllSettingsRecords() {
@@ -202,4 +207,9 @@ function publicDefaults(failClosed = false): PublicSettings {
 
 function failClosedSecurity() {
   return { ...structuredClone(DEFAULT_SETTINGS.security), enforceIframeAllowlist: true, iframeAllowlist: [] };
+}
+
+function toLogError(error: unknown) {
+  if (error instanceof Error) return { name: error.name, message: error.message };
+  return { message: String(error) };
 }

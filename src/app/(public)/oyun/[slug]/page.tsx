@@ -81,13 +81,13 @@ export default async function GameDetailPage({ params, searchParams }: Props) {
   const gameSessionId = (await cookies()).get("mini_game_session")?.value;
   const currentProfile = await getCurrentProfile();
   const [latestComments, topComments, userVote, isFavorite, taxonomySimilarGames, categoryGames, recentGames] = await Promise.all([
-    getApprovedCommentsForGame(game.id),
-    getTopCommentsForGame(game.id),
-    gameSessionId ? getGameVoteForSession(game.id, gameSessionId) : Promise.resolve(null),
-    currentProfile?.id ? getProfileFavorite(game.id, currentProfile.id) : gameSessionId ? getSessionFavorite(game.id, gameSessionId) : Promise.resolve(false),
-    getRelatedPublishedGames(game.id, 4),
-    primaryCategory ? getPublishedGamesByCategorySlug(primaryCategory.slug, 16) : Promise.resolve([]),
-    getPublishedGames(30),
+    optionalGameQuery(slug, "latest-comments", getApprovedCommentsForGame(game.id), [] as GameComment[]),
+    optionalGameQuery(slug, "top-comments", getTopCommentsForGame(game.id), [] as GameComment[]),
+    optionalGameQuery(slug, "session-vote", gameSessionId ? getGameVoteForSession(game.id, gameSessionId) : Promise.resolve(null), null as GameVote | null),
+    optionalGameQuery(slug, "favorite-state", currentProfile?.id ? getProfileFavorite(game.id, currentProfile.id) : gameSessionId ? getSessionFavorite(game.id, gameSessionId) : Promise.resolve(false), false),
+    optionalGameQuery(slug, "related-games", getRelatedPublishedGames(game.id, 4), []),
+    optionalGameQuery(slug, "category-games", primaryCategory ? getPublishedGamesByCategorySlug(primaryCategory.slug, 16) : Promise.resolve([]), []),
+    optionalGameQuery(slug, "recent-games", getPublishedGames(30), []),
   ]);
   const similarGames = settings.games.similarGameStrategy === "popular"
     ? recentGames.filter((item) => item.id !== game.id).toSorted((a, b) => b.playCount - a.playCount).slice(0, 4)
@@ -457,6 +457,20 @@ function normalizeCommentStatus(value: string | undefined) {
 
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+async function optionalGameQuery<T>(slug: string, label: string, promise: Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await promise;
+  } catch (error) {
+    console.error("[game-detail] optional query failed", { slug, label, ...toLogError(error) });
+    return fallback;
+  }
+}
+
+function toLogError(error: unknown) {
+  if (error instanceof Error) return { name: error.name, message: error.message };
+  return { message: String(error) };
 }
 
 function InfoBlock({ title, body }: { title: string; body: string }) {

@@ -24,24 +24,29 @@ export type PublicTag = TagRow & {
 type TagLinkRow = { game_id: string; tag_id?: string };
 
 export async function getPublicTagBySlug(slug: string): Promise<PublicTag | null> {
-  const supabase = createSupabaseServiceClient();
-  if (!supabase) return null;
+  try {
+    const supabase = createSupabaseServiceClient();
+    if (!supabase) return null;
 
-  const { data, error } = await supabase.from("tags").select("*").eq("slug", slug).eq("status", "active").maybeSingle();
-  if (error || !data) return null;
+    const { data, error } = await supabase.from("tags").select("*").eq("slug", slug).eq("status", "active").maybeSingle();
+    if (error || !data) return null;
 
-  const publishedGameCount = await getPublishedGameCountForTag(data.id as string);
-  const tag = data as TagRow;
-  return {
-    ...tag,
-    publishedGameCount,
-    effectiveIndexable: isTagIndexable({
-      requested: tag.is_indexable ?? false,
+    const publishedGameCount = await getPublishedGameCountForTag(data.id as string);
+    const tag = data as TagRow;
+    return {
+      ...tag,
       publishedGameCount,
-      seoTitle: tag.seo_title,
-      seoDescription: tag.seo_description,
-    }),
-  };
+      effectiveIndexable: isTagIndexable({
+        requested: tag.is_indexable ?? false,
+        publishedGameCount,
+        seoTitle: tag.seo_title,
+        seoDescription: tag.seo_description,
+      }),
+    };
+  } catch (error) {
+    console.error("[tags] public tag could not be read", { slug, ...toLogError(error) });
+    return null;
+  }
 }
 
 export async function getPublishedGamesByTagSlugPage({
@@ -53,24 +58,29 @@ export async function getPublishedGamesByTagSlugPage({
   page: number;
   perPage: number;
 }) {
-  const supabase = createSupabaseServiceClient();
-  if (!supabase) return { items: [], total: 0 };
+  try {
+    const supabase = createSupabaseServiceClient();
+    if (!supabase) return { items: [], total: 0 };
 
-  const { data: tag } = await supabase.from("tags").select("id").eq("slug", slug).eq("status", "active").maybeSingle();
-  if (!tag) return { items: [], total: 0 };
+    const { data: tag } = await supabase.from("tags").select("id").eq("slug", slug).eq("status", "active").maybeSingle();
+    if (!tag) return { items: [], total: 0 };
 
-  const from = (page - 1) * perPage;
-  const to = from + perPage - 1;
-  const { data, error, count } = await supabase
-    .from("game_tags")
-    .select("game_id, games!inner(id)", { count: "exact" })
-    .eq("tag_id", tag.id)
-    .eq("games.status", "published")
-    .range(from, to);
+    const from = (page - 1) * perPage;
+    const to = from + perPage - 1;
+    const { data, error, count } = await supabase
+      .from("game_tags")
+      .select("game_id, games!inner(id)", { count: "exact" })
+      .eq("tag_id", tag.id)
+      .eq("games.status", "published")
+      .range(from, to);
 
-  if (error || !data) return { items: [], total: 0 };
-  const ids = (data as unknown as TagLinkRow[]).map((row) => row.game_id);
-  return { items: await getPublishedGamesByIds(ids), total: count ?? 0 };
+    if (error || !data) return { items: [], total: 0 };
+    const ids = (data as unknown as TagLinkRow[]).map((row) => row.game_id);
+    return { items: await getPublishedGamesByIds(ids), total: count ?? 0 };
+  } catch (error) {
+    console.error("[tags] published tag games could not be read", { slug, page, perPage, ...toLogError(error) });
+    return { items: [], total: 0 };
+  }
 }
 
 export async function getAdminTagsPage({ page, perPage, query = "" }: { page: number; perPage: number; query?: string }) {
@@ -148,4 +158,9 @@ async function getPublishedGameCountForTag(tagId: string) {
     .eq("games.status", "published");
   if (error) return 0;
   return count ?? 0;
+}
+
+function toLogError(error: unknown) {
+  if (error instanceof Error) return { name: error.name, message: error.message };
+  return { message: String(error) };
 }
