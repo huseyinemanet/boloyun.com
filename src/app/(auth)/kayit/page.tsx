@@ -18,6 +18,13 @@ export default async function RegisterPage({ searchParams }: Props) {
 
   const { general, community } = await getPublicSettings();
   const registrationsEnabled = general.registrationsEnabled && community.registrationsEnabled;
+  const registerError = error ? getRegisterError(error) : "";
+  const errorDescription = error ? "register-form-error" : undefined;
+  const hasUsernameError = error === "username" || error === "form" || error === "create";
+  const hasEmailError = error === "email" || error === "form" || error === "create";
+  const hasPasswordError = error === "email" || error === "form";
+  const hasAgeError = error === "age" || error === "form";
+  const hasTermsError = error === "terms" || error === "form";
 
   return (
     <main className="mx-auto w-full max-w-md px-3 py-10">
@@ -25,24 +32,50 @@ export default async function RegisterPage({ searchParams }: Props) {
         <h1 className="text-2xl font-black">Kayıt Ol</h1>
         <p className="mt-2 text-sm text-muted-foreground">Oyunlarını favorilere eklemek ve yorum yazmak için ücretsiz hesap oluştur.</p>
         {!registrationsEnabled ? <p className="mt-3 rounded-md bg-warning/10 p-3 text-sm font-semibold text-warning">Yeni üyelikler şu anda kapalı. Mevcut hesabınla giriş yapabilirsin.</p> : null}
-        {error ? <p className="mt-3 rounded-md bg-destructive/10 p-3 text-sm font-semibold text-destructive">{getRegisterError(error)}</p> : null}
+        {error ? <p id="register-form-error" role="alert" className="mt-3 rounded-md bg-destructive/10 p-3 text-sm font-semibold text-destructive">{registerError}</p> : null}
         {registrationsEnabled ? <form action="/auth/signup" method="post" className="mt-4 space-y-3">
           <BotProtectionFields challenge={challenge === "1"} action="signup" />
           <label className="block text-sm font-bold">
             Kullanıcı adı
-            <Input name="username" autoComplete="username" required minLength={community.usernameMinLength} maxLength={community.usernameMaxLength} className="mt-1 h-10" />
+            <Input
+              name="username"
+              autoComplete="username"
+              required
+              minLength={community.usernameMinLength}
+              maxLength={community.usernameMaxLength}
+              aria-invalid={hasUsernameError}
+              aria-describedby={hasUsernameError ? errorDescription : undefined}
+              className="mt-1 h-10"
+            />
           </label>
-          {community.minimumAge > 0 ? <label className="block text-sm font-bold">Doğum yılı<Input name="birth_year" type="number" autoComplete="bday-year" required min={1900} max={new Date().getFullYear() - community.minimumAge} className="mt-1 h-10" /></label> : null}
+          {community.minimumAge > 0 ? <label className="block text-sm font-bold">Doğum yılı<Input name="birth_year" type="number" autoComplete="bday-year" required min={1900} max={new Date().getFullYear() - community.minimumAge} aria-invalid={hasAgeError} aria-describedby={hasAgeError ? errorDescription : undefined} className="mt-1 h-10" /></label> : null}
           <label className="block text-sm font-bold">
             E-posta
-            <Input name="email" type="email" autoComplete="email" required className="mt-1 h-10" />
+            <Input
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              aria-invalid={hasEmailError}
+              aria-describedby={hasEmailError ? errorDescription : undefined}
+              className="mt-1 h-10"
+            />
           </label>
           <label className="block text-sm font-bold">
             Şifre
-            <Input name="password" type="password" autoComplete="new-password" required minLength={8} className="mt-1 h-10" />
+            <Input
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              aria-invalid={hasPasswordError}
+              aria-describedby={hasPasswordError ? errorDescription : undefined}
+              className="mt-1 h-10"
+            />
           </label>
           <div className="flex items-start gap-2 text-sm font-semibold">
-            <Checkbox id="terms_accepted" name="terms_accepted" required aria-label="Kullanım şartlarını ve gizlilik politikasını kabul ediyorum" className="mt-1" />
+            <Checkbox id="terms_accepted" name="terms_accepted" required aria-invalid={hasTermsError} aria-describedby={hasTermsError ? errorDescription : undefined} aria-label="Kullanım şartlarını ve gizlilik politikasını kabul ediyorum" className="mt-1" />
             <p>
               <Link href="/sayfa/kullanim-sartlari" className="text-primary hover:underline">Kullanım şartlarını</Link>
               {" ve "}
