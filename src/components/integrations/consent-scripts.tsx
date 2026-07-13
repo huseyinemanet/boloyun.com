@@ -1,12 +1,15 @@
 "use client";
 
 import Script from "next/script";
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
 
 type Consent = "accepted" | "rejected" | null;
+type ConsentState = Consent | "unknown";
 type IntegrationSettings = { googleAnalyticsId: string; googleTagManagerId: string; clarityProjectId: string; metaPixelId: string; consentModeEnabled: boolean };
+const consentStorageKey = "boloyun_cookie_consent";
+const consentChangeEvent = "boloyun_cookie_consent_change";
 
 declare global {
   interface Window {
@@ -17,24 +20,22 @@ declare global {
 
 export function ConsentScripts({ settings }: { settings: IntegrationSettings }) {
   const pathname = usePathname();
-  const [consent, setConsent] = useState<Consent>(null);
+  const savedConsent = useSyncExternalStore(subscribeConsent, getConsentSnapshot, getServerConsentSnapshot);
+  const consent: ConsentState = pathname.startsWith("/admin") || !settings.consentModeEnabled ? "accepted" : savedConsent;
 
   useEffect(() => {
-    if (pathname.startsWith("/admin")) return;
-    const stored = window.localStorage.getItem("boloyun_cookie_consent");
-    const savedConsent = stored === "accepted" || stored === "rejected" ? stored : null;
-    const timer = window.setTimeout(() => {
-      setConsent(savedConsent);
-      updateGoogleConsent(savedConsent === "accepted");
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [pathname, settings.consentModeEnabled]);
+    updateGoogleConsent(consent === "accepted");
+  }, [consent]);
 
   if (pathname.startsWith("/admin")) return null;
 
   function decide(value: Exclude<Consent, null>) {
-    window.localStorage.setItem("boloyun_cookie_consent", value);
-    setConsent(value);
+    try {
+      window.localStorage.setItem(consentStorageKey, value);
+    } catch {
+      // Storage can be unavailable in strict privacy modes; keep the in-memory choice.
+    }
+    window.dispatchEvent(new Event(consentChangeEvent));
     updateGoogleConsent(value === "accepted");
   }
 
@@ -47,6 +48,28 @@ export function ConsentScripts({ settings }: { settings: IntegrationSettings }) 
     {canLoadOptionalScripts && settings.metaPixelId ? <Script id="boloyun-meta-pixel" strategy="afterInteractive">{`!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${settings.metaPixelId}');fbq('track','PageView');`}</Script> : null}
     {settings.consentModeEnabled && consent === null ? <aside aria-label="Çerez tercihleri" className="fixed right-3 bottom-3 z-50 w-[min(calc(100vw-1.5rem),22rem)] rounded-md border border-border bg-card p-3 shadow-2xl"><p className="text-xs font-semibold">Çerez tercihleri</p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">İsteğe bağlı analitik çerezleri kullanabiliriz. Oyunlar temel çerezlerle çalışır.</p><div className="mt-2 flex justify-end gap-1.5"><Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => decide("rejected")}>Gerekli</Button><Button size="sm" className="h-7 px-2 text-xs" onClick={() => decide("accepted")}>Kabul Et</Button></div></aside> : null}
   </>;
+}
+
+function subscribeConsent(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener(consentChangeEvent, onStoreChange);
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(consentChangeEvent, onStoreChange);
+  };
+}
+
+function getConsentSnapshot(): ConsentState {
+  try {
+    const stored = window.localStorage.getItem(consentStorageKey);
+    return stored === "accepted" || stored === "rejected" ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+function getServerConsentSnapshot(): ConsentState {
+  return "unknown";
 }
 
 function updateGoogleConsent(accepted: boolean) {
