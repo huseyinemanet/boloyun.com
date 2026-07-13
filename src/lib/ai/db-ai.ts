@@ -10,6 +10,8 @@ import {
   type AiProvider,
   type AiProviderConfig,
   type AiRuntimeConfig,
+  type AiTranslationAutomation,
+  type AiTranslationAutomationStatus,
   type AiTranslationActivity,
   type AiTranslationJob,
   type AiTranslationStats,
@@ -86,16 +88,33 @@ type ActivityRow = JobItemRow & {
   }> | null;
 };
 
+type AutomationRow = {
+  enabled: boolean | null;
+  provider: string | null;
+  daily_target: number | null;
+  per_run_limit: number | null;
+  retry_failed: boolean | null;
+  status: AiTranslationAutomationStatus | null;
+  current_job_id: string | null;
+  last_run_at: string | null;
+  last_success_at: string | null;
+  last_error: string | null;
+  updated_at: string | null;
+};
+
 const PROCESS_ITEMS_PER_CLICK = 5;
 const STALE_PROCESSING_MINUTES = 1;
 const DEFAULT_ACTIVITY_LIMIT = 50;
 const MAX_ACTIVITY_LIMIT = 100;
+const AUTOMATION_JOB_BATCH_SIZE: AiBatchSize = 100;
+const AUTOMATION_LOCK_STALE_MINUTES = 10;
 
 export async function getAiDashboardData() {
-  const [configs, stats, jobs] = await Promise.all([
+  const [configs, stats, jobs, automation] = await Promise.all([
     listProviderConfigs(),
     getTranslationStats(),
     listRecentJobs(),
+    getTranslationAutomation(),
   ]);
   const activeJob = jobs.find((job) => job.status === "running") ?? jobs.find((job) => job.status === "queued") ?? jobs[0];
   const activityLimit = Math.min(Math.max(activeJob?.totalCount ?? DEFAULT_ACTIVITY_LIMIT, DEFAULT_ACTIVITY_LIMIT), MAX_ACTIVITY_LIMIT);
@@ -103,7 +122,7 @@ export async function getAiDashboardData() {
     listRecentTranslationActivity(activityLimit, activeJob?.id),
     countTranslationActivity(activeJob?.id),
   ]);
-  return { configs, stats, jobs, activity, activityTotal };
+  return { configs, stats, jobs, activity, activityTotal, automation };
 }
 
 export async function listProviderConfigs(): Promise<AiProviderConfig[]> {
@@ -174,7 +193,7 @@ export async function testProviderConfig(provider: AiProvider) {
   }
 }
 
-export async function createTranslationJob(input: { provider: AiProvider; batchSize: AiBatchSize; createdBy: string; retryFailedOnly?: boolean }) {
+export async function createTranslationJob(input: { provider: AiProvider; batchSize: AiBatchSize; createdBy?: string | null; retryFailedOnly?: boolean }) {
   const config = await getRuntimeConfig(input.provider, { requireEnabled: true });
   const supabase = requiredServiceClient();
   const { data: candidatesData, error: candidatesError } = await supabase.rpc("get_ai_translation_candidates", {
@@ -193,7 +212,7 @@ export async function createTranslationJob(input: { provider: AiProvider; batchS
       total_count: candidates.length,
       completed_count: 0,
       failed_count: 0,
-      created_by: input.createdBy,
+      created_by: input.createdBy ?? null,
       completed_at: candidates.length ? null : new Date().toISOString(),
     })
     .select("id")
@@ -284,6 +303,118 @@ export async function resumeTranslationJob(jobId: string) {
   const supabase = requiredServiceClient();
   const { error } = await supabase.from("ai_translation_jobs").update({ status: "queued", updated_at: new Date().toISOString() }).eq("id", jobId).eq("status", "paused");
   if (error) throw new Error(`Çeviri işi devam ettirilemedi: ${error.message}`);
+}
+
+export async function getTranslationAutomation(): Promise<AiTranslationAutomation> {
+  const supabase = requiredServiceClient();
+  await ensureAutomationRow();
+  const { data, error } = await supabase
+    .from("ai_translation_automation")
+    .select("enabled, provider, daily_target, per_run_limit, retry_failed, status, current_job_id, last_run_at, last_success_at, last_error, updated_at")
+    .eq("id", "default")
+    .single();
+  if (error || !data) throw new Error(`Otomatik çeviri ayarı okunamadı: ${error?.message ?? "kayıt yok"}`);
+  const todayCompleted = await countCompletedItemsSince(istanbulDayStartIso());
+  return mapAutomation(data as AutomationRow, todayCompleted);
+}
+
+export async function saveTranslationAutomation(input: {
+  enabled: boolean;
+  provider: AiProvider;
+  dailyTarget: number;
+  perRunLimit: number;
+  retryFailed: boolean;
+}) {
+  const supabase = requiredServiceClient();
+  const dailyTarget = clampInteger(input.dailyTarget, 1, 5000, 1000);
+  const perRunLimit = clampInteger(input.perRunLimit, 1, 5, 2);
+  const { error } = await supabase.from("ai_translation_automation").upsert({
+    id: "default",
+    enabled: input.enabled,
+    provider: input.provider,
+    daily_target: dailyTarget,
+    per_run_limit: perRunLimit,
+    retry_failed: input.retryFailed,
+    status: input.enabled ? "idle" : "disabled",
+    last_error: null,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "id" });
+  if (error) throw new Error(`Otomatik çeviri ayarı kaydedilemedi: ${error.message}`);
+}
+
+export async function runTranslationAutomationTick(source = "cron") {
+  const startedAt = new Date().toISOString();
+  const supabase = requiredServiceClient();
+  const automation = await getTranslationAutomation();
+  if (!automation.enabled) {
+    await recordAutomationRun({ source, status: "skipped", message: "Otomatik çeviri kapalı.", dailyCompleted: automation.todayCompleted, startedAt });
+    return { status: "skipped" as const, message: "Otomatik çeviri kapalı.", automation };
+  }
+  if (automation.todayCompleted >= automation.dailyTarget) {
+    const message = `Günlük hedef doldu: ${automation.todayCompleted}/${automation.dailyTarget}.`;
+    await recordAutomationRun({ source, status: "skipped", message, dailyCompleted: automation.todayCompleted, startedAt });
+    return { status: "skipped" as const, message, automation };
+  }
+  const locked = await acquireAutomationLock(automation);
+  if (!locked) {
+    await recordAutomationRun({ source, status: "skipped", message: "Önceki otomasyon tick'i hâlâ çalışıyor.", dailyCompleted: automation.todayCompleted, startedAt });
+    return { status: "skipped" as const, message: "Önceki otomasyon tick'i hâlâ çalışıyor.", automation };
+  }
+
+  let jobId: string | null = automation.currentJobId;
+  try {
+    jobId = await resolveAutomationJob(automation);
+    if (!jobId) {
+      const message = "Çevrilecek aday bulunamadı.";
+      await supabase.from("ai_translation_automation").update({
+        status: "idle",
+        current_job_id: null,
+        last_run_at: new Date().toISOString(),
+        last_success_at: new Date().toISOString(),
+        last_error: null,
+        updated_at: new Date().toISOString(),
+      }).eq("id", "default");
+      await recordAutomationRun({ source, status: "skipped", message, dailyCompleted: automation.todayCompleted, startedAt });
+      return { status: "skipped" as const, message, automation: await getTranslationAutomation() };
+    }
+
+    const remainingToday = Math.max(1, automation.dailyTarget - automation.todayCompleted);
+    const limit = Math.min(automation.perRunLimit, remainingToday);
+    const job = await processTranslationJob(jobId, { limit });
+    const todayCompleted = await countCompletedItemsSince(istanbulDayStartIso());
+    const message = `Tick tamamlandı: ${job.completedCount}/${job.totalCount}, hata ${job.failedCount}. Bugün ${todayCompleted}/${automation.dailyTarget}.`;
+    await supabase.from("ai_translation_automation").update({
+      status: "idle",
+      current_job_id: job.status === "completed" ? null : job.id,
+      last_run_at: new Date().toISOString(),
+      last_success_at: new Date().toISOString(),
+      last_error: null,
+      updated_at: new Date().toISOString(),
+    }).eq("id", "default");
+    await recordAutomationRun({
+      source,
+      status: "completed",
+      jobId,
+      processed: "processed" in job && typeof job.processed === "number" ? job.processed : 0,
+      failed: "failedStep" in job && typeof job.failedStep === "number" ? job.failedStep : 0,
+      dailyCompleted: todayCompleted,
+      message,
+      startedAt,
+    });
+    return { status: "completed" as const, message, job, automation: await getTranslationAutomation() };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await supabase.from("ai_translation_automation").update({
+      status: "error",
+      current_job_id: jobId,
+      last_run_at: new Date().toISOString(),
+      last_error: message,
+      updated_at: new Date().toISOString(),
+    }).eq("id", "default");
+    await recordAutomationRun({ source, status: "error", jobId, failed: 1, dailyCompleted: automation.todayCompleted, error: message, startedAt });
+    logAiError("automation.tick.failed", error, { source, jobId });
+    return { status: "error" as const, message, automation: await getTranslationAutomation() };
+  }
 }
 
 export async function getTranslationStats(): Promise<AiTranslationStats> {
@@ -549,6 +680,136 @@ async function countRows(table: "games" | "game_translation_state" | "ai_transla
   const { count, error } = await query;
   if (error) throw new Error(`Sayaç okunamadı: ${error.message}`);
   return count ?? 0;
+}
+
+async function ensureAutomationRow() {
+  const supabase = requiredServiceClient();
+  const { error } = await supabase.from("ai_translation_automation").upsert({
+    id: "default",
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "id", ignoreDuplicates: true });
+  if (error) throw new Error(`Otomatik çeviri ayarı hazırlanamadı: ${error.message}`);
+}
+
+async function acquireAutomationLock(automation: AiTranslationAutomation) {
+  const supabase = requiredServiceClient();
+  const staleBefore = new Date(Date.now() - AUTOMATION_LOCK_STALE_MINUTES * 60 * 1000).toISOString();
+  if (automation.status === "running" && new Date(automation.updatedAt) > new Date(staleBefore)) return false;
+  let query = supabase
+    .from("ai_translation_automation")
+    .update({
+      status: "running",
+      last_run_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", "default");
+  query = automation.status === "running"
+    ? query.eq("status", "running").lt("updated_at", staleBefore)
+    : query.neq("status", "running");
+  const { data, error } = await query.select("id").maybeSingle();
+  if (error) throw new Error(`Otomatik çeviri kilidi alınamadı: ${error.message}`);
+  if (!data) return false;
+  return true;
+}
+
+async function resolveAutomationJob(automation: AiTranslationAutomation) {
+  if (automation.currentJobId) {
+    try {
+      const job = await getJob(automation.currentJobId);
+      if (job.status !== "completed" && job.status !== "cancelled") return job.id;
+    } catch (error) {
+      logAiError("automation.job.current_missing", error, { jobId: automation.currentJobId });
+    }
+  }
+  const jobId = await createTranslationJob({
+    provider: automation.provider,
+    batchSize: AUTOMATION_JOB_BATCH_SIZE,
+    createdBy: null,
+    retryFailedOnly: false,
+  });
+  const job = await getJob(jobId);
+  if (job.totalCount === 0) return null;
+  const supabase = requiredServiceClient();
+  const { error } = await supabase.from("ai_translation_automation").update({
+    current_job_id: jobId,
+    updated_at: new Date().toISOString(),
+  }).eq("id", "default");
+  if (error) throw new Error(`Otomatik çeviri işi bağlanamadı: ${error.message}`);
+  return jobId;
+}
+
+async function countCompletedItemsSince(sinceIso: string) {
+  const supabase = requiredServiceClient();
+  const { count, error } = await supabase
+    .from("ai_translation_job_items")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "completed")
+    .gte("completed_at", sinceIso);
+  if (error) throw new Error(`Günlük çeviri sayısı okunamadı: ${error.message}`);
+  return count ?? 0;
+}
+
+async function recordAutomationRun(input: {
+  source: string;
+  status: "skipped" | "completed" | "error";
+  jobId?: string | null;
+  processed?: number;
+  failed?: number;
+  dailyCompleted: number;
+  message?: string;
+  error?: string;
+  startedAt: string;
+}) {
+  const supabase = requiredServiceClient();
+  const { error } = await supabase.from("ai_translation_automation_runs").insert({
+    automation_id: "default",
+    job_id: input.jobId ?? null,
+    status: input.status,
+    source: input.source,
+    processed_count: input.processed ?? 0,
+    failed_count: input.failed ?? 0,
+    daily_completed_count: input.dailyCompleted,
+    message: input.message ?? null,
+    error_message: input.error ?? null,
+    started_at: input.startedAt,
+    completed_at: new Date().toISOString(),
+  });
+  if (error) logAiError("automation.run.record_failed", error, { status: input.status, source: input.source });
+}
+
+function mapAutomation(row: AutomationRow, todayCompleted: number): AiTranslationAutomation {
+  const provider = row.provider && isAiProvider(row.provider) ? row.provider : "deepseek";
+  return {
+    enabled: Boolean(row.enabled),
+    provider,
+    dailyTarget: clampInteger(row.daily_target, 1, 5000, 1000),
+    perRunLimit: clampInteger(row.per_run_limit, 1, 5, 2),
+    retryFailed: row.retry_failed ?? true,
+    status: row.status ?? (row.enabled ? "idle" : "disabled"),
+    currentJobId: row.current_job_id,
+    todayCompleted,
+    lastRunAt: row.last_run_at,
+    lastSuccessAt: row.last_success_at,
+    lastError: row.last_error,
+    updatedAt: row.updated_at ?? new Date().toISOString(),
+  };
+}
+
+function clampInteger(value: number | null | undefined, min: number, max: number, fallback: number) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(parsed)));
+}
+
+function istanbulDayStartIso() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Istanbul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "01";
+  return new Date(`${get("year")}-${get("month")}-${get("day")}T00:00:00+03:00`).toISOString();
 }
 
 function mapProviderConfig(row: ProviderConfigRow): AiProviderConfig {

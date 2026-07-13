@@ -8,6 +8,8 @@ import {
   pauseTranslationJob,
   processTranslationJob,
   resumeTranslationJob,
+  runTranslationAutomationTick,
+  saveTranslationAutomation,
   saveProviderConfig,
   testProviderConfig,
 } from "@/lib/ai/db-ai";
@@ -64,6 +66,26 @@ export async function createTranslationJobAction(formData: FormData) {
     createdBy: admin.id,
     retryFailedOnly: formData.get("retry_failed_only") === "on",
   });
+  revalidatePath("/admin/ai");
+}
+
+export async function saveTranslationAutomationAction(formData: FormData) {
+  await requireAdmin();
+  const provider = String(formData.get("provider") ?? "");
+  if (!isAiProvider(provider)) throw new Error("Geçersiz AI provider.");
+  await saveTranslationAutomation({
+    enabled: formData.get("enabled") === "on",
+    provider,
+    dailyTarget: Number(formData.get("daily_target") ?? 1000),
+    perRunLimit: Number(formData.get("per_run_limit") ?? 2),
+    retryFailed: formData.get("retry_failed") === "on",
+  });
+  revalidatePath("/admin/ai");
+}
+
+export async function runTranslationAutomationNowAction() {
+  await requireAdmin();
+  await runTranslationAutomationTick("admin");
   revalidatePath("/admin/ai");
 }
 

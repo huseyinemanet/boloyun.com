@@ -1,13 +1,16 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "boloyun",
-  "main": ".open-next/worker.js",
+  "main": "cloudflare-worker.js",
   "compatibility_date": "2026-07-11",
   "compatibility_flags": ["nodejs_compat"],
   "routes": [
     { "pattern": "boloyun.com/*", "zone_name": "boloyun.com" },
     { "pattern": "www.boloyun.com/*", "zone_name": "boloyun.com" }
   ],
+  "triggers": {
+    "crons": ["*/2 * * * *"]
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

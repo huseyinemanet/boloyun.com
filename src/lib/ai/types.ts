@@ -81,6 +81,23 @@ export type AiTranslationStats = {
   pending: number;
 };
 
+export type AiTranslationAutomationStatus = "idle" | "running" | "disabled" | "error";
+
+export type AiTranslationAutomation = {
+  enabled: boolean;
+  provider: AiProvider;
+  dailyTarget: number;
+  perRunLimit: number;
+  retryFailed: boolean;
+  status: AiTranslationAutomationStatus;
+  currentJobId: string | null;
+  todayCompleted: number;
+  lastRunAt: string | null;
+  lastSuccessAt: string | null;
+  lastError: string | null;
+  updatedAt: string;
+};
+
 export type AiTranslationActivity = {
   id: string;
   jobId: string;
