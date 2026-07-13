@@ -1,10 +1,9 @@
-import Image from "next/image";
 import Link from "next/link";
 import { IconCircleLogoutFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCircleLogoutFillDuo18";
 import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
 import { IconProfileBasicFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconProfileBasicFillDuo18";
 import { IconShieldCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconShieldCheckFillDuo18";
-import { IconShuffleFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconShuffleFillDuo18";
+import { BolOyunLogo } from "@/components/layout/bol-oyun-logo";
 import { getCurrentProfile, getDisplayName } from "@/lib/auth";
 import {
   DropdownMenu,
@@ -16,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { RandomGameLink } from "@/components/layout/random-game-link";
 import { SearchAutocomplete } from "@/components/layout/search-autocomplete";
 import { getPublicSettings } from "@/lib/db-settings";
 
@@ -33,14 +33,7 @@ export async function Header() {
     <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
       <div className="mx-auto flex h-16 items-center gap-4 px-3 md:gap-5 md:px-4">
         <Link href="/" className="flex shrink-0 items-center" aria-label={`${settings.general.siteName} ana sayfa`}>
-          <Image
-            src={settings.general.logoUrl}
-            alt={settings.general.siteName}
-            width={1152}
-            height={411}
-            priority
-            className="h-8 w-auto sm:h-10"
-          />
+          <BolOyunLogo className="h-8 w-auto select-none sm:h-10" />
         </Link>
 
         <SearchAutocomplete />
@@ -57,16 +50,11 @@ export async function Header() {
           ))}
         </nav>
 
-        <Button asChild size="lg" className="hidden shrink-0 md:inline-flex">
-          <Link href="/rastgele">
-            <IconShuffleFillDuo18 className="size-[18px]" aria-hidden="true" />
-            Rastgele
-          </Link>
-        </Button>
+        <RandomGameLink />
         {profile ? (
           <DropdownMenu>
             <DropdownMenuTrigger
-              className="grid size-10 shrink-0 place-items-center rounded-md outline-none transition focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              className="grid size-10 shrink-0 place-items-center rounded-full outline-none transition focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               aria-label="Hesap menüsünü aç"
             >
               <Avatar size="lg">

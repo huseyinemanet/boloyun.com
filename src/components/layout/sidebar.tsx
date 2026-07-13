@@ -13,7 +13,7 @@ export async function Sidebar() {
           <Link
             key={category.id}
             href={`/kategori/${category.slug}`}
-            className="group mb-0 flex min-w-fit items-center gap-2 rounded-md px-2 py-1.5 text-sm font-normal text-sidebar-foreground transition hover:bg-sidebar-accent md:mb-0.5 md:min-w-0"
+            className="group mb-0 flex min-w-fit items-center gap-2 rounded-md px-2 py-1.5 text-sm font-normal text-sidebar-foreground transition hover:bg-sidebar-accent md:min-w-0"
             title={category.name}
           >
             <CategoryIcon category={category} />

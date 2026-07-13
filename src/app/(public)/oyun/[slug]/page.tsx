@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
-import { Star } from "lucide-react";
 import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
 import { IconThumbsDownFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsDownFillDuo18";
 import { IconThumbsUpFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsUpFillDuo18";
 import { notFound } from "next/navigation";
 import { AdSlot } from "@/components/ads/ad-slot";
+import { GameActionSubmitButton } from "@/components/game/game-action-submit-button";
 import { GameCard } from "@/components/game/game-card";
 import { PlayCountMetric } from "@/components/game/play-count-metric";
 import { GamePlayer } from "@/components/player/game-player";
@@ -124,7 +124,7 @@ export default async function GameDetailPage({ params, searchParams }: Props) {
       <AdSlot slotKey="game_page_top" />
 
       <section className="rounded-md border border-border bg-card p-4">
-        <Breadcrumbs gameTitle={game.title} categories={categories} tags={tags} />
+        <Breadcrumbs gameTitle={game.title} categories={categories} />
 
         {game.isBroken ? <p role="status" className="mt-4 rounded-md bg-warning/10 p-3 text-sm font-semibold text-warning">Bu oyunda geçici bir teknik sorun var. Ekip düzeltme üzerinde çalışıyor.</p> : null}
 
@@ -157,13 +157,10 @@ export default async function GameDetailPage({ params, searchParams }: Props) {
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <StarRating rating={game.ratingAvg} />
               {settings.games.likesEnabled && settings.community.ratingsEnabled ? <VoteButtons gameId={game.id} slug={game.slug} likesCount={game.likesCount} dislikesCount={game.dislikesCount} userVote={userVote} /> : null}
               {settings.games.favoritesEnabled && settings.community.favoritesEnabled ? <FavoriteButton gameId={game.id} slug={game.slug} isFavorite={isFavorite} /> : null}
               {settings.games.sharingEnabled ? <ShareGameButton title={game.title} /> : null}
             </div>
-
-            <TaxonomyChips categories={categories} tags={tags} />
           </div>
         </div>
 
@@ -187,18 +184,19 @@ export default async function GameDetailPage({ params, searchParams }: Props) {
       <AdSlot slotKey="game_page_below_player" />
 
       <section className="grid gap-3 rounded-md border border-border bg-card p-4 md:grid-cols-2">
-        <InfoBlock title={`${game.title} hakkında`} body={game.longDescription} />
         <InfoBlock title={`${game.title} nasıl oynanır?`} body={game.howToPlay} />
         <ListBlock title="Kontroller" items={game.controls} />
         <ListBlock title="Özellikler" items={game.features} />
       </section>
 
+      <TaxonomyChips categories={categories} tags={tags} />
+
       {primaryCategory && latestCategoryGames.length ? (
-        <GameGrid title={`Son ${primaryCategory.name} Oyunları`} games={latestCategoryGames} />
+        <GameGrid title={categorySectionTitle("Son", primaryCategory.name)} games={latestCategoryGames} />
       ) : null}
 
       {primaryCategory && popularCategoryGames.length ? (
-        <GameGrid title={`En Çok Oynanan ${primaryCategory.name} Oyunları`} games={popularCategoryGames} />
+        <GameGrid title={categorySectionTitle("En Çok Oynanan", primaryCategory.name)} games={popularCategoryGames} />
       ) : null}
 
       <section className="rounded-md border border-border bg-card p-4">
@@ -227,12 +225,19 @@ export default async function GameDetailPage({ params, searchParams }: Props) {
 function GameGrid({ title, games }: { title: string; games: Awaited<ReturnType<typeof getPublishedGamesByCategorySlug>> }) {
   return (
     <section className="rounded-md border border-border bg-card p-4">
-      <h2 className="mb-3 text-lg font-black">{title}</h2>
+      <h2 className="mb-3 text-lg font-semibold">{title}</h2>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {games.map((game) => <GameCard key={game.id} game={game} />)}
       </div>
     </section>
   );
+}
+
+function categorySectionTitle(prefix: string, categoryName: string) {
+  const normalized = categoryName.trim();
+  return normalized.toLocaleLowerCase("tr").endsWith("oyunları")
+    ? `${prefix} ${normalized}`
+    : `${prefix} ${normalized} Oyunları`;
 }
 
 function FavoriteButton({ gameId, slug, isFavorite }: { gameId: string; slug: string; isFavorite: boolean }) {
@@ -259,24 +264,21 @@ function FavoriteButton({ gameId, slug, isFavorite }: { gameId: string; slug: st
       <input type="hidden" name="game_id" value={gameId} />
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="desired" value={isFavorite ? "false" : "true"} />
-      <Button
-        variant="secondary"
-        size="icon"
+      <GameActionSubmitButton
+        iconOnly
         className={isFavorite ? "border-destructive/40 bg-destructive/10 text-destructive ring-1 ring-destructive/20" : ""}
-        type="submit"
-        aria-label={isFavorite ? "Favorilerden çıkar" : "Favorilere ekle"}
-        aria-pressed={isFavorite}
+        active={isFavorite}
+        ariaLabel={isFavorite ? "Favorilerden çıkar" : "Favorilere ekle"}
         title={isFavorite ? "Favorilerden çıkar" : "Favorilere ekle"}
       >
         <IconHeartFillDuo18 className={`size-[18px] ${isFavorite ? "" : "opacity-60"}`} aria-hidden="true" />
-      </Button>
+      </GameActionSubmitButton>
     </form>
   );
 }
 
-function Breadcrumbs({ gameTitle, categories, tags }: { gameTitle: string; categories: GameTaxonomyLink[]; tags: GameTaxonomyLink[] }) {
+function Breadcrumbs({ gameTitle, categories }: { gameTitle: string; categories: GameTaxonomyLink[] }) {
   const primaryCategory = categories[0];
-  const primaryTag = tags[0];
 
   return (
     <Breadcrumb>
@@ -296,16 +298,6 @@ function Breadcrumbs({ gameTitle, categories, tags }: { gameTitle: string; categ
             </BreadcrumbItem>
         </>
       ) : null}
-      {primaryTag ? (
-        <>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link href={`/etiket/${primaryTag.slug}`}>{primaryTag.name}</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-        </>
-      ) : null}
         <BreadcrumbSeparator />
         <BreadcrumbItem>
           <BreadcrumbPage>{gameTitle}</BreadcrumbPage>
@@ -318,27 +310,8 @@ function Breadcrumbs({ gameTitle, categories, tags }: { gameTitle: string; categ
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline gap-1.5">
-      <span className="text-xs font-semibold text-muted-foreground">{label}</span>
-      <span className="text-sm font-black text-foreground">{value}</span>
-    </div>
-  );
-}
-
-function StarRating({ rating }: { rating: number }) {
-  const activeStars = Math.round(Math.max(0, Math.min(5, rating)));
-
-  return (
-    <div className="flex items-center gap-2" aria-label={`${rating.toFixed(1)} puan`}>
-      <div className="flex items-center gap-0.5">
-        {Array.from({ length: 5 }, (_, index) => (
-          <Star
-            key={index}
-            className={`size-5 ${index < activeStars ? "fill-current text-amber-500" : "text-muted-foreground/50"}`}
-            aria-hidden="true"
-          />
-        ))}
-      </div>
-      <span className="text-sm font-bold text-foreground">{rating.toFixed(1)}</span>
+      <span className="text-sm font-medium text-muted-foreground">{label}</span>
+      <span className="text-sm font-semibold text-foreground">{value}</span>
     </div>
   );
 }
@@ -362,19 +335,17 @@ function VoteButtons({
         <input type="hidden" name="game_id" value={gameId} />
         <input type="hidden" name="slug" value={slug} />
         <input type="hidden" name="vote" value="like" />
-        <Button variant="secondary" className={voteButtonClass(userVote === "like")} type="submit" aria-label="Beğendim" aria-pressed={userVote === "like"} title="Beğendim">
+        <GameActionSubmitButton active={userVote === "like"} ariaLabel="Beğendim" className={voteButtonClass(userVote === "like")} count={likesCount.toLocaleString("tr-TR")} title="Beğendim">
           <IconThumbsUpFillDuo18 className="size-[18px]" aria-hidden="true" />
-          <span className="tabular-nums">{likesCount.toLocaleString("tr-TR")}</span>
-        </Button>
+        </GameActionSubmitButton>
       </form>
       <form action={voteGameAction}>
         <input type="hidden" name="game_id" value={gameId} />
         <input type="hidden" name="slug" value={slug} />
         <input type="hidden" name="vote" value="dislike" />
-        <Button variant="secondary" className={voteButtonClass(userVote === "dislike")} type="submit" aria-label="Beğenmedim" aria-pressed={userVote === "dislike"} title="Beğenmedim">
+        <GameActionSubmitButton active={userVote === "dislike"} ariaLabel="Beğenmedim" className={voteButtonClass(userVote === "dislike")} count={dislikesCount.toLocaleString("tr-TR")} title="Beğenmedim">
           <IconThumbsDownFillDuo18 className="size-[18px]" aria-hidden="true" />
-          <span className="tabular-nums">{dislikesCount.toLocaleString("tr-TR")}</span>
-        </Button>
+        </GameActionSubmitButton>
       </form>
     </div>
   );
@@ -393,7 +364,7 @@ function TaxonomyChips({ categories, tags }: { categories: GameTaxonomyLink[]; t
   if (!items.length) return null;
 
   return (
-    <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
+    <div className="flex flex-wrap gap-2 text-xs font-semibold">
       {items.map((item) => (
         <Link key={item.href} href={item.href} className="rounded-md bg-muted px-2 py-1 text-foreground hover:bg-accent">
           {item.name}

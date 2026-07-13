@@ -16,8 +16,8 @@ export function PlayCountMetric({ initialPlayCount, eventName }: { initialPlayCo
 
   return (
     <div className="flex items-baseline gap-1.5">
-      <span className="text-xs font-semibold text-muted-foreground">Oynanma</span>
-      <span className="text-sm font-black text-foreground">{playCount.toLocaleString("tr-TR")}</span>
+      <span className="text-sm font-medium text-muted-foreground">Oynanma</span>
+      <span className="text-sm font-semibold text-foreground">{playCount.toLocaleString("tr-TR")}</span>
     </div>
   );
 }
