@@ -347,12 +347,16 @@ export async function runTranslationAutomationTick(source = "cron") {
   const supabase = requiredServiceClient();
   const automation = await getTranslationAutomation();
   if (!automation.enabled) {
-    await recordAutomationRun({ source, status: "skipped", message: "Otomatik çeviri kapalı.", dailyCompleted: automation.todayCompleted, startedAt });
+    if (source !== "cron") {
+      await recordAutomationRun({ source, status: "skipped", message: "Otomatik çeviri kapalı.", dailyCompleted: automation.todayCompleted, startedAt });
+    }
     return { status: "skipped" as const, message: "Otomatik çeviri kapalı.", automation };
   }
   if (automation.todayCompleted >= automation.dailyTarget) {
     const message = `Günlük hedef doldu: ${automation.todayCompleted}/${automation.dailyTarget}.`;
-    await recordAutomationRun({ source, status: "skipped", message, dailyCompleted: automation.todayCompleted, startedAt });
+    if (source !== "cron") {
+      await recordAutomationRun({ source, status: "skipped", message, dailyCompleted: automation.todayCompleted, startedAt });
+    }
     return { status: "skipped" as const, message, automation };
   }
   const locked = await acquireAutomationLock(automation);
