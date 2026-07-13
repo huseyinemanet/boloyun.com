@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IconArtificialIntelligenceFillDuo18, IconBrainSparkleFillDuo18, IconCircleCheckFillDuo18, IconTriangleWarningFillDuo18 } from "nucleo-ui-fill-duo-18";
+import type { ReactNode } from "react";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,106 +37,67 @@ export default async function AiCenterPage() {
       <AiDebugConsole jobs={jobs} activity={activity} />
       <AdminPageHeader
         title="AI Merkezi"
-        description="Türkçeleştirme durumunu izle, işleri devam ettir ve AI sağlayıcılarını yönet."
+        description="Otomatik çeviriyi aç, günlük hedefi izle ve gerektiğinde müdahale et."
       />
 
-      <StatsGrid stats={stats} />
-
-      <AutomationPanel automation={automation} configs={configs} />
-
-      <section className="rounded-md border border-border bg-card p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold">Çeviri İşleri</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Başlatılan batch işleri burada takip edilir; yarıda kalan işleri buradan devam ettirebilirsin.</p>
-          </div>
-        </div>
-        <AiJobsTable jobs={jobs} />
-      </section>
+      <AutomationPanel automation={automation} configs={configs} stats={stats} />
 
       <RealtimeActivityPanel initialStats={stats} initialJobs={jobs} initialActivity={activity} initialActivityTotal={activityTotal} />
 
-      <section className="rounded-md border border-border bg-card p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold">Yeni Batch Oluştur</h2>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Sıradaki yayınlı oyunlardan yeni bir iş listesi hazırla. Oyun adları korunur; açıklama, oynanış ve SEO metinleri Türkçeleştirilir.
-            </p>
-          </div>
-          <Badge variant={activeConfig?.enabled ? "default" : "outline"}>
-            {activeConfig ? `${AI_PROVIDER_LABELS[activeConfig.provider]} ${activeConfig.enabled ? "aktif" : "pasif"}` : "Provider yok"}
-          </Badge>
-        </div>
+      <DetailsSection
+        title="Geçmiş işler"
+        description="Tamamlanan ve yarıda kalan batch kayıtları. Normalde otomasyon açıkken buraya girmen gerekmez."
+      >
+        <AiJobsTable jobs={jobs} />
+      </DetailsSection>
 
-        <form action={createTranslationJobAction} className="mt-4 grid items-end gap-3 md:grid-cols-[1fr_140px_auto_auto]">
-          <label className="grid gap-1 text-sm font-bold">
-            Provider
-            <Select name="provider" defaultValue={activeConfig?.provider ?? "deepseek"}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Provider seç" />
-              </SelectTrigger>
-              <SelectContent>
-                {configs.map((config) => (
-                  <SelectItem key={config.provider} value={config.provider}>{AI_PROVIDER_LABELS[config.provider]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </label>
-          <label className="grid gap-1 text-sm font-bold">
-            Batch
-            <Select name="batch_size" defaultValue="25">
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Batch seç" />
-              </SelectTrigger>
-              <SelectContent>
-                {AI_BATCH_SIZES.map((size) => <SelectItem key={size} value={String(size)}>{size} oyun</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </label>
-          <label className="flex h-10 items-center gap-2 text-sm font-semibold text-muted-foreground">
-            <Checkbox name="retry_failed_only" />
-            Sadece hatalılar
-          </label>
-          <div>
-            <Button type="submit" variant="outline" className="w-full">Yeni Batch Başlat</Button>
-          </div>
-        </form>
-      </section>
+      <DetailsSection
+        title="Manuel batch"
+        description="Otomasyon dışında tek seferlik küçük bir iş başlatmak istersen kullan."
+      >
+        <ManualBatchForm configs={configs} activeConfig={activeConfig} />
+      </DetailsSection>
 
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-lg font-bold">AI Sağlayıcıları</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Model ve API key ayarlarını buradan yönet. Kaydedilen key düz metin olarak gösterilmez.</p>
-        </div>
+      <DetailsSection
+        title="Sağlayıcı ayarları"
+        description="Model ve API key ayarları. Kaydedilen key düz metin olarak gösterilmez."
+      >
         <div className="grid gap-3 lg:grid-cols-3">
           {configs.map((config) => <ProviderConfigCard key={config.provider} config={config} />)}
         </div>
-      </section>
+      </DetailsSection>
     </div>
   );
 }
 
-function AutomationPanel({ automation, configs }: { automation: AiTranslationAutomation; configs: AiProviderConfig[] }) {
-  const progress = `${automation.todayCompleted.toLocaleString("tr-TR")} / ${automation.dailyTarget.toLocaleString("tr-TR")}`;
+function AutomationPanel({ automation, configs, stats }: { automation: AiTranslationAutomation; configs: AiProviderConfig[]; stats: AiTranslationStats }) {
+  const todayProgress = `${automation.todayCompleted.toLocaleString("tr-TR")} / ${automation.dailyTarget.toLocaleString("tr-TR")}`;
+  const totalProgress = `${stats.completed.toLocaleString("tr-TR")} / ${stats.totalPublished.toLocaleString("tr-TR")}`;
   return (
     <section className="rounded-md border border-border bg-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold">Otomatik Çeviri</h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Cron her 2 dakikada küçük adımlar çalıştırır. Günlük hedef dolunca durur; hata alan oyunlar item bazında loglanır.
+            Açıkken sistem küçük parçalar halinde çeviri yapar. Hata alan oyunlar işi durdurmaz; logda görünür.
           </p>
         </div>
         <Badge variant={automation.enabled ? "default" : "outline"}>{automationStatusText(automation)}</Badge>
       </div>
 
-      <div className="mt-4 grid gap-3 rounded-md border border-border bg-background/40 p-3 text-sm md:grid-cols-4">
-        <Metric label="Bugünkü ilerleme" value={progress} />
-        <Metric label="Tick başına" value={`${automation.perRunLimit} oyun`} />
+      <div className="mt-4 grid gap-3 rounded-md border border-border bg-background/40 p-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
+        <Metric label="Toplam" value={totalProgress} />
+        <Metric label="Bugün" value={todayProgress} />
+        <Metric label="Sırada" value={stats.pending.toLocaleString("tr-TR")} />
+        <Metric label="Hata" value={stats.failed.toLocaleString("tr-TR")} tone={stats.failed ? "danger" : "muted"} />
         <Metric label="Son çalışma" value={automation.lastRunAt ? relativeDate(automation.lastRunAt) : "Henüz yok"} />
-        <Metric label="Son hata" value={automation.lastError || "Yok"} tone={automation.lastError ? "danger" : "muted"} />
       </div>
+
+      {automation.lastError ? (
+        <p className="mt-3 rounded-md bg-destructive/10 px-3 py-2 text-sm font-semibold text-destructive">
+          Son hata: {automation.lastError}
+        </p>
+      ) : null}
 
       <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
         <form action={saveTranslationAutomationAction} className="grid items-end gap-3 md:grid-cols-[1fr_150px_150px_auto]">
@@ -163,42 +124,69 @@ function AutomationPanel({ automation, configs }: { automation: AiTranslationAut
           </label>
           <label className="flex h-10 items-center gap-2 text-sm font-semibold text-muted-foreground">
             <Checkbox name="enabled" defaultChecked={automation.enabled} />
-            Otomasyon açık
+            Açık
           </label>
           <input type="hidden" name="retry_failed" value="on" />
-          <Button type="submit" variant="outline" className="md:col-span-4">Otomasyonu Kaydet</Button>
+          <Button type="submit" variant="outline" className="md:col-span-4">Kaydet</Button>
         </form>
 
         <form action={runTranslationAutomationNowAction} className="flex items-end">
-          <Button type="submit" variant="outline" className="w-full lg:w-auto">Şimdi Bir Tick Çalıştır</Button>
+          <Button type="submit" variant="outline" className="w-full lg:w-auto">Bir Tick Çalıştır</Button>
         </form>
       </div>
     </section>
   );
 }
 
-function StatsGrid({ stats }: { stats: AiTranslationStats }) {
-  const items = [
-    { label: "Yayınlı oyun", value: stats.totalPublished, icon: IconArtificialIntelligenceFillDuo18 },
-    { label: "Tamamlanan", value: stats.completed, icon: IconCircleCheckFillDuo18 },
-    { label: "Sırada", value: stats.pending, icon: IconBrainSparkleFillDuo18 },
-    { label: "Hatalı", value: stats.failed, icon: IconTriangleWarningFillDuo18 },
-  ];
+function ManualBatchForm({ configs, activeConfig }: { configs: AiProviderConfig[]; activeConfig?: AiProviderConfig }) {
   return (
-    <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-      {items.map((item) => {
-        const Icon = item.icon;
-        return (
-          <div key={item.label} className="rounded-md border border-border bg-card p-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-semibold text-muted-foreground">{item.label}</span>
-              <Icon className="size-5 text-primary" />
-            </div>
-            <p className="mt-2 text-2xl font-black">{item.value.toLocaleString("tr-TR")}</p>
-          </div>
-        );
-      })}
-    </section>
+    <form action={createTranslationJobAction} className="grid items-end gap-3 md:grid-cols-[1fr_140px_auto_auto]">
+      <label className="grid gap-1 text-sm font-bold">
+        Provider
+        <Select name="provider" defaultValue={activeConfig?.provider ?? "deepseek"}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Provider seç" />
+          </SelectTrigger>
+          <SelectContent>
+            {configs.map((config) => (
+              <SelectItem key={config.provider} value={config.provider}>{AI_PROVIDER_LABELS[config.provider]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </label>
+      <label className="grid gap-1 text-sm font-bold">
+        Batch
+        <Select name="batch_size" defaultValue="25">
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Batch seç" />
+          </SelectTrigger>
+          <SelectContent>
+            {AI_BATCH_SIZES.map((size) => <SelectItem key={size} value={String(size)}>{size} oyun</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </label>
+      <label className="flex h-10 items-center gap-2 text-sm font-semibold text-muted-foreground">
+        <Checkbox name="retry_failed_only" />
+        Sadece hatalılar
+      </label>
+      <Button type="submit" variant="outline" className="w-full">Yeni Batch Başlat</Button>
+    </form>
+  );
+}
+
+function DetailsSection({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+  return (
+    <details className="group rounded-md border border-border bg-card p-4">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+        <span>
+          <span className="block text-lg font-bold">{title}</span>
+          <span className="mt-1 block text-sm text-muted-foreground">{description}</span>
+        </span>
+        <span className="shrink-0 text-sm font-semibold text-muted-foreground group-open:hidden">Aç</span>
+        <span className="hidden shrink-0 text-sm font-semibold text-muted-foreground group-open:inline">Kapat</span>
+      </summary>
+      <div className="mt-4">{children}</div>
+    </details>
   );
 }
 
