@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { AdminCheckboxField } from "@/components/admin/admin-checkbox-field";
@@ -77,17 +76,15 @@ export default async function EditGamePage({ params }: Props) {
           </MetaBox>
 
           <MetaBox title="Oyun Bilgileri">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4">
               <TextArea label="Nasıl oynanır?" name="how_to_play" defaultValue={game.howToPlay} rows={6} />
-              <div className="space-y-4">
-                <TextArea label="Kontroller - her satır bir madde" name="controls" defaultValue={game.controls.join("\n")} rows={4} />
-                <TextArea label="Özellikler - her satır bir madde" name="features" defaultValue={game.features.join("\n")} rows={4} />
-              </div>
+              <TextArea label="Kontroller - her satır bir madde" name="controls" defaultValue={game.controls.join("\n")} rows={4} />
+              <TextArea label="Özellikler - her satır bir madde" name="features" defaultValue={game.features.join("\n")} rows={4} />
             </div>
           </MetaBox>
 
           <MetaBox title="Oynatıcı">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4">
               <label className="block text-sm font-bold">
                 Oynatma türü
                 <Select name="game_type" defaultValue={game.gameType}>
@@ -176,11 +173,6 @@ export default async function EditGamePage({ params }: Props) {
               </Select>
             </label>
             <AdminCheckboxField name="is_broken" label="Oyun kırık" defaultChecked={game.isBroken} />
-            <div className="border-t border-border pt-3">
-              <Button type="button" variant="outline" size="sm" asChild>
-                <Link href={`/oyun/${game.slug}`} target="_blank" rel="noreferrer">Önizle</Link>
-              </Button>
-            </div>
           </section>
 
           <MetaBox title="Öne Çıkan Görsel" className="p-4">
@@ -191,16 +183,20 @@ export default async function EditGamePage({ params }: Props) {
           </MetaBox>
 
           <MetaBox title="Kategoriler" className="p-4">
-            <div className="grid max-h-72 gap-2 overflow-y-auto">
-              {categories.map((category) => (
-                <AdminCheckboxField
-                  key={category.id}
-                  name="category_ids"
-                  value={category.id}
-                  label={category.name}
-                  defaultChecked={taxonomy.categoryIds.includes(category.id)}
-                />
-              ))}
+            <div className="relative -mx-1">
+              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-6 bg-gradient-to-b from-card to-transparent" />
+              <div className="grid max-h-72 gap-2 overflow-y-auto px-1 py-4">
+                {categories.map((category) => (
+                  <AdminCheckboxField
+                    key={category.id}
+                    name="category_ids"
+                    value={category.id}
+                    label={category.name}
+                    defaultChecked={taxonomy.categoryIds.includes(category.id)}
+                  />
+                ))}
+              </div>
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-6 bg-gradient-to-t from-card to-transparent" />
             </div>
           </MetaBox>
 
