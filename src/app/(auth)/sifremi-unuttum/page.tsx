@@ -9,6 +9,8 @@ type Props = {
 
 export default async function ForgotPasswordPage({ searchParams }: Props) {
   const { error, notice, challenge } = await searchParams;
+  const recoveryError = error ? getRecoveryError(error) : "";
+  const hasEmailError = error === "form" || error === "reset";
 
   return (
     <main className="mx-auto w-full max-w-md px-3 py-10">
@@ -16,12 +18,20 @@ export default async function ForgotPasswordPage({ searchParams }: Props) {
         <h1 className="text-2xl font-black">Şifremi Unuttum</h1>
         <p className="mt-2 text-sm text-muted-foreground">E-posta adresini yaz, şifre yenileme bağlantısını gönderelim.</p>
         {notice === "sent" ? <p role="status" className="mt-3 rounded-md bg-success/10 p-3 text-sm font-semibold text-success">E-posta adresi kayıtlıysa şifre yenileme bağlantısı gönderildi. Gelen kutunu ve spam klasörünü kontrol et.</p> : null}
-        {error ? <p role="alert" className="mt-3 rounded-md bg-destructive/10 p-3 text-sm font-semibold text-destructive">{getRecoveryError(error)}</p> : null}
+        {error ? <p id="recovery-form-error" role="alert" className="mt-3 rounded-md bg-destructive/10 p-3 text-sm font-semibold text-destructive">{recoveryError}</p> : null}
         <form action="/auth/recover" method="post" className="mt-4 space-y-3">
           <BotProtectionFields challenge={challenge === "1"} action="recovery" />
           <label className="block text-sm font-bold">
             E-posta
-            <Input name="email" type="email" autoComplete="email" required className="mt-1 h-10" />
+            <Input
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              aria-invalid={hasEmailError}
+              aria-describedby={hasEmailError ? "recovery-form-error" : undefined}
+              className="mt-1 h-10"
+            />
           </label>
           <Button className="h-10 w-full px-4 text-sm font-black">Şifre Bağlantısı Gönder</Button>
         </form>
