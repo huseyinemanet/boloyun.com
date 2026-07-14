@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { bulkUpdateUsersAction } from "./actions";
 import type { AdminUser, AdminUserCounts, AdminUserFilter } from "@/lib/db-users";
 
@@ -94,15 +95,17 @@ export function UsersTable({ users, counts, activeFilter }: { users: AdminUser[]
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-          {filters.map((filter) => (
-            <span key={filter.key} className="flex items-center">
-              <Link href={filter.key === "all" ? "/admin/users" : `/admin/users?role=${filter.key}`} className={filter.key === activeFilter ? "text-foreground" : "text-primary hover:underline"}>
-                {filter.label} <span className="text-muted-foreground">({counts[filter.key]})</span>
-              </Link>
-            </span>
-          ))}
-        </div>
+        <Tabs value={activeFilter} className="w-full sm:w-auto">
+          <TabsList variant="line" aria-label="Kullanıcı filtresi" className="h-auto flex-wrap justify-start gap-3 p-0">
+            {filters.map((filter) => (
+              <TabsTrigger key={filter.key} value={filter.key} asChild className="h-8 flex-none px-0 text-sm font-bold text-primary data-active:text-foreground">
+                <Link href={filter.key === "all" ? "/admin/users" : `/admin/users?role=${filter.key}`}>
+                  {filter.label} <span className="text-muted-foreground">({counts[filter.key]})</span>
+                </Link>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
         <div className="flex w-full max-w-md items-center gap-2 sm:w-auto">
           <Input
