@@ -20,6 +20,11 @@ export type Game = {
   features: string[];
   developer?: string;
   thumbnailUrl: string;
+  thumbnailSourceUrl?: string | null;
+  thumbnailR2Key?: string | null;
+  thumbnailSyncStatus?: "pending" | "syncing" | "synced" | "failed" | "rolled_back";
+  thumbnailSyncError?: string | null;
+  thumbnailSyncedAt?: string | null;
   gameType: GameType;
   embedUrl?: string;
   swfUrl?: string;

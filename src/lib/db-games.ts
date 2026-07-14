@@ -67,6 +67,11 @@ export type GameRow = {
   features: string[] | null;
   developer: string | null;
   thumbnail_url: string | null;
+  thumbnail_source_url?: string | null;
+  thumbnail_r2_key?: string | null;
+  thumbnail_sync_status?: "pending" | "syncing" | "synced" | "failed" | "rolled_back" | null;
+  thumbnail_sync_error?: string | null;
+  thumbnail_synced_at?: string | null;
   game_type: GameType;
   embed_url: string | null;
   swf_url: string | null;
@@ -160,8 +165,8 @@ export type GameUpdateInput = {
   features: string[];
   developer: string;
   thumbnail_url: string;
-  thumbnail_source_url?: string;
-  thumbnail_r2_key?: string;
+  thumbnail_source_url?: string | null;
+  thumbnail_r2_key?: string | null;
   thumbnail_sync_status?: "pending" | "syncing" | "synced" | "failed" | "rolled_back";
   thumbnail_sync_error?: string | null;
   thumbnail_synced_at?: string | null;
@@ -869,6 +874,11 @@ export function mapGameRow(row: GameRow): Game {
     features: Array.isArray(row.features) ? row.features : [],
     developer: row.developer ?? "",
     thumbnailUrl: normalizeGameThumbnail(row.thumbnail_url),
+    thumbnailSourceUrl: row.thumbnail_source_url ?? null,
+    thumbnailR2Key: row.thumbnail_r2_key ?? null,
+    thumbnailSyncStatus: row.thumbnail_sync_status ?? undefined,
+    thumbnailSyncError: row.thumbnail_sync_error ?? null,
+    thumbnailSyncedAt: row.thumbnail_synced_at ?? null,
     gameType: row.game_type,
     embedUrl: row.embed_url ?? undefined,
     swfUrl: row.swf_url ?? undefined,

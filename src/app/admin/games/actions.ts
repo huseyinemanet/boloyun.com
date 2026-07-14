@@ -40,6 +40,7 @@ export async function updateGameAction(formData: FormData) {
     category_ids: formData.getAll("category_ids").map(String).filter(Boolean),
     tags: splitTags(String(formData.get("tags") ?? "")),
   };
+  const thumbnailChanged = input.thumbnail_url !== currentGame.thumbnailUrl;
   if (input.status === "published" && input.thumbnail_url && !isCdnCoverUrl(input.thumbnail_url)) {
     const mirrored = await mirrorGameCover(input.thumbnail_url);
     Object.assign(input, {
@@ -49,6 +50,23 @@ export async function updateGameAction(formData: FormData) {
       thumbnail_sync_status: "synced" as const,
       thumbnail_sync_error: null,
       thumbnail_synced_at: new Date().toISOString(),
+    });
+  } else if (thumbnailChanged) {
+    const cdnCover = isCdnCoverUrl(input.thumbnail_url);
+    Object.assign(input, {
+      thumbnail_source_url: input.thumbnail_url || null,
+      thumbnail_r2_key: null,
+      thumbnail_sync_status: cdnCover ? "synced" as const : "pending" as const,
+      thumbnail_sync_error: null,
+      thumbnail_synced_at: cdnCover ? new Date().toISOString() : null,
+    });
+  } else {
+    Object.assign(input, {
+      thumbnail_source_url: currentGame.thumbnailSourceUrl ?? currentGame.thumbnailUrl ?? null,
+      thumbnail_r2_key: currentGame.thumbnailR2Key ?? null,
+      thumbnail_sync_status: currentGame.thumbnailSyncStatus ?? (isCdnCoverUrl(currentGame.thumbnailUrl) ? "synced" : "pending"),
+      thumbnail_sync_error: currentGame.thumbnailSyncError ?? null,
+      thumbnail_synced_at: currentGame.thumbnailSyncedAt ?? null,
     });
   }
   if (input.status === "published" && currentGame.status !== "published") {
