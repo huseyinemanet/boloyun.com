@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { LoaderCircleIcon } from "lucide-react";
+import { toast } from "sonner";
 import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
 import { IconThumbsDownFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsDownFillDuo18";
 import { IconThumbsUpFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsUpFillDuo18";
@@ -148,6 +149,9 @@ function FavoriteButton({ gameId, isFavorite, onToggle }: { gameId: string; slug
         setPending(true);
         try {
           await onToggle();
+          toast.success(isFavorite ? "Favorilerden çıkarıldı." : "Favorilere eklendi.");
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : "Favori işlemi tamamlanamadı.");
         } finally {
           setPending(false);
         }
@@ -217,6 +221,9 @@ function VoteButton({
         setPending(true);
         try {
           await onClick();
+          toast.success(active ? `${title} tercihin güncellendi.` : `${title} olarak işaretlendi.`);
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : "Oy işlemi tamamlanamadı.");
         } finally {
           setPending(false);
         }

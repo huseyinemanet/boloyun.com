@@ -3,6 +3,7 @@ import { Header } from "@/components/layout/header";
 import { getPublicSettings } from "@/lib/db-settings";
 import { ConsentScripts } from "@/components/integrations/consent-scripts";
 import { ClickSoundProvider } from "@/components/audio/click-sound-provider";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -36,6 +37,7 @@ export default async function RootLayout({
           <Header />
           {children}
           <ConsentScripts settings={integrations} />
+          <Toaster position="top-center" />
         </ClickSoundProvider>
       </body>
     </html>
