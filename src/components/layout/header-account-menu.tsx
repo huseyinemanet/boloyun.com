@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { IconCircleLogoutFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCircleLogoutFillDuo18";
 import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
 import { IconProfileBasicFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconProfileBasicFillDuo18";
@@ -33,13 +34,15 @@ type MeResponse = {
 let profilePromise: Promise<HeaderProfile | null> | null = null;
 
 export function HeaderAccountMenu({ showRegister }: { showRegister: boolean }) {
+  const pathname = usePathname();
   const [profile, setProfile] = useState<HeaderProfile | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "loaded">("loading");
+  const protectedAccountPath = pathname === "/profil" || pathname.startsWith("/profil/") || pathname.startsWith("/admin");
 
   useEffect(() => {
     let mounted = true;
 
-    void getSharedProfile().then((nextProfile) => {
+    void getSharedProfile(protectedAccountPath).then((nextProfile) => {
       if (!mounted) return;
       setProfile(nextProfile);
       setLoadState("loaded");
@@ -52,9 +55,10 @@ export function HeaderAccountMenu({ showRegister }: { showRegister: boolean }) {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [pathname, protectedAccountPath]);
 
   if (loadState === "loading") return <AccountLoading />;
+  if (!profile && protectedAccountPath) return <AccountLoading />;
   if (!profile) return <AccountLinks showRegister={showRegister} />;
 
   const displayName = getDisplayName(profile);
@@ -140,7 +144,8 @@ function getDisplayName(profile: Pick<HeaderProfile, "displayName" | "firstName"
   return profile.displayName || fullName || profile.username;
 }
 
-async function getSharedProfile() {
+async function getSharedProfile(force = false) {
+  if (force) profilePromise = null;
   profilePromise ??= fetch("/api/me", {
     cache: "no-store",
     credentials: "same-origin",
@@ -148,7 +153,9 @@ async function getSharedProfile() {
     .then(async (response) => {
       if (!response.ok) throw new Error("Profil okunamadi.");
       const data = await response.json() as MeResponse;
-      return data.profile ?? null;
+      const profile = data.profile ?? null;
+      if (!profile) profilePromise = null;
+      return profile;
     })
     .catch((error) => {
       profilePromise = null;

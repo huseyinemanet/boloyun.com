@@ -16,6 +16,7 @@ const worker = {
       return handleGameAction(request, env);
     }
     if (url.pathname === "/api/me") {
+      if (hasSupabaseAuthCookie(request, env)) return openNextWorker.fetch(request, env, ctx);
       return handleMe(request, env);
     }
     if (url.pathname === "/api/search") {
@@ -342,6 +343,12 @@ function getSupabaseAccessToken(cookieHeader, env) {
     .join("");
 
   return parseSupabaseAuthCookie(value);
+}
+
+function hasSupabaseAuthCookie(request, env) {
+  const ref = getSupabaseProjectRef(env.NEXT_PUBLIC_SUPABASE_URL || "");
+  if (!ref) return false;
+  return request.headers.get("cookie")?.includes(`sb-${ref}-auth-token`) ?? false;
 }
 
 function parseSupabaseAuthCookie(value) {
