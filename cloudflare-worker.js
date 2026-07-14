@@ -18,8 +18,14 @@ const worker = {
     if (url.pathname === "/api/me") {
       return handleMe(request, env);
     }
+    if (url.pathname === "/api/search") {
+      return handleSearch(request, env);
+    }
     if (url.pathname === "/rastgele") {
       return handleRandomGame(request, env);
+    }
+    if (url.pathname.startsWith("/admin") && isPrefetchRequest(request, url)) {
+      return new Response(null, { status: 204, headers: { "cache-control": "no-store" } });
     }
     if (url.pathname.startsWith("/oyun/")) {
       if (isRscRequest(request, url)) return new Response(null, { status: 204, headers: { "cache-control": "no-store" } });
@@ -143,6 +149,33 @@ async function handleMe(request, env) {
     displayName: profile.displayName,
     role: profile.role,
   } : null);
+}
+
+async function handleSearch(request, env) {
+  const url = new URL(request.url);
+  const query = (url.searchParams.get("q") || "").trim().slice(0, 80);
+  const popular = url.searchParams.get("popular") === "1";
+  const headers = {
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "public, max-age=30, s-maxage=60, stale-while-revalidate=300",
+    "x-edge-fallback": "search",
+  };
+
+  if (!popular && query.length < 2) return new Response(JSON.stringify({ items: [] }), { headers });
+
+  try {
+    const select = "id,title,slug,thumbnail_url,short_description";
+    const limit = popular && query.length < 2 ? 5 : 6;
+    const path = popular && query.length < 2
+      ? `/rest/v1/games?select=${select}&status=eq.published&order=play_count.desc,updated_at.desc&limit=${limit}`
+      : `/rest/v1/games?select=${select}&status=eq.published&title=ilike.*${encodeURIComponent(escapePostgrestLike(query))}*&order=play_count.desc&limit=${limit}`;
+    const rows = await supabaseRest(env, path);
+    const items = Array.isArray(rows) ? rows.map(mapSearchSuggestion) : [];
+    return new Response(JSON.stringify({ items }), { headers });
+  } catch (error) {
+    console.error("[search] edge fallback failed", { error: error instanceof Error ? error.message : String(error) });
+    return new Response(JSON.stringify({ items: [] }), { headers });
+  }
 }
 
 async function getProfileForRequest(request, env) {
@@ -367,6 +400,31 @@ function isRscRequest(request, url) {
     request.headers.has("next-router-prefetch") ||
     request.headers.has("next-router-segment-prefetch") ||
     url.searchParams.has("_rsc");
+}
+
+function isPrefetchRequest(request, url) {
+  return request.headers.has("next-router-prefetch") ||
+    request.headers.has("next-router-segment-prefetch") ||
+    (url.searchParams.has("_rsc") && request.headers.get("purpose") === "prefetch");
+}
+
+function mapSearchSuggestion(game) {
+  return {
+    id: typeof game.id === "string" ? game.id : "",
+    title: typeof game.title === "string" ? game.title : "",
+    slug: typeof game.slug === "string" ? game.slug : "",
+    thumbnailUrl: normalizeGameThumbnail(game.thumbnail_url),
+    shortDescription: typeof game.short_description === "string" ? game.short_description : "",
+  };
+}
+
+function normalizeGameThumbnail(value) {
+  if (typeof value === "string" && value) return value;
+  return "/thumbnails/space.svg";
+}
+
+function escapePostgrestLike(value) {
+  return value.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_").replaceAll("*", "\\*");
 }
 
 function renderGameHtml(game) {
