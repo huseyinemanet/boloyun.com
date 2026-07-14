@@ -102,6 +102,11 @@ type GameRelationRow = {
   game_id: string;
 };
 
+type PublicGamePageRpc = {
+  games?: GameRow[];
+  total?: number | string | null;
+};
+
 type FavoriteGameRow = {
   game_id: string | null;
 };
@@ -443,6 +448,21 @@ export async function getPublishedGamesByCategorySlugPage({
     };
   }
 
+  const from = (page - 1) * perPage;
+  const { data: rpcData, error: rpcError } = await measuredQuery("categories.public.page-rpc", supabase.rpc("get_public_category_game_page", {
+    p_slug: slug,
+    p_limit: perPage,
+    p_offset: from,
+  }));
+
+  if (!rpcError && rpcData && typeof rpcData === "object") {
+    const result = rpcData as PublicGamePageRpc;
+    return {
+      items: Array.isArray(result.games) ? result.games.map(mapGameRow) : [],
+      total: Number(result.total ?? 0),
+    };
+  }
+
   const { data: category, error: categoryError } = await supabase
     .from("categories")
     .select("id")
@@ -452,12 +472,12 @@ export async function getPublishedGamesByCategorySlugPage({
 
   if (categoryError || !category) return { items: [], total: 0 };
 
-  const from = (page - 1) * perPage;
   const to = from + perPage - 1;
   const { data: links, error: linksError, count } = await supabase
     .from("game_categories")
-    .select("game_id", { count: "exact" })
+    .select("game_id, games!inner(id)", { count: "exact" })
     .eq("category_id", (category as { id: string }).id)
+    .eq("games.status", "published")
     .range(from, to);
 
   if (linksError || !links) return { items: [], total: 0 };
@@ -774,7 +794,7 @@ export async function updateAdminGame(id: string, input: GameUpdateInput) {
   }
 }
 
-function mapGameRow(row: GameRow): Game {
+export function mapGameRow(row: GameRow): Game {
   const shortDescription = row.short_description ?? "";
   const longDescription = row.long_description ?? shortDescription;
   const controls = Array.isArray(row.controls) ? row.controls : [];

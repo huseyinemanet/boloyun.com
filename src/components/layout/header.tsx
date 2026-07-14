@@ -1,18 +1,5 @@
-import { IconCircleLogoutFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCircleLogoutFillDuo18";
-import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
-import { IconProfileBasicFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconProfileBasicFillDuo18";
-import { IconShieldCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconShieldCheckFillDuo18";
 import { BolOyunLogo } from "@/components/layout/bol-oyun-logo";
-import { getCurrentProfile, getDisplayName } from "@/lib/auth";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { HeaderAccountMenu } from "@/components/layout/header-account-menu";
 import { RandomGameLink } from "@/components/layout/random-game-link";
 import { SearchAutocomplete } from "@/components/layout/search-autocomplete";
 import { getPublicSettings } from "@/lib/db-settings";
@@ -25,8 +12,8 @@ const sectionLinks = [
 ] as const;
 
 export async function Header() {
-  const [profile, settings] = await Promise.all([getCurrentProfile(), getPublicSettings()]);
-  const displayName = profile ? getDisplayName(profile) : "";
+  const settings = await getPublicSettings();
+  const showRegister = settings.general.registrationsEnabled && settings.community.registrationsEnabled;
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
@@ -50,64 +37,7 @@ export async function Header() {
         </nav>
 
         <RandomGameLink />
-        {profile ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className="grid size-10 shrink-0 place-items-center rounded-full outline-none transition focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-              aria-label="Hesap menüsünü aç"
-            >
-              <Avatar size="lg">
-                {profile.avatarUrl ? <AvatarImage src={profile.avatarUrl} alt={displayName} /> : null}
-                <AvatarFallback>{profile.username.slice(0, 2).toLocaleUpperCase("tr")}</AvatarFallback>
-              </Avatar>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 border-border/70 bg-popover/80 shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-popover/70">
-              <div className="px-3 py-2">
-                <p className="truncate font-semibold text-foreground">{displayName}</p>
-                {profile.email ? <p className="truncate text-xs text-muted-foreground">{profile.email}</p> : null}
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem asChild>
-                  <SoundLink href="/profil" className="gap-2">
-                    <IconProfileBasicFillDuo18 className="size-[18px] shrink-0" aria-hidden="true" />
-                    Profil
-                  </SoundLink>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <SoundLink href="/profil#favoriler" className="gap-2">
-                    <IconHeartFillDuo18 className="size-[18px] shrink-0" aria-hidden="true" />
-                    Favorilerim
-                  </SoundLink>
-                </DropdownMenuItem>
-                {profile.role === "admin" ? (
-                  <DropdownMenuItem asChild>
-                    <SoundLink href="/admin" className="gap-2">
-                      <IconShieldCheckFillDuo18 className="size-[18px] shrink-0" aria-hidden="true" />
-                      Admin
-                    </SoundLink>
-                  </DropdownMenuItem>
-                ) : null}
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <form action="/auth/signout" method="post">
-                <DropdownMenuItem asChild>
-                  <button type="submit" className="w-full gap-2 text-left text-foreground">
-                    <IconCircleLogoutFillDuo18 className="size-[18px] shrink-0" aria-hidden="true" />
-                    Çıkış
-                  </button>
-                </DropdownMenuItem>
-              </form>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <div className="flex shrink-0 items-center gap-2">
-            <SoundLink href="/giris" className="inline-flex h-10 items-center justify-center rounded-md border border-border px-3 text-sm font-semibold leading-none">
-              Giriş Yap
-            </SoundLink>
-            {settings.general.registrationsEnabled && settings.community.registrationsEnabled ? <SoundLink href="/kayit" className="hidden h-10 items-center justify-center rounded-md bg-primary px-3 text-sm font-semibold leading-none text-primary-foreground sm:inline-flex">Kayıt Ol</SoundLink> : null}
-          </div>
-        )}
+        <HeaderAccountMenu showRegister={showRegister} />
       </div>
     </header>
   );

@@ -7,6 +7,8 @@ type Props = {
   searchParams: Promise<{ page?: string }>;
 };
 
+export const revalidate = 300;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   return getCategoryMetadata(slug, 1);

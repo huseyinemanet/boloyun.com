@@ -1,5 +1,7 @@
+import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
-import { getPublishedGamesByIds } from "@/lib/db-games";
+import { getPublishedGamesByIds, mapGameRow, type GameRow } from "@/lib/db-games";
 import { isTagIndexable } from "@/lib/seo/audit";
 import { slugify } from "@/lib/slug/slugify";
 
@@ -23,7 +25,13 @@ export type PublicTag = TagRow & {
 
 type TagLinkRow = { game_id: string; tag_id?: string };
 
-export async function getPublicTagBySlug(slug: string): Promise<PublicTag | null> {
+type PublicTagPageRpc = {
+  tag?: (TagRow & { published_game_count?: number | string | null }) | null;
+  games?: GameRow[];
+  total?: number | string | null;
+};
+
+const getPublicTagBySlugCached = unstable_cache(async function getPublicTagBySlug(slug: string): Promise<PublicTag | null> {
   try {
     const supabase = createSupabaseServiceClient();
     if (!supabase) return null;
@@ -47,7 +55,8 @@ export async function getPublicTagBySlug(slug: string): Promise<PublicTag | null
     console.error("[tags] public tag could not be read", { slug, ...toLogError(error) });
     return null;
   }
-}
+}, ["public-tag-by-slug"], { revalidate: 600, tags: ["tags"] });
+export const getPublicTagBySlug = cache(getPublicTagBySlugCached);
 
 export async function getPublishedGamesByTagSlugPage({
   slug,
@@ -62,10 +71,24 @@ export async function getPublishedGamesByTagSlugPage({
     const supabase = createSupabaseServiceClient();
     if (!supabase) return { items: [], total: 0 };
 
+    const from = (page - 1) * perPage;
+    const { data: rpcData, error: rpcError } = await supabase.rpc("get_public_tag_page", {
+      p_slug: slug,
+      p_limit: perPage,
+      p_offset: from,
+    });
+
+    if (!rpcError && rpcData && typeof rpcData === "object") {
+      const result = rpcData as PublicTagPageRpc;
+      return {
+        items: Array.isArray(result.games) ? result.games.map(mapGameRow) : [],
+        total: Number(result.total ?? 0),
+      };
+    }
+
     const { data: tag } = await supabase.from("tags").select("id").eq("slug", slug).eq("status", "active").maybeSingle();
     if (!tag) return { items: [], total: 0 };
 
-    const from = (page - 1) * perPage;
     const to = from + perPage - 1;
     const { data, error, count } = await supabase
       .from("game_tags")

@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+const TAXONOMY_CACHE_CONTROL = "public, max-age=300, s-maxage=300, stale-while-revalidate=3600";
+
 export async function middleware(request: NextRequest) {
   const host = request.headers.get("host")?.split(":", 1)[0].toLocaleLowerCase("en-US");
   if (host === "www.boloyun.com") {
@@ -9,6 +11,12 @@ export async function middleware(request: NextRequest) {
     destination.port = "";
     destination.protocol = "https:";
     return NextResponse.redirect(destination, 308);
+  }
+
+  if (isPublicTaxonomyRequest(request)) {
+    const response = NextResponse.next({ request });
+    response.headers.set("Cache-Control", TAXONOMY_CACHE_CONTROL);
+    return response;
   }
 
   let response = NextResponse.next({ request });
@@ -37,7 +45,14 @@ export const config = {
     "/admin/:path*",
     "/api/:path*",
     "/auth/:path*",
+    "/etiket/:path*",
+    "/kategori/:path*",
     "/profil/:path*",
     "/rastgele/:path*",
   ],
 };
+
+function isPublicTaxonomyRequest(request: NextRequest) {
+  if (request.method !== "GET" && request.method !== "HEAD") return false;
+  return request.nextUrl.pathname.startsWith("/etiket/") || request.nextUrl.pathname.startsWith("/kategori/");
+}

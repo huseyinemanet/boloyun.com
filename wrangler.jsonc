@@ -11,6 +11,9 @@
   "triggers": {
     "crons": ["*/2 * * * *"]
   },
+  "cache": {
+    "enabled": true
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

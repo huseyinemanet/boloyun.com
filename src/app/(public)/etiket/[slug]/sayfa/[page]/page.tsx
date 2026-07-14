@@ -4,6 +4,8 @@ import { getTagMetadata, TagView } from "../../tag-view";
 
 type Props = { params: Promise<{ slug: string; page: string }> };
 
+export const revalidate = 300;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, page } = await params;
   return getTagMetadata(slug, parsePage(page));
