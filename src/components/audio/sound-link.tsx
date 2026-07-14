@@ -6,8 +6,12 @@ import { forwardRef, type AnchorHTMLAttributes, type MouseEvent } from "react";
 import { useClickSound } from "@/components/audio/click-sound-provider";
 
 type SoundLinkProps = LinkProps & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, keyof LinkProps>;
+type NativeSoundLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
+  href: string;
+  native?: boolean;
+};
 
-export const SoundLink = forwardRef<HTMLAnchorElement, SoundLinkProps>(function SoundLink({ onClick, ...props }, ref) {
+export const SoundLink = forwardRef<HTMLAnchorElement, SoundLinkProps | NativeSoundLinkProps>(function SoundLink({ onClick, ...props }, ref) {
   const pathname = usePathname();
   const { playClickSound } = useClickSound();
 
@@ -16,7 +20,18 @@ export const SoundLink = forwardRef<HTMLAnchorElement, SoundLinkProps>(function 
     if (shouldPlayLinkSound(event, pathname)) playClickSound();
   }
 
-  return <Link ref={ref} {...props} onClick={handleClick} />;
+  if ("native" in props && props.native) {
+    const anchorProps = { ...(props as NativeSoundLinkProps & Partial<LinkProps>) };
+    delete anchorProps.native;
+    delete anchorProps.prefetch;
+    delete anchorProps.replace;
+    delete anchorProps.scroll;
+    delete anchorProps.shallow;
+    delete anchorProps.locale;
+    return <a ref={ref} {...anchorProps} onClick={handleClick} />;
+  }
+
+  return <Link ref={ref} {...(props as SoundLinkProps)} onClick={handleClick} />;
 });
 
 export function shouldPlayLinkSound(event: MouseEvent<HTMLAnchorElement>, pathname: string) {

@@ -1,4 +1,5 @@
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
+import { normalizeSiteAssetUrl } from "@/lib/site-assets";
 
 export type ProfileGameItem = {
   id: string;
@@ -101,7 +102,7 @@ function mapGameItem(gameValue: FavoriteRow["games"], date: string | null): Prof
     id: game.id,
     title: game.title,
     slug: game.slug,
-    thumbnailUrl: game.thumbnail_url || "/thumbnails/puzzle.svg",
+    thumbnailUrl: normalizeSiteAssetUrl(game.thumbnail_url) || "/thumbnails/puzzle.svg",
     date: date ?? new Date().toISOString(),
   }];
 }

@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { CategoryIcon } from "@/components/icons/category-icon";
 import type { CategoryRow } from "@/lib/db-categories";
 import { cn } from "@/lib/utils";
-import { IntentPrefetchLink } from "@/components/navigation/intent-prefetch-link";
+import { SoundLink } from "@/components/audio/sound-link";
 
 export function SidebarCategoryLink({ category }: { category: CategoryRow }) {
   const pathname = usePathname();
@@ -12,8 +12,9 @@ export function SidebarCategoryLink({ category }: { category: CategoryRow }) {
   const active = pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <IntentPrefetchLink
+    <SoundLink
       href={href}
+      native
       aria-current={active ? "page" : undefined}
       className={cn(
         "group mb-0 flex min-w-fit items-center gap-2 rounded-md px-2 py-1.5 text-sm font-normal text-sidebar-foreground transition hover:bg-sidebar-accent md:min-w-0",
@@ -26,6 +27,6 @@ export function SidebarCategoryLink({ category }: { category: CategoryRow }) {
         className={active ? "bg-primary-foreground/15 text-primary-foreground group-hover:bg-primary-foreground/20" : undefined}
       />
       <span className="truncate">{category.name}</span>
-    </IntentPrefetchLink>
+    </SoundLink>
   );
 }

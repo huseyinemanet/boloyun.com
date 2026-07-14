@@ -8,9 +8,6 @@
     { "pattern": "boloyun.com/*", "zone_name": "boloyun.com" },
     { "pattern": "www.boloyun.com/*", "zone_name": "boloyun.com" }
   ],
-  "triggers": {
-    "crons": ["*/2 * * * *"]
-  },
   "cache": {
     "enabled": true
   },

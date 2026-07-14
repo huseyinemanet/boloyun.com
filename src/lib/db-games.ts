@@ -9,6 +9,7 @@ import { normalizePublicCategoryRow, type CategoryRow } from "@/lib/db-categorie
 import { isGameSourceAllowed } from "@/lib/settings/game-security";
 import { measuredQuery } from "@/lib/query-observability";
 import { keysetFilter, type KeysetCursor, type KeysetDirection } from "@/lib/keyset-pagination";
+import { normalizeSiteAssetUrl } from "@/lib/site-assets";
 
 const publicGameSelect = [
   "id",
@@ -545,7 +546,7 @@ export async function getAdminGamesPage({ cursor, direction, perPage }: {
     title: row.title,
     slug: row.slug,
     shortDescription: row.short_description ?? "",
-    thumbnailUrl: row.thumbnail_url ?? "/images/game-placeholder.svg",
+    thumbnailUrl: normalizeGameThumbnail(row.thumbnail_url, "/images/game-placeholder.svg"),
     status: row.status as PublishStatus,
     playCount: row.play_count ?? 0,
     updatedAt: row.updated_at,
@@ -736,7 +737,7 @@ const searchPublishedGameSuggestionsCached = unstable_cache(async function searc
     id: game.id,
     title: game.title,
     slug: game.slug,
-    thumbnailUrl: game.thumbnail_url ?? "/thumbnails/space.svg",
+    thumbnailUrl: normalizeGameThumbnail(game.thumbnail_url),
     shortDescription: game.short_description ?? "",
   }));
 }, ["search-published-game-suggestions-v1"], { revalidate: 60, tags: ["games"] });
@@ -766,7 +767,7 @@ const getPopularGameSuggestionsCached = unstable_cache(async function getPopular
     id: game.id,
     title: game.title,
     slug: game.slug,
-    thumbnailUrl: game.thumbnail_url ?? "/thumbnails/space.svg",
+    thumbnailUrl: normalizeGameThumbnail(game.thumbnail_url),
     shortDescription: game.short_description ?? "",
   }));
 }, ["popular-game-suggestions-v1"], { revalidate: 300, tags: ["games"] });
@@ -867,7 +868,7 @@ export function mapGameRow(row: GameRow): Game {
     controls,
     features: Array.isArray(row.features) ? row.features : [],
     developer: row.developer ?? "",
-    thumbnailUrl: row.thumbnail_url ?? "/thumbnails/space.svg",
+    thumbnailUrl: normalizeGameThumbnail(row.thumbnail_url),
     gameType: row.game_type,
     embedUrl: row.embed_url ?? undefined,
     swfUrl: row.swf_url ?? undefined,
@@ -911,6 +912,10 @@ function mapGameSearchSuggestion(game: Game): GameSearchSuggestion {
   };
 }
 
+function normalizeGameThumbnail(value: string | null | undefined, fallback = "/thumbnails/space.svg") {
+  return normalizeSiteAssetUrl(value) ?? fallback;
+}
+
 function escapeIlikeQuery(query: string) {
   return query
     .replaceAll("\\", "\\\\")
@@ -930,7 +935,7 @@ function mapAdminPopularGame(row: AdminPopularGameRow, favoriteCount: number): A
     title: row.title,
     slug: row.slug,
     categoryName: "",
-    thumbnailUrl: row.thumbnail_url ?? "/thumbnails/space.svg",
+    thumbnailUrl: normalizeGameThumbnail(row.thumbnail_url),
     playCount,
     favoriteCount,
     likesCount,
