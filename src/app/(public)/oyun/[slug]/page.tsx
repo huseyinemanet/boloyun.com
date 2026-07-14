@@ -25,6 +25,7 @@ import { isGameSourceAllowed } from "@/lib/settings/game-security";
 import { renderSeoTemplate } from "@/lib/settings/validation";
 import { getPublishedGames } from "@/lib/db-games";
 import { recordGamePlayAction } from "./actions";
+import { AdminEditGameLink } from "./admin-edit-game-link";
 import { CommentAuthGate } from "./comment-auth-gate";
 import { CommentStatusNotice } from "./comment-status-notice";
 import { CommentsTabs } from "./comments-tabs";
@@ -148,7 +149,10 @@ export default async function GameDetailPage({ params }: Props) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-semibold">{game.title}</h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl font-semibold">{game.title}</h1>
+                  <AdminEditGameLink gameId={game.id} title={game.title} />
+                </div>
                 <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{game.shortDescription}</p>
               </div>
             </div>

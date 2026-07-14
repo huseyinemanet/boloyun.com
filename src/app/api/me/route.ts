@@ -18,6 +18,7 @@ export async function GET() {
             lastName: profile.lastName,
             displayName: profile.displayName,
             role: profile.role,
+            status: profile.status,
           }
         : null,
     },
