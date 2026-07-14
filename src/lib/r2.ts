@@ -44,16 +44,21 @@ export async function uploadSiteAsset(file: File, kind: "logo" | "favicon" | "co
   if (dimensions.width > limit.width || dimensions.height > limit.height) throw new Error(`Görsel en fazla ${limit.width}×${limit.height} piksel olabilir.`);
   if (isAnimatedImage(bytes, file.type)) throw new Error("Animasyonlu görseller desteklenmiyor.");
   const { env } = await getCloudflareContext({ async: true });
-  if (!env.IMAGES || !env.SITE_ASSETS) throw new Error("Cloudflare görsel veya R2 binding yapılandırılmamış.");
+  if (!env.SITE_ASSETS) throw new Error("Cloudflare R2 binding yapılandırılmamış.");
   let outputBytes: Uint8Array;
-  try {
-    const info = await env.IMAGES.info(new Blob([bytes]).stream());
-    if (!("width" in info) || info.width !== dimensions.width || info.height !== dimensions.height) throw new Error("Görsel boyut bilgisi tutarsız.");
-    const transformed = await env.IMAGES.input(new Blob([bytes]).stream()).output({ format: "image/webp", quality: kind === "favicon" ? 90 : 82, anim: false });
-    outputBytes = new Uint8Array(await new Response(transformed.image()).arrayBuffer());
-  } catch (error) {
-    if (error instanceof Error && error.message.includes("boyut")) throw error;
-    throw new Error("Görsel güvenli biçimde yeniden kodlanamadı.");
+  if (file.type === "image/webp") {
+    outputBytes = bytes;
+  } else {
+    if (!env.IMAGES) throw new Error("Cloudflare görsel binding yapılandırılmamış.");
+    try {
+      const info = await env.IMAGES.info(new Blob([bytes]).stream());
+      if (!("width" in info) || info.width !== dimensions.width || info.height !== dimensions.height) throw new Error("Görsel boyut bilgisi tutarsız.");
+      const transformed = await env.IMAGES.input(new Blob([bytes]).stream()).output({ format: "image/webp", quality: kind === "favicon" ? 90 : 82, anim: false });
+      outputBytes = new Uint8Array(await new Response(transformed.image()).arrayBuffer());
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("boyut")) throw error;
+      throw new Error("Görsel güvenli biçimde yeniden kodlanamadı.");
+    }
   }
 
   const sha256 = createHash("sha256").update(outputBytes).digest("hex");

@@ -40,6 +40,8 @@ test("image signatures must match the declared MIME type", () => {
   assert.equal(matchesImageSignature(Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), "image/png"), true);
   assert.equal(matchesImageSignature(Uint8Array.from([0xff, 0xd8, 0xff]), "image/png"), false);
   assert.equal(matchesImageSignature(Uint8Array.from([0xff, 0xd8, 0xff]), "image/jpeg"), true);
+  assert.equal(matchesImageSignature(bytes("RIFF0000WEBP"), "image/webp"), true);
+  assert.equal(matchesImageSignature(bytes("RIFF0000WAVE"), "image/webp"), false);
 });
 
 test("audio signatures must match the declared MIME type", () => {
