@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { getAdminImports } from "@/import/db/game-imports";
+import { adminPageMetadata } from "@/lib/seo/metadata";
 import { CrawlerRunner } from "./crawler-runner";
 
 type Props = {
@@ -17,6 +18,7 @@ type Props = {
 };
 
 export const dynamic = "force-dynamic";
+export const metadata = adminPageMetadata("Yeni Oyun Tara");
 
 export default async function AdminCrawlerPage({ searchParams }: Props) {
   const result = await searchParams;

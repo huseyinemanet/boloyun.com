@@ -8,9 +8,11 @@ import { CategoryIcon } from "@/components/icons/category-icon";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getAdminCategories } from "@/lib/db-categories";
+import { adminPageMetadata } from "@/lib/seo/metadata";
 import { CategoryForm } from "./category-form";
 
 export const dynamic = "force-dynamic";
+export const metadata = adminPageMetadata("Kategoriler");
 
 type AdminCategoriesPageProps = {
   searchParams: Promise<{

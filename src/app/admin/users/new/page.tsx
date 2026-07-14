@@ -1,5 +1,8 @@
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { adminPageMetadata } from "@/lib/seo/metadata";
 import { UserCreateForm } from "./user-create-form";
+
+export const metadata = adminPageMetadata("Yeni Kullanıcı Ekle");
 
 export default function NewAdminUserPage() {
   return (

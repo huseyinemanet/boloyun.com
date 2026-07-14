@@ -1,6 +1,9 @@
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import type { StaticPageRow } from "@/lib/db-static-pages";
+import { adminPageMetadata } from "@/lib/seo/metadata";
 import { StaticPageForm } from "../static-page-form";
+
+export const metadata = adminPageMetadata("Yeni Sayfa Ekle");
 
 export default function NewStaticPage() {
   const page: StaticPageRow = {

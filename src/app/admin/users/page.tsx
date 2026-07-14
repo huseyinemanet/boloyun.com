@@ -3,10 +3,12 @@ import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminPagination, parseAdminPage } from "@/components/admin/admin-pagination";
 import { Button } from "@/components/ui/button";
 import { getAdminUserCounts, getAdminUsersPage, type AdminUserFilter } from "@/lib/db-users";
+import { adminPageMetadata } from "@/lib/seo/metadata";
 import { UserNoticeToast } from "./user-notice-toast";
 import { UsersTable } from "./users-table";
 
 export const dynamic = "force-dynamic";
+export const metadata = adminPageMetadata("Kullanıcılar");
 
 type Props = {
   searchParams: Promise<{ role?: string; page?: string; notice?: string }>;

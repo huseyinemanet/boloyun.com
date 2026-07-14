@@ -9,10 +9,12 @@ import { AdminPagination, parseAdminPage } from "@/components/admin/admin-pagina
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getAdminTagById, getAdminTagsPage } from "@/lib/db-tags";
+import { adminPageMetadata } from "@/lib/seo/metadata";
 import { TagForm } from "./tag-form";
 import { TagsSearchForm } from "./tags-search-form";
 
 export const dynamic = "force-dynamic";
+export const metadata = adminPageMetadata("Etiketler");
 const PER_PAGE = 50;
 
 type Props = { searchParams: Promise<{ page?: string; q?: string; edit?: string }> };

@@ -1,8 +1,10 @@
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { getAdminCommentCounts, getAdminComments, type AdminCommentFilter } from "@/lib/db-comments";
+import { adminPageMetadata } from "@/lib/seo/metadata";
 import { CommentsTable } from "./comments-table";
 
 export const dynamic = "force-dynamic";
+export const metadata = adminPageMetadata("Yorumlar");
 
 type Props = {
   searchParams: Promise<{ status?: string }>;

@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { getAdminStaticPage } from "@/lib/db-static-pages";
+import { adminPageMetadata } from "@/lib/seo/metadata";
 import { StaticPageForm } from "../../static-page-form";
+
+export const metadata = adminPageMetadata("Sayfayı Düzenle");
 
 type Props = { params: Promise<{ id: string }> };
 

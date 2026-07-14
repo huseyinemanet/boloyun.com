@@ -2,9 +2,11 @@ import { IconSquareDashedTextPlusFillDuo18 } from "nucleo-ui-fill-duo-18/compone
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Button } from "@/components/ui/button";
 import { getAdminStaticPages } from "@/lib/db-static-pages";
+import { adminPageMetadata } from "@/lib/seo/metadata";
 import { StaticPagesTable } from "./static-pages-table";
 
 export const dynamic = "force-dynamic";
+export const metadata = adminPageMetadata("Sayfalar");
 
 export default async function AdminStaticPagesPage() {
   const pages = await getAdminStaticPages();

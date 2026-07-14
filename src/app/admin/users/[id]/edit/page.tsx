@@ -6,7 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getAdminUserByProfileId } from "@/lib/db-users";
+import { adminPageMetadata } from "@/lib/seo/metadata";
 import { sendPasswordResetAction, updateUserAction } from "../../actions";
+
+export const metadata = adminPageMetadata("Kullanıcıyı Düzenle");
 
 type Props = {
   params: Promise<{ id: string }>;

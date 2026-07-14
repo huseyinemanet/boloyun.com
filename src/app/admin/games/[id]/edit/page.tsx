@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { getAdminGameById, getAdminGameTaxonomy } from "@/lib/db-games";
 import { getAdminCategories } from "@/lib/db-categories";
 import { auditGameSeo } from "@/lib/seo/audit";
-import { absoluteUrl } from "@/lib/seo/metadata";
+import { absoluteUrl, adminPageMetadata } from "@/lib/seo/metadata";
 import { videoGameJsonLd } from "@/lib/seo/jsonld";
 import { updateGameAction } from "../../actions";
 
@@ -19,6 +19,7 @@ type Props = {
 };
 
 export const dynamic = "force-dynamic";
+export const metadata = adminPageMetadata("Oyunu Düzenle");
 
 export default async function EditGamePage({ params }: Props) {
   const { id } = await params;

@@ -10,10 +10,12 @@ import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getAdminAdManagerData, type AdRow } from "@/lib/db-ads";
+import { adminPageMetadata } from "@/lib/seo/metadata";
 import { AdForm, AdSlotForm } from "./ads-forms";
 import { AdsTable } from "./ads-table";
 
 export const dynamic = "force-dynamic";
+export const metadata = adminPageMetadata("Reklam Yönetimi");
 
 type AdminAdsPageProps = {
   searchParams: Promise<{

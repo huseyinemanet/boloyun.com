@@ -67,3 +67,10 @@ export const privatePageMetadata: Metadata = {
     googleBot: { index: false, follow: false, noimageindex: true },
   },
 };
+
+export function adminPageMetadata(title: string): Metadata {
+  return {
+    ...privatePageMetadata,
+    title,
+  };
+}

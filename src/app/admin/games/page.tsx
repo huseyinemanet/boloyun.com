@@ -16,9 +16,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { getAdminGamesPage } from "@/lib/db-games";
 import type { PublishStatus } from "@/types/game";
 import { decodeKeysetCursor, parseKeysetDirection } from "@/lib/keyset-pagination";
+import { adminPageMetadata } from "@/lib/seo/metadata";
 import { GameNoticeToast } from "./game-notice-toast";
 
 export const dynamic = "force-dynamic";
+export const metadata = adminPageMetadata("Oyunlar");
 const PER_PAGE = 50;
 
 type AdminGamesPageProps = {

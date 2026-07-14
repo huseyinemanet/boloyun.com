@@ -15,9 +15,11 @@ import { getAdminPopularGames, type AdminPopularGame } from "@/lib/db-games";
 import { getCategoriesCount } from "@/lib/db-categories";
 import { getCommentsCount } from "@/lib/db-comments";
 import { getUsersCount } from "@/lib/db-users";
+import { adminPageMetadata } from "@/lib/seo/metadata";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const dynamic = "force-dynamic";
+export const metadata = adminPageMetadata("Genel Bakış");
 
 export default async function AdminPage() {
   const [gamesCount, categoriesCount, commentsCount, usersCount, popularGames] = await Promise.all([

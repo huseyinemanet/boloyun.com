@@ -2,9 +2,11 @@ import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminCursorPagination } from "@/components/admin/admin-cursor-pagination";
 import { getAdminImportsPage } from "@/import/db/game-imports";
 import { decodeKeysetCursor, parseKeysetDirection } from "@/lib/keyset-pagination";
+import { adminPageMetadata } from "@/lib/seo/metadata";
 import { ImportsTable } from "./imports-table";
 
 export const dynamic = "force-dynamic";
+export const metadata = adminPageMetadata("Onay Kuyruğu");
 const PER_PAGE = 50;
 
 type ImportsPageProps = {
