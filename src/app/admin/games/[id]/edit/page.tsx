@@ -48,7 +48,7 @@ export default async function EditGamePage({ params, searchParams }: Props) {
   });
 
   return (
-    <form action={`/admin/games/${game.id}/edit/save`} method="post" className="space-y-3">
+    <form action={`/api/admin/games/${game.id}`} method="post" className="space-y-3">
       <input type="hidden" name="id" value={game.id} />
       <AdminPageHeader
         title="Oyunu Düzenle"
