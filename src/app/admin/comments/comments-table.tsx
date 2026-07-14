@@ -27,6 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AdminComment, AdminCommentCounts, AdminCommentFilter } from "@/lib/db-comments";
 import { approveCommentAction, bulkDeleteTrashedCommentsAction, bulkUpdateCommentsAction, deleteTrashedCommentAction, spamCommentAction, trashCommentAction, unapproveCommentAction } from "./actions";
 import { getCommentColumns } from "./columns";
@@ -179,18 +180,17 @@ export function CommentsTable({ comments, counts, activeFilter }: { comments: Ad
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-        {filters.map((filter) => (
-          <span key={filter.key} className="flex items-center">
-            <Link
-              href={filter.key === "all" ? "/admin/comments" : `/admin/comments?status=${filter.key}`}
-              className={filter.key === activeFilter ? "text-foreground" : "text-primary hover:underline"}
-            >
-              {filter.label} <span className="text-muted-foreground">({counts[filter.key]})</span>
-            </Link>
-          </span>
-        ))}
-      </div>
+      <Tabs value={activeFilter} className="w-full">
+        <TabsList variant="line" aria-label="Yorum filtresi" className="h-auto flex-wrap justify-start gap-3 p-0">
+          {filters.map((filter) => (
+            <TabsTrigger key={filter.key} value={filter.key} asChild className="h-8 flex-none px-0 text-sm font-bold text-primary data-active:text-foreground">
+              <Link href={filter.key === "all" ? "/admin/comments" : `/admin/comments?status=${filter.key}`}>
+                {filter.label} <span className="text-muted-foreground">({counts[filter.key]})</span>
+              </Link>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
