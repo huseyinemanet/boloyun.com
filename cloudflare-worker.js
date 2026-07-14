@@ -12,6 +12,9 @@ const worker = {
     if (url.pathname === "/api/game-state") {
       return handleGameState(request, env);
     }
+    if (url.pathname === "/api/game-action") {
+      return handleGameAction(request, env);
+    }
     if (url.pathname === "/api/me") {
       return handleMe(request, env);
     }
@@ -39,17 +42,21 @@ async function handleGameState(request, env) {
   if (!isUuid(gameId)) return gameStateResponse();
 
   const sessionId = readCookie(request.headers.get("cookie") || "", "mini_game_session");
-  if (!sessionId) return gameStateResponse();
+  const profile = await getProfileForRequest(request, env);
+  if (!sessionId && !profile?.id) return gameStateResponse({ isFavorite: false, userVote: null, isLoggedIn: Boolean(profile?.id) });
 
   try {
+    const favoritePath = profile?.id
+      ? `/rest/v1/favorites?select=game_id&game_id=eq.${encodeURIComponent(gameId)}&user_id=eq.${encodeURIComponent(profile.id)}&limit=1`
+      : `/rest/v1/session_favorites?select=id&game_id=eq.${encodeURIComponent(gameId)}&session_id=eq.${encodeURIComponent(sessionId)}&limit=1`;
     const [favorite, vote] = await Promise.all([
-      supabaseRest(env, `/rest/v1/session_favorites?select=id&game_id=eq.${encodeURIComponent(gameId)}&session_id=eq.${encodeURIComponent(sessionId)}&limit=1`),
-      supabaseRest(env, `/rest/v1/game_reactions?select=vote&game_id=eq.${encodeURIComponent(gameId)}&session_id=eq.${encodeURIComponent(sessionId)}&limit=1`),
+      supabaseRest(env, favoritePath),
+      sessionId ? supabaseRest(env, `/rest/v1/game_reactions?select=vote&game_id=eq.${encodeURIComponent(gameId)}&session_id=eq.${encodeURIComponent(sessionId)}&limit=1`) : Promise.resolve([]),
     ]);
     return gameStateResponse({
       isFavorite: Array.isArray(favorite) && favorite.length > 0,
       userVote: Array.isArray(vote) && typeof vote[0]?.vote === "string" ? vote[0].vote : null,
-      isLoggedIn: false,
+      isLoggedIn: Boolean(profile?.id),
     });
   } catch (error) {
     console.error("[game-state] edge fallback", { error: error instanceof Error ? error.message : String(error) });
@@ -57,9 +64,86 @@ async function handleGameState(request, env) {
   }
 }
 
+async function handleGameAction(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, { status: 405 });
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Geçersiz istek." }, { status: 400 });
+  }
+
+  const gameId = typeof body?.gameId === "string" ? body.gameId : "";
+  if (!isUuid(gameId)) return jsonResponse({ error: "Oyun bilgisi eksik." }, { status: 400 });
+
+  const session = getOrCreateGameSession(request);
+  const profile = await getProfileForRequest(request, env);
+
+  try {
+    if (body?.action === "favorite") {
+      const desired = Boolean(body.desired);
+      const result = await supabaseRpc(env, "set_favorite_atomic", {
+        p_game_id: gameId,
+        p_profile_id: profile?.id || null,
+        p_session_id: profile?.id ? null : session.id,
+        p_desired: desired,
+      });
+
+      return jsonResponse(
+        {
+          ok: true,
+          isFavorite: Boolean(result),
+          isLoggedIn: Boolean(profile?.id),
+        },
+        { setCookie: session.setCookie },
+      );
+    }
+
+    if (body?.action === "vote") {
+      const vote = body.vote === "dislike" ? "dislike" : body.vote === "like" ? "like" : "";
+      if (!vote) return jsonResponse({ error: "Oy bilgisi eksik." }, { status: 400, setCookie: session.setCookie });
+      const stats = await supabaseRpc(env, "upsert_game_vote_atomic", {
+        p_game_id: gameId,
+        p_session_id: session.id,
+        p_vote: vote,
+      });
+
+      return jsonResponse(
+        {
+          ok: true,
+          userVote: vote,
+          likesCount: Number(stats?.likesCount ?? 0),
+          dislikesCount: Number(stats?.dislikesCount ?? 0),
+          isLoggedIn: Boolean(profile?.id),
+        },
+        { setCookie: session.setCookie },
+      );
+    }
+
+    return jsonResponse({ error: "Geçersiz işlem." }, { status: 400, setCookie: session.setCookie });
+  } catch (error) {
+    console.error("[game-action] edge fallback", { error: error instanceof Error ? error.message : String(error) });
+    return jsonResponse({ error: "İşlem tamamlanamadı." }, { status: 500, setCookie: session.setCookie });
+  }
+}
+
 async function handleMe(request, env) {
+  const profile = await getProfileForRequest(request, env);
+  return meResponse(profile ? {
+    username: profile.username,
+    email: profile.email,
+    avatarUrl: profile.avatarUrl,
+    firstName: profile.firstName,
+    lastName: profile.lastName,
+    displayName: profile.displayName,
+    role: profile.role,
+  } : null);
+}
+
+async function getProfileForRequest(request, env) {
   const token = getSupabaseAccessToken(request.headers.get("cookie") || "", env);
-  if (!token) return meResponse(null);
+  if (!token) return null;
 
   try {
     const userResponse = await fetch(`${env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/user`, {
@@ -69,21 +153,22 @@ async function handleMe(request, env) {
         authorization: `Bearer ${token}`,
       },
     });
-    if (!userResponse.ok) return meResponse(null);
+    if (!userResponse.ok) return null;
 
     const user = await userResponse.json();
     const userId = typeof user?.id === "string" ? user.id : "";
     const email = typeof user?.email === "string" ? user.email : "";
-    if (!isUuid(userId)) return meResponse(null);
+    if (!isUuid(userId)) return null;
 
     const profiles = await supabaseRest(
       env,
-      `/rest/v1/profiles?select=username,avatar_url,first_name,last_name,display_name,role,status&user_id=eq.${encodeURIComponent(userId)}&limit=1`,
+      `/rest/v1/profiles?select=id,username,avatar_url,first_name,last_name,display_name,role,status&user_id=eq.${encodeURIComponent(userId)}&limit=1`,
     );
     const profile = Array.isArray(profiles) ? profiles[0] : null;
-    if (!profile || profile.status === "blocked") return meResponse(null);
+    if (!profile || profile.status === "blocked") return null;
 
-    return meResponse({
+    return {
+      id: typeof profile.id === "string" ? profile.id : "",
       username: typeof profile.username === "string" ? profile.username : "",
       email,
       avatarUrl: normalizeSiteAssetUrl(profile.avatar_url),
@@ -91,10 +176,10 @@ async function handleMe(request, env) {
       lastName: typeof profile.last_name === "string" ? profile.last_name : null,
       displayName: typeof profile.display_name === "string" ? profile.display_name : null,
       role: profile.role === "admin" ? "admin" : "member",
-    });
+    };
   } catch (error) {
-    console.error("[me] edge fallback", { error: error instanceof Error ? error.message : String(error) });
-    return meResponse(null);
+    console.error("[profile] edge fallback", { error: error instanceof Error ? error.message : String(error) });
+    return null;
   }
 }
 
@@ -141,6 +226,30 @@ async function supabaseRest(env, path, init = {}) {
   if (!response.ok) throw new Error(`Supabase REST ${response.status}`);
   if (init.method === "HEAD") return response;
   return response.json();
+}
+
+async function supabaseRpc(env, name, body) {
+  return supabaseRest(env, `/rest/v1/rpc/${name}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+function jsonResponse(value, options = {}) {
+  const headers = new Headers(privateJsonHeaders);
+  if (options.setCookie) headers.set("set-cookie", options.setCookie);
+  return new Response(JSON.stringify(value), { status: options.status || 200, headers });
+}
+
+function getOrCreateGameSession(request) {
+  const existing = readCookie(request.headers.get("cookie") || "", "mini_game_session");
+  if (existing) return { id: existing, setCookie: "" };
+  const id = crypto.randomUUID();
+  return {
+    id,
+    setCookie: `mini_game_session=${id}; Path=/; Max-Age=31536000; SameSite=Lax; Secure; HttpOnly`,
+  };
 }
 
 function readCookie(cookieHeader, name) {

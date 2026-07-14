@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { LoaderCircleIcon } from "lucide-react";
 import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
 import { IconThumbsDownFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsDownFillDuo18";
 import { IconThumbsUpFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsUpFillDuo18";
-import { GameActionSubmitButton } from "@/components/game/game-action-submit-button";
+import { useClickSound } from "@/components/audio/click-sound-provider";
 import { Button } from "@/components/ui/button";
 import type { GameVote } from "@/lib/db-game-reactions";
-import { toggleFavoriteAction, voteGameAction } from "./actions";
+import { cn } from "@/lib/utils";
 
 type GameState = {
   isFavorite: boolean;
@@ -31,6 +32,7 @@ export function GameUserActions({
   showFavorite: boolean;
 }) {
   const [state, setState] = useState<GameState>({ isFavorite: false, userVote: null, isLoggedIn: false });
+  const [counts, setCounts] = useState({ likes: likesCount, dislikes: dislikesCount });
 
   useEffect(() => {
     if (!isUuid(gameId) || (!showVotes && !showFavorite)) return;
@@ -60,18 +62,46 @@ export function GameUserActions({
     return () => controller.abort();
   }, [gameId, showFavorite, showVotes]);
 
+  async function runAction(payload: Record<string, unknown>) {
+    const response = await fetch("/api/game-action", {
+      method: "POST",
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ gameId, slug, ...payload }),
+    });
+    const data = await response.json() as Partial<GameState> & {
+      ok?: boolean;
+      likesCount?: number;
+      dislikesCount?: number;
+      error?: string;
+    };
+    if (!response.ok || !data.ok) throw new Error(data.error || "İşlem tamamlanamadı.");
+
+    setState((current) => ({
+      isFavorite: typeof data.isFavorite === "boolean" ? data.isFavorite : current.isFavorite,
+      userVote: data.userVote === "like" || data.userVote === "dislike" ? data.userVote : current.userVote,
+      isLoggedIn: typeof data.isLoggedIn === "boolean" ? data.isLoggedIn : current.isLoggedIn,
+    }));
+    if (typeof data.likesCount === "number" || typeof data.dislikesCount === "number") {
+      setCounts((current) => ({
+        likes: typeof data.likesCount === "number" ? data.likesCount : current.likes,
+        dislikes: typeof data.dislikesCount === "number" ? data.dislikesCount : current.dislikes,
+      }));
+    }
+  }
+
   return (
     <>
       {showVotes ? (
         <VoteButtons
-          gameId={gameId}
-          slug={slug}
-          likesCount={likesCount}
-          dislikesCount={dislikesCount}
+          likesCount={counts.likes}
+          dislikesCount={counts.dislikes}
           userVote={state.userVote}
+          onVote={(vote) => runAction({ action: "vote", vote })}
         />
       ) : null}
-      {showFavorite ? <FavoriteButton gameId={gameId} slug={slug} isFavorite={state.isFavorite} /> : null}
+      {showFavorite ? <FavoriteButton gameId={gameId} slug={slug} isFavorite={state.isFavorite} onToggle={() => runAction({ action: "favorite", desired: !state.isFavorite })} /> : null}
     </>
   );
 }
@@ -80,8 +110,10 @@ function hasPersonalStateCookie() {
   return /\b(?:mini_game_session|sb-|supabase-auth-token)/.test(document.cookie);
 }
 
-function FavoriteButton({ gameId, slug, isFavorite }: { gameId: string; slug: string; isFavorite: boolean }) {
+function FavoriteButton({ gameId, isFavorite, onToggle }: { gameId: string; slug: string; isFavorite: boolean; onToggle: () => Promise<void> }) {
   const canFavorite = isUuid(gameId);
+  const [pending, setPending] = useState(false);
+  const { playClickSound } = useClickSound();
 
   if (!canFavorite) {
     return (
@@ -100,60 +132,102 @@ function FavoriteButton({ gameId, slug, isFavorite }: { gameId: string; slug: st
   }
 
   return (
-    <form action={toggleFavoriteAction}>
-      <input type="hidden" name="game_id" value={gameId} />
-      <input type="hidden" name="slug" value={slug} />
-      <input type="hidden" name="desired" value={isFavorite ? "false" : "true"} />
-      <GameActionSubmitButton
-        iconOnly
-        className={isFavorite ? "border-destructive/40 bg-destructive/10 text-destructive ring-1 ring-destructive/20" : ""}
-        active={isFavorite}
-        ariaLabel={isFavorite ? "Favorilerden çıkar" : "Favorilere ekle"}
-        title={isFavorite ? "Favorilerden çıkar" : "Favorilere ekle"}
-      >
-        <IconHeartFillDuo18 className={`size-[18px] ${isFavorite ? "" : "opacity-60"}`} aria-hidden="true" />
-      </GameActionSubmitButton>
-    </form>
+    <Button
+      type="button"
+      variant="secondary"
+      size="icon"
+      className={cn(isFavorite ? "border-destructive/40 bg-destructive/10 text-destructive ring-1 ring-destructive/20" : "")}
+      aria-label={isFavorite ? "Favorilerden çıkar" : "Favorilere ekle"}
+      aria-pressed={isFavorite}
+      aria-busy={pending}
+      disabled={pending}
+      title={isFavorite ? "Favorilerden çıkar" : "Favorilere ekle"}
+      onClick={async () => {
+        if (pending) return;
+        playClickSound();
+        setPending(true);
+        try {
+          await onToggle();
+        } finally {
+          setPending(false);
+        }
+      }}
+    >
+      <span className="grid size-[18px] shrink-0 place-items-center">
+        {pending ? <LoaderCircleIcon className="size-[18px] animate-spin" aria-hidden="true" /> : <IconHeartFillDuo18 className={`size-[18px] ${isFavorite ? "" : "opacity-60"}`} aria-hidden="true" />}
+      </span>
+    </Button>
   );
 }
 
 function VoteButtons({
-  gameId,
-  slug,
   likesCount,
   dislikesCount,
   userVote,
+  onVote,
 }: {
-  gameId: string;
-  slug: string;
   likesCount: number;
   dislikesCount: number;
   userVote: GameVote | null;
+  onVote: (vote: GameVote) => Promise<void>;
 }) {
   return (
     <div className="flex items-center gap-2">
-      <form action={voteGameAction}>
-        <input type="hidden" name="game_id" value={gameId} />
-        <input type="hidden" name="slug" value={slug} />
-        <input type="hidden" name="vote" value="like" />
-        <GameActionSubmitButton active={userVote === "like"} ariaLabel="Beğendim" className={voteButtonClass(userVote === "like")} count={likesCount.toLocaleString("tr-TR")} title="Beğendim">
-          <IconThumbsUpFillDuo18 className="size-[18px]" aria-hidden="true" />
-        </GameActionSubmitButton>
-      </form>
-      <form action={voteGameAction}>
-        <input type="hidden" name="game_id" value={gameId} />
-        <input type="hidden" name="slug" value={slug} />
-        <input type="hidden" name="vote" value="dislike" />
-        <GameActionSubmitButton active={userVote === "dislike"} ariaLabel="Beğenmedim" className={voteButtonClass(userVote === "dislike")} count={dislikesCount.toLocaleString("tr-TR")} title="Beğenmedim">
-          <IconThumbsDownFillDuo18 className="size-[18px]" aria-hidden="true" />
-        </GameActionSubmitButton>
-      </form>
+      <VoteButton active={userVote === "like"} ariaLabel="Beğendim" count={likesCount.toLocaleString("tr-TR")} title="Beğendim" onClick={() => onVote("like")}>
+        <IconThumbsUpFillDuo18 className="size-[18px]" aria-hidden="true" />
+      </VoteButton>
+      <VoteButton active={userVote === "dislike"} ariaLabel="Beğenmedim" count={dislikesCount.toLocaleString("tr-TR")} title="Beğenmedim" onClick={() => onVote("dislike")}>
+        <IconThumbsDownFillDuo18 className="size-[18px]" aria-hidden="true" />
+      </VoteButton>
     </div>
   );
 }
 
-function voteButtonClass(isActive: boolean) {
-  return `h-9 gap-1.5 px-2.5 ${isActive ? "border-primary bg-primary/10 text-primary ring-1 ring-primary" : ""}`;
+function VoteButton({
+  active,
+  ariaLabel,
+  children,
+  count,
+  onClick,
+  title,
+}: {
+  active: boolean;
+  ariaLabel: string;
+  children: ReactNode;
+  count: string;
+  onClick: () => Promise<void>;
+  title: string;
+}) {
+  const [pending, setPending] = useState(false);
+  const { playClickSound } = useClickSound();
+
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      className={cn("h-9 gap-1.5 px-2.5", active ? "border-primary bg-primary/10 text-primary ring-1 ring-primary" : "")}
+      aria-label={ariaLabel}
+      aria-pressed={active}
+      aria-busy={pending}
+      disabled={pending}
+      title={title}
+      onClick={async () => {
+        if (pending) return;
+        playClickSound();
+        setPending(true);
+        try {
+          await onClick();
+        } finally {
+          setPending(false);
+        }
+      }}
+    >
+      <span className="grid size-[18px] shrink-0 place-items-center">
+        {pending ? <LoaderCircleIcon className="size-[18px] animate-spin" aria-hidden="true" /> : children}
+      </span>
+      <span className="min-w-[1ch] tabular-nums">{count}</span>
+    </Button>
+  );
 }
 
 function isUuid(value: string) {

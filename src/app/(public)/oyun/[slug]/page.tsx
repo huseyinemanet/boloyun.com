@@ -255,7 +255,7 @@ function Breadcrumbs({ gameTitle, categories }: { gameTitle: string; categories:
       <BreadcrumbList className="font-medium">
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <SoundLink href="/">Oyunlar</SoundLink>
+            <SoundLink href="/" native>Oyunlar</SoundLink>
           </BreadcrumbLink>
         </BreadcrumbItem>
       {primaryCategory ? (
@@ -263,7 +263,7 @@ function Breadcrumbs({ gameTitle, categories }: { gameTitle: string; categories:
             <BreadcrumbSeparator />
             <BreadcrumbItem>
               <BreadcrumbLink asChild>
-                <SoundLink href={`/kategori/${primaryCategory.slug}`}>{primaryCategory.name}</SoundLink>
+                <SoundLink href={`/kategori/${primaryCategory.slug}`} native>{primaryCategory.name}</SoundLink>
               </BreadcrumbLink>
             </BreadcrumbItem>
         </>
@@ -297,7 +297,7 @@ function TaxonomyChips({ categories, tags }: { categories: GameTaxonomyLink[]; t
   return (
     <div className="flex flex-wrap gap-2 text-xs font-semibold">
       {items.map((item) => (
-        <SoundLink key={item.href} href={item.href} className="rounded-md bg-muted px-2 py-1 text-foreground hover:bg-accent">
+        <SoundLink key={item.href} href={item.href} native className="rounded-md bg-muted px-2 py-1 text-foreground hover:bg-accent">
           {item.name}
         </SoundLink>
       ))}

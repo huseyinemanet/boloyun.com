@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
 import { LoaderCircleIcon, SearchIcon } from "lucide-react";
 import { SoundLink } from "@/components/audio/sound-link";
@@ -17,7 +16,6 @@ const MINIMUM_QUERY_LENGTH = 2;
 const POPULAR_CACHE_KEY = "__popular__";
 
 export function SearchAutocomplete() {
-  const router = useRouter();
   const listboxId = useId();
   const cache = useRef(new Map<string, GameSearchSuggestion[]>());
   const [query, setQuery] = useState("");
@@ -114,7 +112,7 @@ export function SearchAutocomplete() {
     if (!normalizedQuery) return;
     setOpen(false);
     setActiveIndex(-1);
-    router.push(`/arama?q=${encodeURIComponent(normalizedQuery)}`);
+    window.location.assign(`/arama?q=${encodeURIComponent(normalizedQuery)}`);
   }
 
   function handleBlur(event: FocusEvent<HTMLFormElement>) {
@@ -227,6 +225,7 @@ export function SearchAutocomplete() {
           {!loading && !showingPopular ? (
             <SoundLink
               href={`/arama?q=${encodeURIComponent(normalizedQuery)}`}
+              native
               onClick={() => setOpen(false)}
               className="mt-1 flex items-center justify-center rounded-md border-t border-border px-3 py-2 text-sm font-bold text-primary hover:bg-accent"
             >
