@@ -113,15 +113,15 @@ async function handleRandomGame(request, env) {
       headers: { Prefer: "count=exact" },
     });
     const count = Number.parseInt(String(countResponse.headers.get("content-range") || "").split("/")[1] || "0", 10);
-    if (!count) return Response.redirect(new URL("/", request.url), 302);
+    if (!count) return Response.redirect(publicUrl(request, "/"), 302);
 
     const offset = Math.floor(Math.random() * count);
     const games = await supabaseRest(env, `/rest/v1/games?select=slug&status=eq.published&limit=1&offset=${offset}`);
     const slug = Array.isArray(games) && typeof games[0]?.slug === "string" ? games[0].slug : "";
-    return Response.redirect(new URL(slug ? `/oyun/${slug}` : "/", request.url), 302);
+    return Response.redirect(publicUrl(request, slug ? `/oyun/${slug}` : "/"), 302);
   } catch (error) {
     console.error("[random-game] edge fallback", { error: error instanceof Error ? error.message : String(error) });
-    return Response.redirect(new URL("/", request.url), 302);
+    return Response.redirect(publicUrl(request, "/"), 302);
   }
 }
 
@@ -219,6 +219,12 @@ function normalizeSiteAssetUrl(value) {
   if (value.startsWith("/site-assets/")) return value;
   if (value.startsWith("site-assets/")) return `/${value}`;
   return value;
+}
+
+function publicUrl(request, pathname) {
+  const url = new URL(pathname, request.url);
+  url.protocol = "https:";
+  return url;
 }
 
 function isUuid(value) {

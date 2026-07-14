@@ -24,11 +24,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ key:
 
 function assetFallback(kind: string | undefined, request: Request) {
   if (kind === "avatar") {
-    return Response.redirect(new URL("/thumbnails/puzzle.svg", request.url), 302);
+    return Response.redirect(publicUrl(request, "/thumbnails/puzzle.svg"), 302);
   }
   if (kind === "cover") {
-    return Response.redirect(new URL("/thumbnails/space.svg", request.url), 302);
+    return Response.redirect(publicUrl(request, "/thumbnails/space.svg"), 302);
   }
 
   return new Response("Not found", { status: 404 });
+}
+
+function publicUrl(request: Request, pathname: string) {
+  const url = new URL(pathname, request.url);
+  url.protocol = "https:";
+  return url;
 }
