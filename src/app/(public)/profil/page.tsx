@@ -44,7 +44,7 @@ export default async function ProfilePage({ searchParams }: Props) {
           {comments.length ? comments.map((comment) => (
             <article key={comment.id} className="rounded-md border border-border p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <SoundLink href={`/oyun/${comment.gameSlug}#yorumlar`} className="text-sm font-semibold text-primary hover:underline">{comment.gameTitle}</SoundLink>
+                <SoundLink href={`/oyun/${comment.gameSlug}#yorumlar`} native className="text-sm font-semibold text-primary hover:underline">{comment.gameTitle}</SoundLink>
                 <span className="rounded-md bg-muted px-2 py-1 text-xs font-bold text-foreground">{getStatusLabel(comment.status)}</span>
               </div>
               <p className="mt-2 line-clamp-3 text-sm leading-6 text-foreground">{comment.body}</p>
@@ -65,7 +65,7 @@ function GameList({ id, title, empty, games, eagerFirst = false }: { id?: string
       {games.length ? (
         <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
           {games.map((game, index) => (
-            <SoundLink key={`${title}-${game.id}-${game.date}`} href={`/oyun/${game.slug}`} className="group rounded-md border border-border bg-card p-2 transition hover:border-primary">
+            <SoundLink key={`${title}-${game.id}-${game.date}`} href={`/oyun/${game.slug}`} native className="group rounded-md border border-border bg-card p-2 transition hover:border-primary">
               <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-muted">
                 <Image
                   src={game.thumbnailUrl}
