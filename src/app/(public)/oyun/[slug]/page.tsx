@@ -148,13 +148,11 @@ export default async function GameDetailPage({ params }: Props) {
 
           <div className="min-w-0">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl font-semibold">{game.title}</h1>
-                  <AdminEditGameLink gameId={game.id} title={game.title} />
-                </div>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-2xl font-semibold">{game.title}</h1>
                 <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{game.shortDescription}</p>
               </div>
+              <AdminEditGameLink gameId={game.id} title={game.title} />
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-border py-3">
