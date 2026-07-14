@@ -12,17 +12,18 @@ import { getAdminCategories } from "@/lib/db-categories";
 import { auditGameSeo } from "@/lib/seo/audit";
 import { absoluteUrl, adminPageMetadata } from "@/lib/seo/metadata";
 import { videoGameJsonLd } from "@/lib/seo/jsonld";
-import { updateGameAction } from "../../actions";
 
 type Props = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
 };
 
 export const dynamic = "force-dynamic";
 export const metadata = adminPageMetadata("Oyunu Düzenle");
 
-export default async function EditGamePage({ params }: Props) {
+export default async function EditGamePage({ params, searchParams }: Props) {
   const { id } = await params;
+  const { error } = await searchParams;
   const [game, taxonomy, categories] = await Promise.all([getAdminGameById(id), getAdminGameTaxonomy(id), getAdminCategories()]);
 
   if (!game) {
@@ -47,13 +48,18 @@ export default async function EditGamePage({ params }: Props) {
   });
 
   return (
-    <form action={updateGameAction} className="space-y-3">
+    <form action={`/admin/games/${game.id}/edit/save`} method="post" className="space-y-3">
       <input type="hidden" name="id" value={game.id} />
       <AdminPageHeader
         title="Oyunu Düzenle"
         description={game.title}
         actions={<Button type="submit" className="h-10 text-sm font-bold">Güncelle</Button>}
       />
+      {error ? (
+        <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm font-bold text-destructive">
+          {error}
+        </p>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <main className="space-y-4">

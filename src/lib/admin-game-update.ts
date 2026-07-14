@@ -1,20 +1,17 @@
-"use server";
+import "server-only";
 
 import { revalidatePath, revalidateTag } from "next/cache";
-import { redirect } from "next/navigation";
+import { mirrorGameCover, isCdnCoverUrl } from "@/import/covers/mirror-cover";
 import { getAdminGameById, updateAdminGame } from "@/lib/db-games";
-import type { GameType, PublishStatus } from "@/types/game";
-import { requireAdmin } from "@/lib/auth";
 import { auditGameSeo } from "@/lib/seo/audit";
-import { isCdnCoverUrl, mirrorGameCover } from "@/import/covers/mirror-cover";
+import type { GameType, PublishStatus } from "@/types/game";
 
-export async function updateGameAction(formData: FormData) {
-  await requireAdmin();
-  const id = String(formData.get("id") ?? "");
-  if (!id) return;
+export async function updateAdminGameFromForm(id: string, formData: FormData) {
+  if (!id) throw new Error("Oyun kimliği eksik.");
 
   const currentGame = await getAdminGameById(id);
   if (!currentGame) throw new Error("Oyun bulunamadı.");
+
   const input = {
     title: String(formData.get("title") ?? ""),
     slug: String(formData.get("slug") ?? ""),
@@ -40,6 +37,7 @@ export async function updateGameAction(formData: FormData) {
     category_ids: formData.getAll("category_ids").map(String).filter(Boolean),
     tags: splitTags(String(formData.get("tags") ?? "")),
   };
+
   const thumbnailChanged = input.thumbnail_url !== currentGame.thumbnailUrl;
   if (input.status === "published" && input.thumbnail_url && !isCdnCoverUrl(input.thumbnail_url)) {
     const mirrored = await mirrorGameCover(input.thumbnail_url);
@@ -69,6 +67,7 @@ export async function updateGameAction(formData: FormData) {
       thumbnail_synced_at: currentGame.thumbnailSyncedAt ?? null,
     });
   }
+
   if (input.status === "published" && currentGame.status !== "published") {
     const audit = auditGameSeo({
       title: input.title,
@@ -89,6 +88,7 @@ export async function updateGameAction(formData: FormData) {
     });
     if (!audit.publishable) throw new Error(`Oyun yayınlanamaz. Eksikler: ${audit.criticalErrors.join(", ")}`);
   }
+
   if (input.status !== "published" || input.is_broken) input.is_indexable = false;
   await updateAdminGame(id, input);
 
@@ -97,7 +97,6 @@ export async function updateGameAction(formData: FormData) {
   revalidateTag("categories", "max");
   revalidateTag("tags", "max");
   revalidatePath("/admin/games");
-  redirect("/admin/games?notice=updated");
 }
 
 function splitTags(value: string) {
