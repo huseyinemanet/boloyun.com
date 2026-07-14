@@ -16,7 +16,7 @@ export default async function LoginPage({ searchParams }: Props) {
   const { error, notice, next = "/", challenge } = await searchParams;
   const profile = await getCurrentProfile();
   if (profile) {
-    const target = safeLocalPath(next, "/profil");
+    const target = safeLocalPath(next === "/" ? "/profil" : next, "/profil");
     redirect(target === "/giris" || target === "/kayit" ? "/profil" : target);
   }
   const loginError = error ? getLoginError(error) : "";

@@ -9,6 +9,10 @@ export async function getRequestOrigin() {
     return `http://${host}`;
   }
 
+  if (host === "boloyun.com" || host === "www.boloyun.com") {
+    return `https://${host}`;
+  }
+
   if (origin) return origin;
 
   const proto = headerStore.get("x-forwarded-proto") || "https";

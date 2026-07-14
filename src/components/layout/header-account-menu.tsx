@@ -127,10 +127,10 @@ function AccountLoading() {
 function AccountLinks({ showRegister }: { showRegister: boolean }) {
   return (
     <div className="flex shrink-0 items-center gap-2">
-      <SoundLink href="/giris" className="inline-flex h-10 items-center justify-center rounded-md border border-border px-3 text-sm font-semibold leading-none">
+      <SoundLink href="/giris" native className="inline-flex h-10 items-center justify-center rounded-md border border-border px-3 text-sm font-semibold leading-none">
         Giriş Yap
       </SoundLink>
-      {showRegister ? <SoundLink href="/kayit" className="hidden h-10 items-center justify-center rounded-md bg-primary px-3 text-sm font-semibold leading-none text-primary-foreground sm:inline-flex">Kayıt Ol</SoundLink> : null}
+      {showRegister ? <SoundLink href="/kayit" native className="hidden h-10 items-center justify-center rounded-md bg-primary px-3 text-sm font-semibold leading-none text-primary-foreground sm:inline-flex">Kayıt Ol</SoundLink> : null}
     </div>
   );
 }
