@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { deleteStaticPageAction } from "./actions";
 
 type StatusFilter = "all" | "published" | "draft";
@@ -89,11 +90,13 @@ export function StaticPagesTable({ pages }: { pages: StaticPageListItem[] }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-          <FilterLink active={status === "all"} onClick={() => setStatus("all")}>Tümü ({counts.all})</FilterLink>
-          <FilterLink active={status === "published"} onClick={() => setStatus("published")}>Yayında ({counts.published})</FilterLink>
-          <FilterLink active={status === "draft"} onClick={() => setStatus("draft")}>Taslak ({counts.draft})</FilterLink>
-        </div>
+        <Tabs value={status} onValueChange={(value) => setStatus(value as StatusFilter)} className="w-full sm:w-auto">
+          <TabsList variant="line" aria-label="Sayfa filtresi" className="h-auto flex-wrap justify-start gap-3 p-0">
+            <TabsTrigger value="all" className="h-8 flex-none px-0 text-sm font-bold text-primary data-active:text-foreground">Tümü ({counts.all})</TabsTrigger>
+            <TabsTrigger value="published" className="h-8 flex-none px-0 text-sm font-bold text-primary data-active:text-foreground">Yayında ({counts.published})</TabsTrigger>
+            <TabsTrigger value="draft" className="h-8 flex-none px-0 text-sm font-bold text-primary data-active:text-foreground">Taslak ({counts.draft})</TabsTrigger>
+          </TabsList>
+        </Tabs>
         <div className="flex w-full items-center gap-2 sm:w-auto">
           <Input
             type="search"
@@ -181,10 +184,6 @@ export function StaticPagesTable({ pages }: { pages: StaticPageListItem[] }) {
       </section>
     </div>
   );
-}
-
-function FilterLink({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return <button type="button" onClick={onClick} className={active ? "text-foreground" : "text-primary hover:underline"}>{children}</button>;
 }
 
 function SortButton({ label, onClick }: { label: string; onClick: () => void }) {
