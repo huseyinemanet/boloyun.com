@@ -3,6 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { IconBadgeCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBadgeCheckFillDuo18";
+import { IconCalendarClockFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCalendarClockFillDuo18";
+import { IconChatBubbleContentFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconChatBubbleContentFillDuo18";
+import { IconEnvelopeFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconEnvelopeFillDuo18";
+import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
+import { IconProfileBasicFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconProfileBasicFillDuo18";
+import { IconShieldCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconShieldCheckFillDuo18";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -128,13 +135,41 @@ export function UsersTable({ users, counts, activeFilter }: { users: AdminUser[]
               <TableHead className="w-12">
                 <Checkbox checked={allVisibleSelected} onCheckedChange={(checked) => toggleAll(checked === true)} aria-label="Tüm kullanıcıları seç" />
               </TableHead>
-              <TableHead>Kullanıcı</TableHead>
-              <TableHead>E-posta</TableHead>
-              <TableHead>Rol</TableHead>
-              <TableHead>Durum</TableHead>
-              <TableHead>Yorum</TableHead>
-              <TableHead>Favori</TableHead>
-              <TableHead>Kayıt</TableHead>
+              <TableHead>
+                <span className="inline-flex items-center justify-center" title="Kullanıcı" aria-label="Kullanıcı">
+                  <IconProfileBasicFillDuo18 className="size-5" />
+                </span>
+              </TableHead>
+              <TableHead>
+                <span className="inline-flex items-center justify-center" title="E-posta" aria-label="E-posta">
+                  <IconEnvelopeFillDuo18 className="size-5" />
+                </span>
+              </TableHead>
+              <TableHead>
+                <span className="inline-flex items-center justify-center" title="Rol" aria-label="Rol">
+                  <IconShieldCheckFillDuo18 className="size-5" />
+                </span>
+              </TableHead>
+              <TableHead>
+                <span className="inline-flex items-center justify-center" title="Durum" aria-label="Durum">
+                  <IconBadgeCheckFillDuo18 className="size-5" />
+                </span>
+              </TableHead>
+              <TableHead>
+                <span className="inline-flex items-center justify-center" title="Yorum" aria-label="Yorum">
+                  <IconChatBubbleContentFillDuo18 className="size-5" />
+                </span>
+              </TableHead>
+              <TableHead>
+                <span className="inline-flex items-center justify-center" title="Favori" aria-label="Favori">
+                  <IconHeartFillDuo18 className="size-5" />
+                </span>
+              </TableHead>
+              <TableHead>
+                <span className="inline-flex items-center justify-center" title="Kayıt" aria-label="Kayıt">
+                  <IconCalendarClockFillDuo18 className="size-5" />
+                </span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

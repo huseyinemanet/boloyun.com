@@ -4,6 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Column, ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDownIcon, MoreHorizontalIcon } from "lucide-react";
+import { IconBadgeCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBadgeCheckFillDuo18";
+import { IconCircleImageFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCircleImageFillDuo18";
+import { IconCode2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCode2FillDuo18";
+import { IconCodeActionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCodeActionFillDuo18";
+import { IconExternalLinkFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconExternalLinkFillDuo18";
+import { IconGamepadFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGamepadFillDuo18";
+import { IconMediaPlayFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMediaPlayFillDuo18";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -48,7 +55,11 @@ export function getImportColumns({ pendingIds, onApprove, onStatusChange }: Impo
     },
     {
       id: "thumbnail",
-      header: "Görsel",
+      header: () => (
+        <span className="inline-flex items-center justify-center" title="Görsel" aria-label="Görsel">
+          <IconCircleImageFillDuo18 className="size-5" />
+        </span>
+      ),
       cell: ({ row }) => {
         const item = row.original;
         const title = getImportTitle(item);
@@ -68,7 +79,7 @@ export function getImportColumns({ pendingIds, onApprove, onStatusChange }: Impo
     {
       id: "title",
       accessorFn: getImportTitle,
-      header: ({ column }) => <SortableHeader column={column} label="Oyun" />,
+      header: ({ column }) => <SortableHeader column={column} label="Oyun" icon={<IconGamepadFillDuo18 className="size-5" />} />,
       cell: ({ row }) => {
         const item = row.original;
         const title = getImportTitle(item);
@@ -86,7 +97,7 @@ export function getImportColumns({ pendingIds, onApprove, onStatusChange }: Impo
     {
       id: "source",
       accessorFn: (item) => item.source_domain || sourceDomainFromUrl(item.source_url),
-      header: ({ column }) => <SortableHeader column={column} label="Kaynak" />,
+      header: ({ column }) => <SortableHeader column={column} label="Kaynak" icon={<IconExternalLinkFillDuo18 className="size-5" />} />,
       cell: ({ row }) => (
         <Link
           href={row.original.source_url}
@@ -100,26 +111,30 @@ export function getImportColumns({ pendingIds, onApprove, onStatusChange }: Impo
     },
     {
       accessorKey: "detected_game_type",
-      header: ({ column }) => <SortableHeader column={column} label="Tip" />,
+      header: ({ column }) => <SortableHeader column={column} label="Tip" icon={<IconCode2FillDuo18 className="size-5" />} />,
       cell: ({ row }) => <span className="font-medium">{row.original.detected_game_type || "-"}</span>,
     },
     {
       accessorKey: "import_status",
-      header: ({ column }) => <SortableHeader column={column} label="Durum" />,
+      header: ({ column }) => <SortableHeader column={column} label="Durum" icon={<IconBadgeCheckFillDuo18 className="size-5" />} />,
       cell: ({ row }) => <StatusBadge status={row.original.import_status} />,
       filterFn: (row, columnId, value) => value === "all" || row.getValue(columnId) === value,
     },
     {
       id: "player",
       accessorFn: (item) => item.detected_embed_url ? "Hazır" : "Kontrol gerekli",
-      header: ({ column }) => <SortableHeader column={column} label="Player" />,
+      header: ({ column }) => <SortableHeader column={column} label="Player" icon={<IconMediaPlayFillDuo18 className="size-5" />} />,
       cell: ({ row }) => (
         <span className="whitespace-nowrap text-xs font-medium text-muted-foreground">{row.getValue("player")}</span>
       ),
     },
     {
       id: "actions",
-      header: () => <span className="sr-only">İşlemler</span>,
+      header: () => (
+        <span className="inline-flex items-center justify-center" title="İşlemler" aria-label="İşlemler">
+          <IconCodeActionFillDuo18 className="size-5" />
+        </span>
+      ),
       cell: ({ row }) => {
         const item = row.original;
         const pending = pendingIds.has(item.id);
@@ -156,7 +171,7 @@ export function getImportColumns({ pendingIds, onApprove, onStatusChange }: Impo
   ];
 }
 
-function SortableHeader({ column, label }: { column: Column<ScrapedGameImport, unknown>; label: string }) {
+function SortableHeader({ column, label, icon }: { column: Column<ScrapedGameImport, unknown>; label: string; icon: React.ReactNode }) {
   return (
     <Button
       type="button"
@@ -164,9 +179,11 @@ function SortableHeader({ column, label }: { column: Column<ScrapedGameImport, u
       size="sm"
       className="-ml-2"
       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      title={label}
+      aria-label={label}
     >
-      {label}
-      <ArrowUpDownIcon />
+      {icon}
+      <ArrowUpDownIcon aria-hidden="true" />
     </Button>
   );
 }

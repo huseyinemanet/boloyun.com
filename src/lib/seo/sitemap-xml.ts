@@ -1,7 +1,9 @@
 import type { SitemapRecord } from "@/lib/db-seo";
 import { absoluteUrl } from "@/lib/seo/metadata";
 
-export const SITEMAP_CACHE_CONTROL = "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400";
+import { cacheControl } from "@/lib/cache-policy";
+
+export const SITEMAP_CACHE_CONTROL = cacheControl("sitemap");
 
 export function sitemapIndex(urls: string[]) {
   const items = urls.map((url) => `<sitemap><loc>${escapeXml(url)}</loc></sitemap>`).join("");

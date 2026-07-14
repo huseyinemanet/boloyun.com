@@ -166,12 +166,7 @@ export default async function EditGamePage({ params }: Props) {
             <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-muted">
               <Image src={game.thumbnailUrl} alt={game.title} fill sizes="320px" unoptimized className="object-cover" />
             </div>
-            <details className="group rounded-md border border-border p-3">
-              <summary className="cursor-pointer text-sm font-bold">Görsel URL</summary>
-              <div className="mt-3">
-                <Field label="Thumbnail URL" name="thumbnail_url" defaultValue={game.thumbnailUrl} />
-              </div>
-            </details>
+            <Field label="Thumbnail URL" name="thumbnail_url" defaultValue={game.thumbnailUrl} />
           </MetaBox>
 
           <DetailsBox title="Sınıflandırma" description="Kategori ve etiket ilişkileri." className="p-4">

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth";
+import { cacheHeaders } from "@/lib/cache-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,6 @@ export async function GET() {
           }
         : null,
     },
-    { headers: { "Cache-Control": "private, no-store" } },
+    { headers: cacheHeaders("privateNoStore") },
   );
 }

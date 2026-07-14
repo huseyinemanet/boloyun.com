@@ -1,6 +1,8 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import type { User } from "@supabase/supabase-js";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
+import { measuredQuery } from "@/lib/query-observability";
 
 export type GameComment = {
   id: string;
@@ -37,17 +39,17 @@ type CommentRow = {
   games?: { title?: string | null; slug?: string | null } | { title?: string | null; slug?: string | null }[] | null;
 };
 
-export const getApprovedCommentsForGame = cache(async function getApprovedCommentsForGame(gameId: string, limit = 20): Promise<GameComment[]> {
+const getApprovedCommentsForGameCached = unstable_cache(async function getApprovedCommentsForGame(gameId: string, limit = 20): Promise<GameComment[]> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await measuredQuery("comments.approved.latest", supabase
     .from("comments")
     .select("id, body, likes_count, created_at, profiles(username, avatar_url, first_name, last_name, display_name)")
     .eq("game_id", gameId)
     .eq("status", "approved")
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .limit(limit));
 
   if (error || !data) return [];
 
@@ -60,20 +62,23 @@ export const getApprovedCommentsForGame = cache(async function getApprovedCommen
     avatarUrl: getProfile(comment.profiles).avatarUrl,
     likesCount: comment.likes_count ?? 0,
   }));
+}, ["approved-comments-for-game-v1"], { revalidate: 300, tags: ["comments"] });
+export const getApprovedCommentsForGame = cache(async function getApprovedCommentsForGame(gameId: string, limit = 20): Promise<GameComment[]> {
+  return getApprovedCommentsForGameCached(gameId, limit);
 });
 
-export const getTopCommentsForGame = cache(async function getTopCommentsForGame(gameId: string, limit = 5): Promise<GameComment[]> {
+const getTopCommentsForGameCached = unstable_cache(async function getTopCommentsForGame(gameId: string, limit = 5): Promise<GameComment[]> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await measuredQuery("comments.approved.top", supabase
     .from("comments")
     .select("id, body, likes_count, created_at, profiles(username, avatar_url, first_name, last_name, display_name)")
     .eq("game_id", gameId)
     .eq("status", "approved")
     .order("likes_count", { ascending: false })
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .limit(limit));
 
   if (error || !data) return [];
 
@@ -86,6 +91,9 @@ export const getTopCommentsForGame = cache(async function getTopCommentsForGame(
     avatarUrl: getProfile(comment.profiles).avatarUrl,
     likesCount: comment.likes_count ?? 0,
   }));
+}, ["top-comments-for-game-v1"], { revalidate: 300, tags: ["comments"] });
+export const getTopCommentsForGame = cache(async function getTopCommentsForGame(gameId: string, limit = 5): Promise<GameComment[]> {
+  return getTopCommentsForGameCached(gameId, limit);
 });
 
 export async function createPendingComment(gameId: string, body: string, userId: string, status: "pending" | "approved" = "pending", dailyLimit = 20) {

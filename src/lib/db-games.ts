@@ -5,6 +5,7 @@ import { games as fallbackGames } from "@/lib/data";
 import type { Game, GameSearchSuggestion, GameType, PublishStatus } from "@/types/game";
 import { slugify } from "@/lib/slug/slugify";
 import { getPublicSettings } from "@/lib/db-settings";
+import { normalizePublicCategoryRow, type CategoryRow } from "@/lib/db-categories";
 import { isGameSourceAllowed } from "@/lib/settings/game-security";
 import { measuredQuery } from "@/lib/query-observability";
 import { keysetFilter, type KeysetCursor, type KeysetDirection } from "@/lib/keyset-pagination";
@@ -103,8 +104,15 @@ type GameRelationRow = {
 };
 
 type PublicGamePageRpc = {
+  category?: CategoryRow | null;
   games?: GameRow[];
   total?: number | string | null;
+};
+
+type PublicGameDetailRpc = {
+  game?: GameRow | null;
+  categories?: unknown;
+  tags?: unknown;
 };
 
 type FavoriteGameRow = {
@@ -210,21 +218,22 @@ const getPublishedGamesCached = unstable_cache(async function getPublishedGames(
 }, ["published-game-cards-v2"], { revalidate: 300, tags: ["games"] });
 export const getPublishedGames = cache(getPublishedGamesCached);
 
-export async function getPublishedGamesCount(): Promise<number> {
+const getPublishedGamesCountCached = unstable_cache(async function getPublishedGamesCount(): Promise<number> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return fallbackGames.filter((game) => game.status === "published").length;
 
-  const { count, error } = await supabase
+  const { count, error } = await measuredQuery("games.published.count", supabase
     .from("games")
     .select("id", { count: "exact", head: true })
-    .eq("status", "published");
+    .eq("status", "published"));
 
   if (error) {
     throw new Error(`Yayindaki oyun sayisi okunamadi: ${error.message}`);
   }
 
   return count ?? 0;
-}
+}, ["published-games-count-v1"], { revalidate: 300, tags: ["games"] });
+export const getPublishedGamesCount = cache(getPublishedGamesCountCached);
 
 export async function getAdminPopularGames(limit = 8): Promise<AdminPopularGame[]> {
   const supabase = createSupabaseServiceClient();
@@ -304,20 +313,16 @@ export async function getRandomPublishedGameSlug(): Promise<string | null> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return fallbackSlug;
 
-  const { count, error: countError } = await supabase
-    .from("games")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "published");
-
-  if (countError || !count) return fallbackSlug;
+  const count = await getPublishedGamesCount().catch(() => 0);
+  if (!count) return fallbackSlug;
 
   const offset = Math.floor(Math.random() * count);
-  const { data, error } = await supabase
+  const { data, error } = await measuredQuery("games.random.slug", supabase
     .from("games")
     .select("slug")
     .eq("status", "published")
     .range(offset, offset)
-    .maybeSingle();
+    .maybeSingle());
 
   if (error || !data || typeof data.slug !== "string") return fallbackSlug;
   return data.slug;
@@ -353,15 +358,15 @@ export async function getPublishedGamesPage({ page, perPage }: { page: number; p
   };
 }
 
-export const getRelatedPublishedGames = cache(async function getRelatedPublishedGames(gameId: string, limit = 4): Promise<Game[]> {
+const getRelatedPublishedGamesCached = unstable_cache(async function getRelatedPublishedGames(gameId: string, limit = 4): Promise<Game[]> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
     return fallbackGames.filter((game) => game.id !== gameId).slice(0, limit);
   }
 
   const [{ data: categoryLinks }, { data: tagLinks }] = await Promise.all([
-    supabase.from("game_categories").select("category_id").eq("game_id", gameId),
-    supabase.from("game_tags").select("tag_id").eq("game_id", gameId),
+    measuredQuery("games.related.category-links", supabase.from("game_categories").select("category_id").eq("game_id", gameId)),
+    measuredQuery("games.related.tag-links", supabase.from("game_tags").select("tag_id").eq("game_id", gameId)),
   ]);
 
   const categoryIds = mapIdRows(categoryLinks, "category_id");
@@ -369,10 +374,10 @@ export const getRelatedPublishedGames = cache(async function getRelatedPublished
 
   const [relatedByCategory, relatedByTag] = await Promise.all([
     categoryIds.length
-      ? supabase.from("game_categories").select("game_id").in("category_id", categoryIds).neq("game_id", gameId).limit(80)
+      ? measuredQuery("games.related.by-category", supabase.from("game_categories").select("game_id").in("category_id", categoryIds).neq("game_id", gameId).limit(80))
       : Promise.resolve({ data: [] as GameRelationRow[] }),
     tagIds.length
-      ? supabase.from("game_tags").select("game_id").in("tag_id", tagIds).neq("game_id", gameId).limit(120)
+      ? measuredQuery("games.related.by-tag", supabase.from("game_tags").select("game_id").in("tag_id", tagIds).neq("game_id", gameId).limit(120))
       : Promise.resolve({ data: [] as GameRelationRow[] }),
   ]);
 
@@ -400,44 +405,38 @@ export const getRelatedPublishedGames = cache(async function getRelatedPublished
   );
 
   return [...sorted, ...fallback].slice(0, limit);
-});
+}, ["related-published-games-v1"], { revalidate: 300, tags: ["games", "categories", "tags"] });
+export const getRelatedPublishedGames = cache(getRelatedPublishedGamesCached);
 
-export const getPublishedGamesByCategorySlug = cache(async function getPublishedGamesByCategorySlug(slug: string, limit = 60): Promise<Game[]> {
+const getPublishedGamesByCategorySlugCached = unstable_cache(async function getPublishedGamesByCategorySlug(slug: string, limit = 60): Promise<Game[]> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
     return fallbackGames.filter((game) => game.status === "published" && game.categories.includes(slug)).slice(0, limit);
   }
 
-  const { data: category, error: categoryError } = await supabase
+  const { data: category, error: categoryError } = await measuredQuery("categories.public.by-slug-id", supabase
     .from("categories")
     .select("id")
     .eq("slug", slug)
     .eq("status", "active")
-    .maybeSingle();
+    .maybeSingle());
 
   if (categoryError || !category) return [];
 
-  const { data: links, error: linksError } = await supabase
+  const { data: links, error: linksError } = await measuredQuery("categories.public.game-links", supabase
     .from("game_categories")
     .select("game_id")
     .eq("category_id", (category as { id: string }).id)
-    .limit(limit);
+    .limit(limit));
 
   if (linksError || !links) return [];
 
   const gameIds = (links as GameRelationRow[]).map((link) => link.game_id);
   return getPublishedGamesByIds(gameIds);
-});
+}, ["published-games-by-category-slug-v2"], { revalidate: 300, tags: ["games", "categories"] });
+export const getPublishedGamesByCategorySlug = cache(getPublishedGamesByCategorySlugCached);
 
-export async function getPublishedGamesByCategorySlugPage({
-  slug,
-  page,
-  perPage,
-}: {
-  slug: string;
-  page: number;
-  perPage: number;
-}): Promise<{ items: Game[]; total: number }> {
+const getPublishedGamesByCategorySlugPageCached = unstable_cache(async function getPublishedGamesByCategorySlugPage(slug: string, page: number, perPage: number): Promise<{ items: Game[]; total: number; category: CategoryRow | null }> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
     const games = fallbackGames.filter((game) => game.status === "published" && game.categories.includes(slug));
@@ -445,6 +444,7 @@ export async function getPublishedGamesByCategorySlugPage({
     return {
       items: games.slice(from, from + perPage),
       total: games.length,
+      category: null,
     };
   }
 
@@ -460,6 +460,7 @@ export async function getPublishedGamesByCategorySlugPage({
     return {
       items: Array.isArray(result.games) ? result.games.map(mapGameRow) : [],
       total: Number(result.total ?? 0),
+      category: result.category ? normalizePublicCategoryRow(result.category) : null,
     };
   }
 
@@ -470,7 +471,7 @@ export async function getPublishedGamesByCategorySlugPage({
     .eq("status", "active")
     .maybeSingle();
 
-  if (categoryError || !category) return { items: [], total: 0 };
+  if (categoryError || !category) return { items: [], total: 0, category: null };
 
   const to = from + perPage - 1;
   const { data: links, error: linksError, count } = await supabase
@@ -480,14 +481,27 @@ export async function getPublishedGamesByCategorySlugPage({
     .eq("games.status", "published")
     .range(from, to);
 
-  if (linksError || !links) return { items: [], total: 0 };
+  if (linksError || !links) return { items: [], total: 0, category: null };
 
   const gameIds = (links as GameRelationRow[]).map((link) => link.game_id);
   return {
     items: await getPublishedGamesByIds(gameIds),
     total: count ?? 0,
+    category: null,
   };
-}
+}, ["public-category-games-page-v1"], { revalidate: 300, tags: ["games", "categories"] });
+
+export const getPublishedGamesByCategorySlugPage = cache(async function getPublishedGamesByCategorySlugPage({
+  slug,
+  page,
+  perPage,
+}: {
+  slug: string;
+  page: number;
+  perPage: number;
+}): Promise<{ items: Game[]; total: number; category: CategoryRow | null }> {
+  return getPublishedGamesByCategorySlugPageCached(slug, page, perPage);
+});
 
 export type AdminGameListItem = Pick<Game, "id" | "title" | "slug" | "shortDescription" | "thumbnailUrl" | "status" | "playCount"> & {
   updatedAt: string;
@@ -594,11 +608,10 @@ const getPublishedGameBySlugCached = unstable_cache(async function getPublishedG
 export const getPublishedGameBySlug = cache(getPublishedGameBySlugCached);
 
 const getPublishedGameDetailBySlugCached = unstable_cache(async function getPublishedGameDetailBySlug(slug: string): Promise<GameDetail | null> {
-  const game = await getPublishedGameBySlug(slug);
-  if (!game) return null;
-
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
+    const game = fallbackGames.find((item) => item.slug === slug) ?? null;
+    if (!game) return null;
     return {
       game,
       categories: game.categories.map((categorySlug) => ({ name: categorySlug, slug: categorySlug })),
@@ -606,15 +619,41 @@ const getPublishedGameDetailBySlugCached = unstable_cache(async function getPubl
     };
   }
 
+  const { data: rpcData, error: rpcError } = await measuredQuery("games.published.detail-rpc", supabase.rpc("get_public_game_detail", {
+    p_slug: slug,
+  }));
+
+  if (!rpcError && rpcData && typeof rpcData === "object") {
+    const result = rpcData as PublicGameDetailRpc;
+    if (result.game) {
+      const game = mapGameRow(result.game);
+      const categories = prioritizeTaxonomy(mapTaxonomyItems(result.categories), game.primaryCategoryId);
+      const tags = mapTaxonomyItems(result.tags);
+
+      return {
+        game: {
+          ...game,
+          categories: categories.map((category) => category.slug),
+          tags: tags.map((tag) => tag.name),
+        },
+        categories,
+        tags,
+      };
+    }
+  }
+
+  const game = await getPublishedGameBySlug(slug);
+  if (!game) return null;
+
   const [{ data: categoryRows }, { data: tagRows }] = await Promise.all([
-    supabase
+    measuredQuery("games.published.detail-categories", supabase
       .from("game_categories")
       .select("categories(id, name, slug)")
-      .eq("game_id", game.id),
-    supabase
+      .eq("game_id", game.id)),
+    measuredQuery("games.published.detail-tags", supabase
       .from("game_tags")
       .select("tags(id, name, slug)")
-      .eq("game_id", game.id),
+      .eq("game_id", game.id)),
   ]);
 
   const categories = prioritizeTaxonomy(mapTaxonomyRows(categoryRows, "categories"), game.primaryCategoryId);
@@ -670,7 +709,7 @@ export async function searchPublishedGames(query: string): Promise<Game[]> {
   });
 }
 
-export async function searchPublishedGameSuggestions(query: string, limit = 6): Promise<GameSearchSuggestion[]> {
+const searchPublishedGameSuggestionsCached = unstable_cache(async function searchPublishedGameSuggestions(query: string, limit = 6): Promise<GameSearchSuggestion[]> {
   const normalized = query.trim().slice(0, 80);
   if (normalized.length < 2) return [];
 
@@ -700,9 +739,10 @@ export async function searchPublishedGameSuggestions(query: string, limit = 6): 
     thumbnailUrl: game.thumbnail_url ?? "/thumbnails/space.svg",
     shortDescription: game.short_description ?? "",
   }));
-}
+}, ["search-published-game-suggestions-v1"], { revalidate: 60, tags: ["games"] });
+export const searchPublishedGameSuggestions = cache(searchPublishedGameSuggestionsCached);
 
-export async function getPopularGameSuggestions(limit = 5): Promise<GameSearchSuggestion[]> {
+const getPopularGameSuggestionsCached = unstable_cache(async function getPopularGameSuggestions(limit = 5): Promise<GameSearchSuggestion[]> {
   const safeLimit = Math.min(Math.max(limit, 1), 10);
   const fallbackMatches = fallbackGames
     .filter((game) => game.status === "published")
@@ -729,20 +769,31 @@ export async function getPopularGameSuggestions(limit = 5): Promise<GameSearchSu
     thumbnailUrl: game.thumbnail_url ?? "/thumbnails/space.svg",
     shortDescription: game.short_description ?? "",
   }));
-}
+}, ["popular-game-suggestions-v1"], { revalidate: 300, tags: ["games"] });
+export const getPopularGameSuggestions = cache(getPopularGameSuggestionsCached);
 
-export async function getPublishedGamesByIds(ids: string[]): Promise<Game[]> {
+const getPublishedGamesByIdKeyCached = unstable_cache(async function getPublishedGamesByIdKey(idKey: string): Promise<Game[]> {
+  const ids = idKey.split(",").filter(Boolean);
   const supabase = createSupabaseServiceClient();
   if (!supabase || ids.length === 0) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await measuredQuery("games.published.by-ids", supabase
     .from("games")
     .select(publicGameCardSelect)
     .eq("status", "published")
-    .in("id", ids);
+    .in("id", ids));
 
   if (error || !data) return [];
   return (data as unknown as GameRow[]).map(mapGameRow);
+}, ["published-games-by-id-key-v1"], { revalidate: 300, tags: ["games"] });
+
+export async function getPublishedGamesByIds(ids: string[]): Promise<Game[]> {
+  const normalizedIds = normalizeGameIds(ids);
+  if (!normalizedIds.length) return [];
+
+  const games = await getPublishedGamesByIdKeyCached(normalizedIds.join(","));
+  const byId = new Map(games.map((game) => [game.id, game]));
+  return ids.flatMap((id) => byId.get(id) ?? []);
 }
 
 async function getAdminPopularGameRowsByIds(ids: string[]): Promise<AdminPopularGameRow[]> {
@@ -1010,6 +1061,21 @@ function mapTaxonomyRows(rows: unknown, key: "categories" | "tags"): GameTaxonom
     .filter((item, index, all) => all.findIndex((other) => other.slug === item.slug) === index);
 }
 
+function mapTaxonomyItems(items: unknown): GameTaxonomyLink[] {
+  if (!Array.isArray(items)) return [];
+
+  return items
+    .flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      const record = item as Record<string, unknown>;
+      const id = typeof record.id === "string" ? record.id : "";
+      const name = typeof record.name === "string" ? record.name : "";
+      const slug = typeof record.slug === "string" ? record.slug : "";
+      return name && slug ? [{ id, name, slug }] : [];
+    })
+    .filter((item, index, all) => all.findIndex((other) => other.slug === item.slug) === index);
+}
+
 function mapIdRows(rows: unknown, key: "category_id" | "tag_id") {
   if (!Array.isArray(rows)) return [];
 
@@ -1018,6 +1084,10 @@ function mapIdRows(rows: unknown, key: "category_id" | "tag_id") {
     const value = (row as Record<string, unknown>)[key];
     return typeof value === "string" && value ? [value] : [];
   });
+}
+
+function normalizeGameIds(ids: string[]) {
+  return [...new Set(ids.filter((id) => typeof id === "string" && id.length > 0))].sort();
 }
 
 function scoreRelatedGameIds(items: { id: string; score: number }[]) {

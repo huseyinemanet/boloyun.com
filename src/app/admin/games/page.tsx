@@ -1,5 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
+import { IconBadgeCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBadgeCheckFillDuo18";
+import { IconCircleImageFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCircleImageFillDuo18";
+import { IconCodeActionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCodeActionFillDuo18";
+import { IconGamepadFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGamepadFillDuo18";
+import { IconMediaPlayFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMediaPlayFillDuo18";
 import { IconOpenInNewWindowFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconOpenInNewWindowFillDuo18";
 import { IconPencilFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconPencilFillDuo18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
@@ -41,11 +46,31 @@ export default async function AdminGamesPage({ searchParams }: AdminGamesPagePro
         <Table>
           <TableHeader className="bg-muted/40">
             <TableRow>
-              <TableHead className="w-20">Görsel</TableHead>
-              <TableHead>Oyun</TableHead>
-              <TableHead className="w-[110px]">Durum</TableHead>
-              <TableHead className="w-[110px] text-center">Oynanma</TableHead>
-              <TableHead className="w-[170px] text-right">Aksiyon</TableHead>
+              <TableHead className="w-20">
+                <span className="inline-flex items-center justify-center" title="Görsel" aria-label="Görsel">
+                  <IconCircleImageFillDuo18 className="size-5" />
+                </span>
+              </TableHead>
+              <TableHead>
+                <span className="inline-flex items-center justify-center" title="Oyun" aria-label="Oyun">
+                  <IconGamepadFillDuo18 className="size-5" />
+                </span>
+              </TableHead>
+              <TableHead className="w-[110px]">
+                <span className="inline-flex items-center justify-center" title="Durum" aria-label="Durum">
+                  <IconBadgeCheckFillDuo18 className="size-5" />
+                </span>
+              </TableHead>
+              <TableHead className="w-[110px] text-center">
+                <span className="inline-flex items-center justify-center" title="Oynanma" aria-label="Oynanma">
+                  <IconMediaPlayFillDuo18 className="size-5" />
+                </span>
+              </TableHead>
+              <TableHead className="w-[170px] text-right">
+                <span className="inline-flex items-center justify-center" title="Aksiyon" aria-label="Aksiyon">
+                  <IconCodeActionFillDuo18 className="size-5" />
+                </span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

@@ -2,7 +2,7 @@
 
 import { randomUUID } from "crypto";
 import { cookies } from "next/headers";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { createPendingComment } from "@/lib/db-comments";
 import { recordGamePlay } from "@/lib/db-game-plays";
@@ -38,6 +38,7 @@ export async function createCommentAction(formData: FormData) {
   if (blocked) throw new Error("Yorum yasaklı bir ifade içeriyor.");
   const status = profile.role === "admin" || !community.commentsRequireApproval ? "approved" : "pending";
   await createPendingComment(gameId, body, profile.id, status, community.dailyCommentLimit);
+  revalidateTag("comments", "max");
   revalidatePath(`/oyun/${slug}`);
   revalidatePath("/admin/comments");
   redirect(`/oyun/${slug}?comment=${status}#yorumlar`);

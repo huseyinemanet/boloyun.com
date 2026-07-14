@@ -29,11 +29,11 @@ export async function getTagMetadata(slug: string, page: number): Promise<Metada
 }
 
 export async function TagView({ slug, page }: { slug: string; page: number }) {
-  const [tag, tagGames, settings] = await Promise.all([
-    getPublicTagBySlug(slug),
+  const [tagGames, settings] = await Promise.all([
     getPublishedGamesByTagSlugPage({ slug, page, perPage: PER_PAGE }),
     getPublicSettings(),
   ]);
+  const tag = tagGames.tag ?? await getPublicTagBySlug(slug);
   if (!tag || page < 1 || (page > 1 && tagGames.items.length === 0)) notFound();
   const path = page > 1 ? `/etiket/${slug}/sayfa/${page}` : `/etiket/${slug}`;
 

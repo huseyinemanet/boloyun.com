@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { upsertAdminAd, upsertAdminAdSlot } from "@/lib/db-ads";
 
@@ -56,6 +56,7 @@ export async function saveAdSlotAction(_previousState: AdSlotFormState, formData
   }
 
   revalidatePath("/admin/ads");
+  revalidateTag("ads", "max");
   return {
     status: "success",
     message: "Reklam slotu güncellendi.",
@@ -102,6 +103,7 @@ export async function saveAdAction(_previousState: AdFormState, formData: FormDa
   }
 
   revalidatePath("/admin/ads");
+  revalidateTag("ads", "max");
   revalidatePath("/");
   revalidatePath("/oyun/[slug]", "page");
   return {

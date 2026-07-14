@@ -1,13 +1,8 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import Image from "next/image";
 import { SoundLink } from "@/components/audio/sound-link";
-import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
-import { IconThumbsDownFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsDownFillDuo18";
-import { IconThumbsUpFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsUpFillDuo18";
 import { notFound } from "next/navigation";
 import { AdSlot } from "@/components/ads/ad-slot";
-import { GameActionSubmitButton } from "@/components/game/game-action-submit-button";
 import { GameCard } from "@/components/game/game-card";
 import { PlayCountMetric } from "@/components/game/play-count-metric";
 import { GamePlayer } from "@/components/player/game-player";
@@ -21,28 +16,29 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
 import { getApprovedCommentsForGame, getTopCommentsForGame, type GameComment } from "@/lib/db-comments";
-import { getGameVoteForSession, type GameVote } from "@/lib/db-game-reactions";
 import { getPublishedGameDetailBySlug, getPublishedGamesByCategorySlug, getRelatedPublishedGames, type GameTaxonomyLink } from "@/lib/db-games";
 import { breadcrumbJsonLd, videoGameJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
-import { getProfileFavorite, getSessionFavorite } from "@/lib/db-session-favorites";
-import { getCurrentProfile } from "@/lib/auth";
 import { getPublicSettings } from "@/lib/db-settings";
 import { isGameSourceAllowed } from "@/lib/settings/game-security";
 import { renderSeoTemplate } from "@/lib/settings/validation";
 import { getPublishedGames } from "@/lib/db-games";
-import { recordGamePlayAction, toggleFavoriteAction, voteGameAction } from "./actions";
-import { CommentForm } from "./comment-form";
+import { recordGamePlayAction } from "./actions";
+import { CommentAuthGate } from "./comment-auth-gate";
+import { CommentStatusNotice } from "./comment-status-notice";
 import { CommentsTabs } from "./comments-tabs";
+import { GameUserActions } from "./game-user-actions";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 type Props = {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ comment?: string }>;
 };
+
+export function generateStaticParams() {
+  return [];
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -66,9 +62,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-export default async function GameDetailPage({ params, searchParams }: Props) {
+export default async function GameDetailPage({ params }: Props) {
   const { slug } = await params;
-  const commentStatus = normalizeCommentStatus((await searchParams)?.comment);
   const [detail, settings] = await Promise.all([getPublishedGameDetailBySlug(slug), getPublicSettings()]);
 
   if (!detail) {
@@ -78,16 +73,24 @@ export default async function GameDetailPage({ params, searchParams }: Props) {
   const { game, categories, tags } = detail;
   const primaryCategory = categories[0];
   const playEventName = `game-played-${game.id}`;
-  const gameSessionId = (await cookies()).get("mini_game_session")?.value;
-  const currentProfile = await getCurrentProfile();
-  const [latestComments, topComments, userVote, isFavorite, taxonomySimilarGames, categoryGames, recentGames] = await Promise.all([
-    optionalGameQuery(slug, "latest-comments", getApprovedCommentsForGame(game.id), [] as GameComment[]),
-    optionalGameQuery(slug, "top-comments", getTopCommentsForGame(game.id), [] as GameComment[]),
-    optionalGameQuery(slug, "session-vote", gameSessionId ? getGameVoteForSession(game.id, gameSessionId) : Promise.resolve(null), null as GameVote | null),
-    optionalGameQuery(slug, "favorite-state", currentProfile?.id ? getProfileFavorite(game.id, currentProfile.id) : gameSessionId ? getSessionFavorite(game.id, gameSessionId) : Promise.resolve(false), false),
-    optionalGameQuery(slug, "related-games", getRelatedPublishedGames(game.id, 4), []),
+  const latestCommentsPromise = settings.community.commentsEnabled
+    ? optionalGameQuery(slug, "latest-comments", getApprovedCommentsForGame(game.id), [] as GameComment[])
+    : Promise.resolve([] as GameComment[]);
+  const topCommentsPromise = settings.community.commentsEnabled
+    ? optionalGameQuery(slug, "top-comments", getTopCommentsForGame(game.id), [] as GameComment[])
+    : Promise.resolve([] as GameComment[]);
+  const taxonomySimilarGamesPromise = settings.games.similarGameStrategy === "taxonomy"
+    ? optionalGameQuery(slug, "related-games", getRelatedPublishedGames(game.id, 4), [])
+    : Promise.resolve([]);
+  const recentGamesPromise = settings.games.similarGameStrategy === "popular"
+    ? optionalGameQuery(slug, "recent-games", getPublishedGames(30), [])
+    : Promise.resolve([]);
+  const [latestComments, topComments, taxonomySimilarGames, categoryGames, recentGames] = await Promise.all([
+    latestCommentsPromise,
+    topCommentsPromise,
+    taxonomySimilarGamesPromise,
     optionalGameQuery(slug, "category-games", primaryCategory ? getPublishedGamesByCategorySlug(primaryCategory.slug, 16) : Promise.resolve([]), []),
-    optionalGameQuery(slug, "recent-games", getPublishedGames(30), []),
+    recentGamesPromise,
   ]);
   const similarGames = settings.games.similarGameStrategy === "popular"
     ? recentGames.filter((item) => item.id !== game.id).toSorted((a, b) => b.playCount - a.playCount).slice(0, 4)
@@ -157,8 +160,14 @@ export default async function GameDetailPage({ params, searchParams }: Props) {
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              {settings.games.likesEnabled && settings.community.ratingsEnabled ? <VoteButtons gameId={game.id} slug={game.slug} likesCount={game.likesCount} dislikesCount={game.dislikesCount} userVote={userVote} /> : null}
-              {settings.games.favoritesEnabled && settings.community.favoritesEnabled ? <FavoriteButton gameId={game.id} slug={game.slug} isFavorite={isFavorite} /> : null}
+              <GameUserActions
+                gameId={game.id}
+                slug={game.slug}
+                likesCount={game.likesCount}
+                dislikesCount={game.dislikesCount}
+                showVotes={settings.games.likesEnabled && settings.community.ratingsEnabled}
+                showFavorite={settings.games.favoritesEnabled && settings.community.favoritesEnabled}
+              />
               {settings.games.sharingEnabled ? <ShareGameButton title={game.title} /> : null}
             </div>
           </div>
@@ -169,7 +178,7 @@ export default async function GameDetailPage({ params, searchParams }: Props) {
             game={game}
             onStartAction={recordGamePlayAction.bind(null, game.id, game.slug)}
             playEventName={playEventName}
-            isLoggedIn={Boolean(currentProfile)}
+            isLoggedIn={false}
             allowGuestPlay={settings.games.allowGuestPlay}
             allowFullscreen={settings.games.allowFullscreen}
             aspectRatio={settings.games.playerAspectRatio}
@@ -215,8 +224,6 @@ export default async function GameDetailPage({ params, searchParams }: Props) {
         slug={game.slug}
         latestComments={latestComments}
         topComments={topComments}
-        commentStatus={commentStatus}
-        isLoggedIn={Boolean(currentProfile)}
       /> : null}
     </article>
   );
@@ -238,43 +245,6 @@ function categorySectionTitle(prefix: string, categoryName: string) {
   return normalized.toLocaleLowerCase("tr").endsWith("oyunları")
     ? `${prefix} ${normalized}`
     : `${prefix} ${normalized} Oyunları`;
-}
-
-function FavoriteButton({ gameId, slug, isFavorite }: { gameId: string; slug: string; isFavorite: boolean }) {
-  const canFavorite = isUuid(gameId);
-
-  if (!canFavorite) {
-    return (
-      <Button
-        type="button"
-        disabled
-        variant="outline"
-        size="icon"
-        className="cursor-not-allowed text-muted-foreground opacity-60"
-        aria-label="Favorilere ekle"
-        title="Favorilere ekle"
-      >
-        <IconHeartFillDuo18 className="size-[18px]" aria-hidden="true" />
-      </Button>
-    );
-  }
-
-  return (
-    <form action={toggleFavoriteAction}>
-      <input type="hidden" name="game_id" value={gameId} />
-      <input type="hidden" name="slug" value={slug} />
-      <input type="hidden" name="desired" value={isFavorite ? "false" : "true"} />
-      <GameActionSubmitButton
-        iconOnly
-        className={isFavorite ? "border-destructive/40 bg-destructive/10 text-destructive ring-1 ring-destructive/20" : ""}
-        active={isFavorite}
-        ariaLabel={isFavorite ? "Favorilerden çıkar" : "Favorilere ekle"}
-        title={isFavorite ? "Favorilerden çıkar" : "Favorilere ekle"}
-      >
-        <IconHeartFillDuo18 className={`size-[18px] ${isFavorite ? "" : "opacity-60"}`} aria-hidden="true" />
-      </GameActionSubmitButton>
-    </form>
-  );
 }
 
 function Breadcrumbs({ gameTitle, categories }: { gameTitle: string; categories: GameTaxonomyLink[] }) {
@@ -316,45 +286,6 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function VoteButtons({
-  gameId,
-  slug,
-  likesCount,
-  dislikesCount,
-  userVote,
-}: {
-  gameId: string;
-  slug: string;
-  likesCount: number;
-  dislikesCount: number;
-  userVote: GameVote | null;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <form action={voteGameAction}>
-        <input type="hidden" name="game_id" value={gameId} />
-        <input type="hidden" name="slug" value={slug} />
-        <input type="hidden" name="vote" value="like" />
-        <GameActionSubmitButton active={userVote === "like"} ariaLabel="Beğendim" className={voteButtonClass(userVote === "like")} count={likesCount.toLocaleString("tr-TR")} title="Beğendim">
-          <IconThumbsUpFillDuo18 className="size-[18px]" aria-hidden="true" />
-        </GameActionSubmitButton>
-      </form>
-      <form action={voteGameAction}>
-        <input type="hidden" name="game_id" value={gameId} />
-        <input type="hidden" name="slug" value={slug} />
-        <input type="hidden" name="vote" value="dislike" />
-        <GameActionSubmitButton active={userVote === "dislike"} ariaLabel="Beğenmedim" className={voteButtonClass(userVote === "dislike")} count={dislikesCount.toLocaleString("tr-TR")} title="Beğenmedim">
-          <IconThumbsDownFillDuo18 className="size-[18px]" aria-hidden="true" />
-        </GameActionSubmitButton>
-      </form>
-    </div>
-  );
-}
-
-function voteButtonClass(isActive: boolean) {
-  return `h-9 gap-1.5 px-2.5 ${isActive ? "border-primary bg-primary/10 text-primary ring-1 ring-primary" : ""}`;
-}
-
 function TaxonomyChips({ categories, tags }: { categories: GameTaxonomyLink[]; tags: GameTaxonomyLink[] }) {
   const items = [
     ...categories.map((category) => ({ ...category, href: `/kategori/${category.slug}` })),
@@ -379,15 +310,11 @@ function CommentsSection({
   slug,
   latestComments,
   topComments,
-  commentStatus,
-  isLoggedIn,
 }: {
   gameId: string;
   slug: string;
   latestComments: GameComment[];
   topComments: GameComment[];
-  commentStatus: "pending" | "approved" | "disabled" | null;
-  isLoggedIn: boolean;
 }) {
   const canWriteComment = isUuid(gameId);
   const commentCount = latestComments.length;
@@ -404,14 +331,10 @@ function CommentsSection({
         </span>
       </div>
 
-      {commentStatus ? <CommentNotice status={commentStatus} /> : null}
+      <CommentStatusNotice />
 
-      {canWriteComment && isLoggedIn ? (
-        <CommentForm gameId={gameId} slug={slug} />
-      ) : !isLoggedIn ? (
-        <p className="mt-4 rounded-md bg-muted/40 p-4 text-sm font-semibold text-muted-foreground">
-          Yorum yazmak için <SoundLink href="/giris" className="text-primary hover:underline">giriş yap</SoundLink> veya <SoundLink href="/kayit" className="text-primary hover:underline">kayıt ol</SoundLink>.
-        </p>
+      {canWriteComment ? (
+        <CommentAuthGate gameId={gameId} slug={slug} />
       ) : (
         <p className="mt-4 rounded-md bg-muted/40 p-4 text-sm font-semibold text-muted-foreground">
           Bu demo oyun için yorum kaydı kapalı. Yayındaki oyunlarda yorumlar moderasyon kuyruğuna düşer.
@@ -421,25 +344,6 @@ function CommentsSection({
       <CommentsTabs topComments={topComments} latestComments={latestComments} />
     </section>
   );
-}
-
-function CommentNotice({ status }: { status: "pending" | "approved" | "disabled" }) {
-  const messages = {
-    pending: "Yorumun alındı. Admin onayından sonra bu sayfada görünecek.",
-    approved: "Yorumun yayınlandı.",
-    disabled: "Bu demo oyun için yorum kaydı yapılamıyor.",
-  };
-
-  return (
-    <p className="mt-4 rounded-md bg-warning/10 px-3 py-2 text-sm font-semibold text-warning">
-      {messages[status]}
-    </p>
-  );
-}
-
-function normalizeCommentStatus(value: string | undefined) {
-  if (value === "pending" || value === "approved" || value === "disabled") return value;
-  return null;
 }
 
 function isUuid(value: string) {

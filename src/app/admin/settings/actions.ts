@@ -31,6 +31,7 @@ export async function clearSettingsCacheAction() {
   await requireAdmin();
   revalidateTag("site-settings", "max");
   revalidateTag("games", "max");
+  revalidateTag("homepage-sections", "max");
   revalidatePath("/", "layout");
   return { ok: true as const, clearedAt: new Date().toISOString() };
 }
@@ -43,6 +44,8 @@ export async function refreshSettingsRecordAction(section: SettingsSection) {
 
 function refreshSettingsRoutes(section: SettingsSection) {
   updateTag("site-settings");
+  if (section === "appearance") revalidateTag("homepage-sections", "max");
+  if (section === "ads") revalidateTag("ads", "max");
   revalidatePath(`/admin/settings/${section}`);
   revalidatePath("/", "layout");
   revalidatePath("/robots.txt");

@@ -37,6 +37,8 @@ export function GamePlayer({
   const [remaining, setRemaining] = useState(preRollSkipSeconds);
   const [timedOut, setTimedOut] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(isLoggedIn);
+  const [loginChecked, setLoginChecked] = useState(isLoggedIn || allowGuestPlay);
   const containerRef = useRef<HTMLDivElement>(null);
   const { playClickSound } = useClickSound();
   const source = useMemo(() => {
@@ -45,6 +47,29 @@ export function GamePlayer({
     if (game.gameType === "swf") return game.swfUrl;
     return game.externalUrl;
   }, [game]);
+
+  useEffect(() => {
+    if (allowGuestPlay || isLoggedIn) return;
+    const controller = new AbortController();
+    async function loadProfile() {
+      try {
+        const response = await fetch("/api/me", {
+          cache: "no-store",
+          credentials: "same-origin",
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error("Profil okunamadi.");
+        const data = await response.json() as { profile?: unknown };
+        if (!controller.signal.aborted) setLoggedIn(Boolean(data.profile));
+      } catch {
+        if (!controller.signal.aborted) setLoggedIn(false);
+      } finally {
+        if (!controller.signal.aborted) setLoginChecked(true);
+      }
+    }
+    void loadProfile();
+    return () => controller.abort();
+  }, [allowGuestPlay, isLoggedIn]);
 
   async function handleStart() {
     playClickSound();
@@ -83,7 +108,11 @@ export function GamePlayer({
     return () => window.clearTimeout(timer);
   }, [game.gameType, loadTimeoutSeconds, loaded, started]);
 
-  if (!allowGuestPlay && !isLoggedIn) {
+  if (!allowGuestPlay && !loginChecked) {
+    return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center rounded-md border border-border bg-card p-6 text-center`}><p className="font-bold">Oyun hazırlanıyor...</p></div>;
+  }
+
+  if (!allowGuestPlay && !loggedIn) {
     return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center rounded-md border border-border bg-card p-6 text-center`}><div><p className="font-bold">Bu oyunu başlatmak için giriş yapmalısın.</p><Button asChild className="mt-3"><SoundAnchor href="/giris">Giriş Yap</SoundAnchor></Button></div></div>;
   }
 

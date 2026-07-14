@@ -1,34 +1,22 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { AdSlot } from "@/components/ads/ad-slot";
-import { parseAdminPage } from "@/components/admin/admin-pagination";
 import { GameSection } from "@/components/game/game-section";
-import { getPublishedGames, getPublishedGamesPage } from "@/lib/db-games";
+import { getPublishedGames } from "@/lib/db-games";
 import { JsonLd } from "@/components/seo/json-ld";
 import { itemListJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getPublicSettings } from "@/lib/db-settings";
 import { getHomepageSectionsPublic } from "@/lib/db-homepage-sections";
-import { getCurrentProfile } from "@/lib/auth";
 
-export const dynamic = "force-dynamic";
-const PER_PAGE = 60;
+export const revalidate = 300;
+const HOME_ALL_GAMES_LIMIT = 40;
 
-type HomeProps = {
-  searchParams: Promise<{
-    page?: string;
-    code?: string;
-    next?: string;
-  }>;
-};
-
-export async function generateMetadata({ searchParams }: HomeProps): Promise<Metadata> {
-  const page = parseAdminPage((await searchParams).page);
+export async function generateMetadata(): Promise<Metadata> {
   const { general, seo } = await getPublicSettings();
   return buildMetadata({
-    title: page > 1 ? `${seo.defaultTitle} - Sayfa ${page}` : seo.defaultTitle,
-    description: page > 1 ? `${seo.defaultDescription} Oyun listesi, sayfa ${page}.` : seo.defaultDescription,
-    canonicalPath: page > 1 ? `/?page=${page}` : "/",
+    title: seo.defaultTitle,
+    description: seo.defaultDescription,
+    canonicalPath: "/",
     indexable: true,
     siteName: general.siteName,
     baseUrl: seo.canonicalDomain,
@@ -36,24 +24,15 @@ export async function generateMetadata({ searchParams }: HomeProps): Promise<Met
   });
 }
 
-export default async function Home({ searchParams }: HomeProps) {
-  const params = await searchParams;
-  if (params.code) {
-    const next = params.next ? `&next=${encodeURIComponent(params.next)}` : "";
-    redirect(`/auth/callback?code=${encodeURIComponent(params.code)}${next}`);
-  }
-  const currentPage = parseAdminPage(params.page);
-  const [publishedGames, allGames, settings, configuredSections, profile] = await Promise.all([
+export default async function Home() {
+  const [publishedGames, settings, configuredSections] = await Promise.all([
     getPublishedGames(80),
-    getPublishedGamesPage({ page: currentPage, perPage: PER_PAGE }),
     getPublicSettings(),
     getHomepageSectionsPublic(),
-    getCurrentProfile(),
   ]);
-  const visibleConfiguredSections = configuredSections.filter(({ section }) => section.visibility !== "members" || Boolean(profile));
-  const visibleGames = [...new Map(
-    [...publishedGames.slice(0, 72), ...allGames.items].map((game) => [game.id, game]),
-  ).values()];
+  const visibleConfiguredSections = configuredSections.filter(({ section }) => section.visibility !== "members");
+  const allGames = publishedGames.slice(0, HOME_ALL_GAMES_LIMIT);
+  const visibleGames = publishedGames.slice(0, 72);
 
   return (
     <div className="space-y-5">
@@ -74,7 +53,7 @@ export default async function Home({ searchParams }: HomeProps) {
         <div id="populer-oyunlar" className="scroll-mt-24"><GameSection title="Popüler Oyunlar" games={publishedGames.slice(24, 48)} /></div>
         <div id="trend-oyunlar" className="scroll-mt-24"><GameSection title="Trend Oyunlar" games={publishedGames.slice(48, 72)} /></div>
       </>}
-      <GameSection title="Tüm Oyunlar" games={allGames.items} />
+      <GameSection title="Tüm Oyunlar" games={allGames} />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 import { getPublishedGames, getPublishedGamesByCategorySlug, getPublishedGamesByIds } from "@/lib/db-games";
 import type { Game } from "@/types/game";
@@ -60,11 +61,16 @@ export async function saveHomepageSections(input: HomepageSectionInput[]) {
   if (error) throw new Error(`Ana sayfa bölümleri kaydedilemedi: ${error.message}`);
 }
 
-export async function getHomepageSectionsPublic() {
+const getHomepageSectionsPublicCached = unstable_cache(async function getHomepageSectionsPublicCached() {
   const sections = (await getHomepageSectionsAdmin()).filter((section) => section.status === "active");
-  const needsSharedGames = sections.some((section) => !["manual_games", "category_based", "tag_based"].includes(section.sectionType));
-  const sharedGames = needsSharedGames ? await getPublishedGames(Math.max(...sections.map((section) => section.limitCount * 5), 60)) : [];
-  return Promise.all(sections.map(async (section) => ({ section, games: await resolveSectionGames(section, sharedGames) })));
+  const publicSections = sections.filter((section) => section.visibility !== "members");
+  const needsSharedGames = publicSections.some((section) => !["manual_games", "category_based", "tag_based"].includes(section.sectionType));
+  const sharedGames = needsSharedGames ? await getPublishedGames(Math.max(...publicSections.map((section) => section.limitCount * 5), 60)) : [];
+  return Promise.all(publicSections.map(async (section) => ({ section, games: await resolveSectionGames(section, sharedGames) })));
+}, ["homepage-sections-public-v1"], { revalidate: 300, tags: ["homepage-sections", "games", "categories", "tags"] });
+
+export async function getHomepageSectionsPublic() {
+  return getHomepageSectionsPublicCached();
 }
 
 async function resolveSectionGames(section: HomepageSectionInput, sharedGames: Game[]): Promise<Game[]> {

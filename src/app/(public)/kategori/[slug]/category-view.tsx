@@ -34,12 +34,12 @@ export async function getCategoryMetadata(slug: string, page: number): Promise<M
 }
 
 export async function CategoryView({ slug, page }: { slug: string; page: number }) {
-  const [category, categoryGames, categories, settings] = await Promise.all([
-    getPublicCategoryBySlug(slug),
+  const [categoryGames, categories, settings] = await Promise.all([
     getPublishedGamesByCategorySlugPage({ slug, page, perPage: PER_PAGE }),
     getPublicCategories(18),
     getPublicSettings(),
   ]);
+  const category = categoryGames.category ?? await getPublicCategoryBySlug(slug);
   if (!category || page < 1 || (page > 1 && categoryGames.items.length === 0)) notFound();
 
   const canonicalPath = page > 1 ? `/kategori/${slug}/sayfa/${page}` : `/kategori/${slug}`;

@@ -3,6 +3,12 @@
 import type { Column, ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
 import { ArrowUpDownIcon, MoreHorizontalIcon } from "lucide-react";
+import { IconBadgeCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBadgeCheckFillDuo18";
+import { IconCalendarClockFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCalendarClockFillDuo18";
+import { IconChatBubbleContentFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconChatBubbleContentFillDuo18";
+import { IconCodeActionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCodeActionFillDuo18";
+import { IconGamepadFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGamepadFillDuo18";
+import { IconProfileBasicFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconProfileBasicFillDuo18";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -49,18 +55,22 @@ export function getCommentColumns({ activeFilter, pendingIds, onUpdate, onDelete
     {
       id: "author",
       accessorFn: (comment) => [comment.displayName, comment.username, comment.email].join(" "),
-      header: ({ column }) => <SortableHeader column={column} label="Yazar" />,
+      header: ({ column }) => <SortableHeader column={column} label="Yazar" icon={<IconProfileBasicFillDuo18 className="size-5" />} />,
       cell: ({ row }) => <CommentAuthor comment={row.original} />,
     },
     {
       accessorKey: "body",
-      header: "Yorum",
+      header: () => (
+        <span className="inline-flex items-center justify-center" title="Yorum" aria-label="Yorum">
+          <IconChatBubbleContentFillDuo18 className="size-5" />
+        </span>
+      ),
       cell: ({ row }) => <p className="max-w-3xl whitespace-normal leading-6 text-foreground">{row.original.body}</p>,
       enableSorting: false,
     },
     {
       accessorKey: "gameTitle",
-      header: ({ column }) => <SortableHeader column={column} label="Yanıtlanan oyun" />,
+      header: ({ column }) => <SortableHeader column={column} label="Yanıtlanan oyun" icon={<IconGamepadFillDuo18 className="size-5" />} />,
       cell: ({ row }) => {
         const comment = row.original;
 
@@ -75,13 +85,13 @@ export function getCommentColumns({ activeFilter, pendingIds, onUpdate, onDelete
     },
     {
       accessorKey: "status",
-      header: ({ column }) => <SortableHeader column={column} label="Durum" />,
+      header: ({ column }) => <SortableHeader column={column} label="Durum" icon={<IconBadgeCheckFillDuo18 className="size-5" />} />,
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
       filterFn: (row, columnId, value) => value === "all" || row.getValue(columnId) === value,
     },
     {
       accessorKey: "createdAt",
-      header: ({ column }) => <SortableHeader column={column} label="Gönderim" />,
+      header: ({ column }) => <SortableHeader column={column} label="Gönderim" icon={<IconCalendarClockFillDuo18 className="size-5" />} />,
       cell: ({ row }) => (
         <time
           dateTime={row.original.createdAt}
@@ -95,7 +105,11 @@ export function getCommentColumns({ activeFilter, pendingIds, onUpdate, onDelete
     },
     {
       id: "actions",
-      header: () => <span className="sr-only">İşlemler</span>,
+      header: () => (
+        <span className="inline-flex items-center justify-center" title="İşlemler" aria-label="İşlemler">
+          <IconCodeActionFillDuo18 className="size-5" />
+        </span>
+      ),
       cell: ({ row }) => {
         const comment = row.original;
         const pending = pendingIds.has(comment.id);
@@ -134,7 +148,7 @@ export function getCommentColumns({ activeFilter, pendingIds, onUpdate, onDelete
   ];
 }
 
-function SortableHeader({ column, label }: { column: Column<AdminComment, unknown>; label: string }) {
+function SortableHeader({ column, label, icon }: { column: Column<AdminComment, unknown>; label: string; icon: React.ReactNode }) {
   return (
     <Button
       type="button"
@@ -142,9 +156,11 @@ function SortableHeader({ column, label }: { column: Column<AdminComment, unknow
       size="sm"
       className="-ml-2"
       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      title={label}
+      aria-label={label}
     >
-      {label}
-      <ArrowUpDownIcon />
+      {icon}
+      <ArrowUpDownIcon aria-hidden="true" />
     </Button>
   );
 }

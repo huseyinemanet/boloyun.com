@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getPublicSettings } from "@/lib/db-settings";
+import { cacheHeaders } from "@/lib/cache-policy";
 
 export async function GET() {
   const { integrations } = await getPublicSettings();
-  return NextResponse.json(integrations, { headers: { "Cache-Control": "public, max-age=300, stale-while-revalidate=600" } });
+  return NextResponse.json(integrations, { headers: cacheHeaders("publicData") });
 }

@@ -174,7 +174,7 @@ function sortCategoriesByName(rows: CategoryRow[]) {
   return [...rows].sort((left, right) => turkishCategoryCollator.compare(left.name, right.name));
 }
 
-function normalizePublicCategoryRow(row: CategoryRow): CategoryRow {
+export function normalizePublicCategoryRow(row: CategoryRow): CategoryRow {
   const normalized = findNormalizedImportCategory(row.slug) ?? findNormalizedImportCategory(row.name);
   if (!normalized) return row;
 

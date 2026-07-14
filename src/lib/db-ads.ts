@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 
 export type AdSlotRow = {
@@ -49,7 +50,7 @@ export type AdminAdManagerData = {
 
 export type PublicAd = Pick<AdRow, "id" | "name" | "ad_code" | "show_desktop" | "show_mobile">;
 
-export async function getPublicAdForSlot(slotKey: string): Promise<PublicAd | null> {
+const getPublicAdForSlotCached = unstable_cache(async function getPublicAdForSlotCached(slotKey: string): Promise<PublicAd | null> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return null;
   const { data: slot, error: slotError } = await supabase.from("ad_slots").select("id, is_active").eq("key", slotKey).maybeSingle();
@@ -68,6 +69,10 @@ export async function getPublicAdForSlot(slotKey: string): Promise<PublicAd | nu
     .maybeSingle();
   if (error || !data) return null;
   return data as PublicAd;
+}, ["public-ad-slot-v1"], { revalidate: 300, tags: ["ads"] });
+
+export async function getPublicAdForSlot(slotKey: string): Promise<PublicAd | null> {
+  return getPublicAdForSlotCached(slotKey);
 }
 
 export const getAdminAdManagerData = cache(async function getAdminAdManagerData(): Promise<AdminAdManagerData> {

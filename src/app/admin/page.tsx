@@ -71,8 +71,16 @@ function PopularGamesSection({ games }: { games: AdminPopularGame[] }) {
       <Table className="min-w-[760px] table-fixed">
         <TableHeader className="bg-muted/40">
           <TableRow>
-            <TableHead className="w-16">Sıra</TableHead>
-            <TableHead>Oyun</TableHead>
+            <TableHead className="w-16 text-center">
+              <span className="inline-flex items-center justify-center" title="Sıra" aria-label="Sıra">
+                <IconRankingStarFillDuo18 className="size-5" />
+              </span>
+            </TableHead>
+            <TableHead>
+              <span className="inline-flex items-center justify-center" title="Oyun" aria-label="Oyun">
+                <IconGamepadFillDuo18 className="size-5" />
+              </span>
+            </TableHead>
             <TableHead className="w-24 text-center">
               <span className="inline-flex items-center justify-center" title="Skor" aria-label="Skor">
                 <IconRankingStarFillDuo18 className="size-5" />

@@ -2,31 +2,25 @@
 
 import { useEffect, useState } from "react";
 import type { PublicAd } from "@/lib/db-ads";
-import { cn } from "@/lib/utils";
+import { publicAdSlotClassName } from "@/components/ads/ad-slot-style";
 
 type MeResponse = {
   profile: unknown | null;
 };
 
-export function PublicAdSlot({ ad, hideForMembers }: { ad: PublicAd; hideForMembers: boolean }) {
-  const [canShow, setCanShow] = useState(!hideForMembers);
+let profilePromise: Promise<boolean> | null = null;
+
+export function MemberAwarePublicAdSlot({ ad }: { ad: PublicAd }) {
+  const [canShow, setCanShow] = useState(false);
 
   useEffect(() => {
-    if (!hideForMembers) return;
-
     const controller = new AbortController();
 
     async function checkProfile() {
       try {
-        const response = await fetch("/api/me", {
-          cache: "no-store",
-          credentials: "same-origin",
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error("Profil okunamadi.");
-
-        const data = await response.json() as MeResponse;
-        setCanShow(!data.profile);
+        const hasProfile = await getSharedProfileState();
+        if (controller.signal.aborted) return;
+        setCanShow(!hasProfile);
       } catch {
         if (!controller.signal.aborted) setCanShow(true);
       }
@@ -34,19 +28,33 @@ export function PublicAdSlot({ ad, hideForMembers }: { ad: PublicAd; hideForMemb
 
     void checkProfile();
     return () => controller.abort();
-  }, [hideForMembers]);
+  }, []);
 
   if (!canShow) return null;
 
   return (
     <div
-      className={cn(
-        "min-h-10 overflow-hidden rounded-md text-center",
-        ad.show_desktop === false && "md:hidden",
-        ad.show_mobile === false && "hidden md:block",
-      )}
+      className={publicAdSlotClassName(ad)}
       aria-label={ad.name}
       dangerouslySetInnerHTML={{ __html: ad.ad_code }}
     />
   );
+}
+
+async function getSharedProfileState() {
+  profilePromise ??= fetch("/api/me", {
+    cache: "no-store",
+    credentials: "same-origin",
+  })
+    .then(async (response) => {
+      if (!response.ok) throw new Error("Profil okunamadi.");
+      const data = await response.json() as MeResponse;
+      return Boolean(data.profile);
+    })
+    .catch((error) => {
+      profilePromise = null;
+      throw error;
+    });
+
+  return profilePromise;
 }

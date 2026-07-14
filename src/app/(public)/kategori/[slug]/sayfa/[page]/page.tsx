@@ -6,6 +6,10 @@ type Props = { params: Promise<{ slug: string; page: string }> };
 
 export const revalidate = 300;
 
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, page } = await params;
   return getCategoryMetadata(slug, parsePage(page));

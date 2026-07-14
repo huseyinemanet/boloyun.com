@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { IconBadgeCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBadgeCheckFillDuo18";
+import { IconCalendarClockFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCalendarClockFillDuo18";
+import { IconCodeActionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCodeActionFillDuo18";
+import { IconTextTitleCaseFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconTextTitleCaseFillDuo18";
 import { ArrowUpDownIcon, Trash2Icon } from "lucide-react";
 import {
   AlertDialog,
@@ -131,13 +135,21 @@ export function StaticPagesTable({ pages }: { pages: StaticPageListItem[] }) {
           <TableHeader className="bg-muted/40">
             <TableRow>
               <TableHead className="h-9 px-3 py-2">
-                <SortButton label="Başlık" onClick={() => toggleSort("title")} />
+                <SortButton label="Başlık" onClick={() => toggleSort("title")} icon={<IconTextTitleCaseFillDuo18 className="size-5" />} />
               </TableHead>
-              <TableHead className="h-9 w-24 px-3 py-2">Durum</TableHead>
+              <TableHead className="h-9 w-24 px-3 py-2">
+                <span className="inline-flex items-center justify-center" title="Durum" aria-label="Durum">
+                  <IconBadgeCheckFillDuo18 className="size-5" />
+                </span>
+              </TableHead>
               <TableHead className="h-9 w-32 px-3 py-2">
-                <SortButton label="Son güncelleme" onClick={() => toggleSort("updated_at")} />
+                <SortButton label="Son güncelleme" onClick={() => toggleSort("updated_at")} icon={<IconCalendarClockFillDuo18 className="size-5" />} />
               </TableHead>
-              <TableHead className="h-9 w-32 px-3 py-2 text-right">İşlem</TableHead>
+              <TableHead className="h-9 w-32 px-3 py-2 text-right">
+                <span className="inline-flex items-center justify-center" title="İşlem" aria-label="İşlem">
+                  <IconCodeActionFillDuo18 className="size-5" />
+                </span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -186,8 +198,13 @@ export function StaticPagesTable({ pages }: { pages: StaticPageListItem[] }) {
   );
 }
 
-function SortButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return <button type="button" onClick={onClick} className="inline-flex items-center gap-1 font-semibold hover:text-foreground">{label}<ArrowUpDownIcon className="size-3.5" /></button>;
+function SortButton({ label, onClick, icon }: { label: string; onClick: () => void; icon: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} className="inline-flex items-center gap-1 font-semibold hover:text-foreground" title={label} aria-label={label}>
+      {icon}
+      <ArrowUpDownIcon className="size-3.5" aria-hidden="true" />
+    </button>
+  );
 }
 
 function formatRelativeDate(value?: string | null) {

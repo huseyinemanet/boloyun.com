@@ -1,4 +1,4 @@
-import { SoundLink } from "@/components/audio/sound-link";
+import { IntentPrefetchLink } from "@/components/navigation/intent-prefetch-link";
 
 const links = [
   ["Kullanım Şartları", "kullanim-sartlari"],
@@ -15,9 +15,9 @@ export function Footer() {
     <footer className="mt-8 border-t border-border bg-card">
       <div className="mx-auto flex flex-wrap gap-3 px-4 py-6 text-sm text-muted-foreground">
         {links.map(([label, slug]) => (
-          <SoundLink key={slug} href={`/sayfa/${slug}`} className="hover:text-primary">
+          <IntentPrefetchLink key={slug} href={`/sayfa/${slug}`} className="hover:text-primary">
             {label}
-          </SoundLink>
+          </IntentPrefetchLink>
         ))}
       </div>
     </footer>

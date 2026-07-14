@@ -4,6 +4,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/client";
 import { getPublishedGamesByIds, mapGameRow, type GameRow } from "@/lib/db-games";
 import { isTagIndexable } from "@/lib/seo/audit";
 import { slugify } from "@/lib/slug/slugify";
+import { measuredQuery } from "@/lib/query-observability";
 
 export type TagRow = {
   id: string;
@@ -58,36 +59,30 @@ const getPublicTagBySlugCached = unstable_cache(async function getPublicTagBySlu
 }, ["public-tag-by-slug"], { revalidate: 600, tags: ["tags"] });
 export const getPublicTagBySlug = cache(getPublicTagBySlugCached);
 
-export async function getPublishedGamesByTagSlugPage({
-  slug,
-  page,
-  perPage,
-}: {
-  slug: string;
-  page: number;
-  perPage: number;
-}) {
+const getPublishedGamesByTagSlugPageCached = unstable_cache(async function getPublishedGamesByTagSlugPage(slug: string, page: number, perPage: number) {
   try {
     const supabase = createSupabaseServiceClient();
-    if (!supabase) return { items: [], total: 0 };
+    if (!supabase) return { items: [], total: 0, tag: null };
 
     const from = (page - 1) * perPage;
-    const { data: rpcData, error: rpcError } = await supabase.rpc("get_public_tag_page", {
+    const { data: rpcData, error: rpcError } = await measuredQuery("tags.public.page-rpc", supabase.rpc("get_public_tag_page", {
       p_slug: slug,
       p_limit: perPage,
       p_offset: from,
-    });
+    }));
 
     if (!rpcError && rpcData && typeof rpcData === "object") {
       const result = rpcData as PublicTagPageRpc;
+      const tag = mapPublicTagFromRpc(result.tag ?? null, Number(result.total ?? 0));
       return {
         items: Array.isArray(result.games) ? result.games.map(mapGameRow) : [],
         total: Number(result.total ?? 0),
+        tag,
       };
     }
 
     const { data: tag } = await supabase.from("tags").select("id").eq("slug", slug).eq("status", "active").maybeSingle();
-    if (!tag) return { items: [], total: 0 };
+    if (!tag) return { items: [], total: 0, tag: null };
 
     const to = from + perPage - 1;
     const { data, error, count } = await supabase
@@ -97,13 +92,39 @@ export async function getPublishedGamesByTagSlugPage({
       .eq("games.status", "published")
       .range(from, to);
 
-    if (error || !data) return { items: [], total: 0 };
+    if (error || !data) return { items: [], total: 0, tag: null };
     const ids = (data as unknown as TagLinkRow[]).map((row) => row.game_id);
-    return { items: await getPublishedGamesByIds(ids), total: count ?? 0 };
+    return { items: await getPublishedGamesByIds(ids), total: count ?? 0, tag: null };
   } catch (error) {
     console.error("[tags] published tag games could not be read", { slug, page, perPage, ...toLogError(error) });
-    return { items: [], total: 0 };
+    return { items: [], total: 0, tag: null };
   }
+}, ["public-tag-games-page-v1"], { revalidate: 300, tags: ["games", "tags"] });
+
+export const getPublishedGamesByTagSlugPage = cache(async function getPublishedGamesByTagSlugPage({
+  slug,
+  page,
+  perPage,
+}: {
+  slug: string;
+  page: number;
+  perPage: number;
+}) {
+  return getPublishedGamesByTagSlugPageCached(slug, page, perPage);
+});
+
+function mapPublicTagFromRpc(tag: PublicTagPageRpc["tag"], publishedGameCount: number): PublicTag | null {
+  if (!tag) return null;
+  return {
+    ...tag,
+    publishedGameCount,
+    effectiveIndexable: isTagIndexable({
+      requested: tag.is_indexable ?? false,
+      publishedGameCount,
+      seoTitle: tag.seo_title,
+      seoDescription: tag.seo_description,
+    }),
+  };
 }
 
 export async function getAdminTagsPage({ page, perPage, query = "" }: { page: number; perPage: number; query?: string }) {

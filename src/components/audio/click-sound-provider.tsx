@@ -22,6 +22,7 @@ const clickSoundPreferenceChangeEvent = "boloyun_click_sound_preference_change";
 
 export function ClickSoundProvider({ children, settings }: { children: ReactNode; settings: AudioSettings }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const clickSoundUrlRef = useRef(settings.clickSoundUrl);
   const stateRef = useRef<ClickSoundState>({ enabled: settings.clickSoundEnabled, lastPlayedAt: 0 });
   const browserSoundEnabled = useSyncExternalStore(subscribeClickSoundPreference, getClickSoundPreferenceSnapshot, getServerClickSoundPreferenceSnapshot);
 
@@ -42,20 +43,15 @@ export function ClickSoundProvider({ children, settings }: { children: ReactNode
   }, [browserSoundEnabled, settings.clickSoundEnabled]);
 
   useEffect(() => {
-    if (!settings.clickSoundUrl) {
-      audioRef.current = null;
-      return;
-    }
-
-    const audio = new Audio(settings.clickSoundUrl);
-    audio.preload = "auto";
-    audioRef.current = audio;
-
-    return () => {
-      audio.pause();
-      audioRef.current = null;
-    };
+    clickSoundUrlRef.current = settings.clickSoundUrl;
+    audioRef.current?.pause();
+    audioRef.current = null;
   }, [settings.clickSoundUrl]);
+
+  useEffect(() => () => {
+    audioRef.current?.pause();
+    audioRef.current = null;
+  }, []);
 
   const setBrowserSoundEnabled = useCallback((enabled: boolean) => {
     try {
@@ -67,6 +63,11 @@ export function ClickSoundProvider({ children, settings }: { children: ReactNode
   }, []);
 
   const playClickSound = useCallback(() => {
+    if (!audioRef.current && clickSoundUrlRef.current && stateRef.current.enabled) {
+      const audio = new Audio(clickSoundUrlRef.current);
+      audio.preload = "none";
+      audioRef.current = audio;
+    }
     playClickAudio(audioRef.current, stateRef.current, performance.now());
   }, []);
 

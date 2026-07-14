@@ -1,5 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { IconBadgeCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBadgeCheckFillDuo18";
+import { IconCodeActionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCodeActionFillDuo18";
+import { IconGamepadFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGamepadFillDuo18";
+import { IconTag2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconTag2FillDuo18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminPagination, parseAdminPage } from "@/components/admin/admin-pagination";
 import { Button } from "@/components/ui/button";
@@ -34,7 +38,31 @@ export default async function AdminTagsPage({ searchParams }: Props) {
           <TagsSearchForm query={query} />
           <AdminPagination currentPage={page} perPage={PER_PAGE} total={total} basePath="/admin/tags" itemName="etiket" queryParams={query ? { q: query } : undefined} />
           <section className="overflow-hidden rounded-md border border-border bg-card">
-            <Table><TableHeader><TableRow><TableHead>Etiket</TableHead><TableHead className="w-28">Oyun</TableHead><TableHead className="w-28">SEO</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
+                    <span className="inline-flex items-center justify-center" title="Etiket" aria-label="Etiket">
+                      <IconTag2FillDuo18 className="size-5" />
+                    </span>
+                  </TableHead>
+                  <TableHead className="w-28">
+                    <span className="inline-flex items-center justify-center" title="Oyun" aria-label="Oyun">
+                      <IconGamepadFillDuo18 className="size-5" />
+                    </span>
+                  </TableHead>
+                  <TableHead className="w-28">
+                    <span className="inline-flex items-center justify-center" title="SEO" aria-label="SEO">
+                      <IconBadgeCheckFillDuo18 className="size-5" />
+                    </span>
+                  </TableHead>
+                  <TableHead className="w-24 text-right">
+                    <span className="inline-flex items-center justify-center" title="Aksiyon" aria-label="Aksiyon">
+                      <IconCodeActionFillDuo18 className="size-5" />
+                    </span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
               <TableBody>{items.map((tag) => <TableRow key={tag.id}><TableCell><p className="font-semibold">{tag.name}</p><p className="text-xs text-muted-foreground">/{tag.slug}</p></TableCell><TableCell>{tag.publishedGameCount}</TableCell><TableCell>{tag.effectiveIndexable ? "İndekste" : "Kapalı"}</TableCell><TableCell><Button asChild size="sm" variant="outline"><Link href={`/admin/tags?edit=${tag.id}${query ? `&q=${encodeURIComponent(query)}` : ""}`}>Düzenle</Link></Button></TableCell></TableRow>)}</TableBody>
             </Table>
           </section>

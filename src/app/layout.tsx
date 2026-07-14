@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Header } from "@/components/layout/header";
-import { Toaster } from "@/components/ui/sonner";
 import { getPublicSettings } from "@/lib/db-settings";
 import { ConsentScripts } from "@/components/integrations/consent-scripts";
 import { ClickSoundProvider } from "@/components/audio/click-sound-provider";
@@ -43,7 +42,6 @@ export default async function RootLayout({
           <Header />
           {children}
           <ConsentScripts settings={integrations} />
-          <Toaster position="top-center" />
         </ClickSoundProvider>
       </body>
     </html>

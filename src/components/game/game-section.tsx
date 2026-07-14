@@ -7,7 +7,7 @@ export function GameSection({ title, games, eagerCount = 0 }: { title: string; g
   }
 
   return (
-    <section className="mb-6">
+    <section className="mb-6 [contain-intrinsic-size:1px_520px] [content-visibility:auto]">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-xl font-semibold">{title}</h2>
       </div>

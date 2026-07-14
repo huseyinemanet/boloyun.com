@@ -3,3 +3,18 @@
 
 /site-assets/*
   Cache-Control: public, max-age=31536000, immutable
+
+/sounds/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/thumbnails/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/logo.svg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/favicon*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/*.svg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800

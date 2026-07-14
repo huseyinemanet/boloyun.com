@@ -19,6 +19,7 @@ const contentSecurityPolicy = [
   "worker-src 'self' blob:",
   ...(!isDevelopment ? ["upgrade-insecure-requests"] : []),
 ].join("; ");
+const publicHtmlCacheControl = "public, max-age=60, s-maxage=300, stale-while-revalidate=3600";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
@@ -47,12 +48,24 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        source: "/",
+        headers: [{ key: "Cache-Control", value: publicHtmlCacheControl }],
+      },
+      {
+        source: "/oyun/:path*",
+        headers: [{ key: "Cache-Control", value: publicHtmlCacheControl }],
+      },
+      {
         source: "/kategori/:path*",
-        headers: [{ key: "Cache-Control", value: "public, max-age=300, s-maxage=300, stale-while-revalidate=3600" }],
+        headers: [{ key: "Cache-Control", value: publicHtmlCacheControl }],
       },
       {
         source: "/etiket/:path*",
-        headers: [{ key: "Cache-Control", value: "public, max-age=300, s-maxage=300, stale-while-revalidate=3600" }],
+        headers: [{ key: "Cache-Control", value: publicHtmlCacheControl }],
+      },
+      {
+        source: "/sayfa/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400" }],
       },
     ];
   },

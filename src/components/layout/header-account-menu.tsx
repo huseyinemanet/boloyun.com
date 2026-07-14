@@ -30,36 +30,31 @@ type MeResponse = {
   profile: HeaderProfile | null;
 };
 
+let profilePromise: Promise<HeaderProfile | null> | null = null;
+
 export function HeaderAccountMenu({ showRegister }: { showRegister: boolean }) {
   const [profile, setProfile] = useState<HeaderProfile | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [loadState, setLoadState] = useState<"loading" | "loaded">("loading");
 
   useEffect(() => {
-    const controller = new AbortController();
+    let mounted = true;
 
-    async function loadProfile() {
-      try {
-        const response = await fetch("/api/me", {
-          cache: "no-store",
-          credentials: "same-origin",
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error("Profil okunamadi.");
+    void getSharedProfile().then((nextProfile) => {
+      if (!mounted) return;
+      setProfile(nextProfile);
+      setLoadState("loaded");
+    }).catch(() => {
+      if (!mounted) return;
+      setProfile(null);
+      setLoadState("loaded");
+    });
 
-        const data = await response.json() as MeResponse;
-        setProfile(data.profile ?? null);
-      } catch {
-        if (!controller.signal.aborted) setProfile(null);
-      } finally {
-        if (!controller.signal.aborted) setLoaded(true);
-      }
-    }
-
-    void loadProfile();
-    return () => controller.abort();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  if (!loaded) return <AccountLinks showRegister={showRegister} />;
+  if (loadState === "loading") return <AccountLoading />;
   if (!profile) return <AccountLinks showRegister={showRegister} />;
 
   const displayName = getDisplayName(profile);
@@ -117,6 +112,18 @@ export function HeaderAccountMenu({ showRegister }: { showRegister: boolean }) {
   );
 }
 
+function AccountLoading() {
+  return (
+    <div
+      className="grid size-10 shrink-0 place-items-center rounded-full border border-border bg-card"
+      aria-label="Hesap bilgisi yükleniyor"
+      aria-busy="true"
+    >
+      <span className="size-5 animate-pulse rounded-full bg-muted-foreground/40" />
+    </div>
+  );
+}
+
 function AccountLinks({ showRegister }: { showRegister: boolean }) {
   return (
     <div className="flex shrink-0 items-center gap-2">
@@ -131,4 +138,22 @@ function AccountLinks({ showRegister }: { showRegister: boolean }) {
 function getDisplayName(profile: Pick<HeaderProfile, "displayName" | "firstName" | "lastName" | "username">) {
   const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(" ").trim();
   return profile.displayName || fullName || profile.username;
+}
+
+async function getSharedProfile() {
+  profilePromise ??= fetch("/api/me", {
+    cache: "no-store",
+    credentials: "same-origin",
+  })
+    .then(async (response) => {
+      if (!response.ok) throw new Error("Profil okunamadi.");
+      const data = await response.json() as MeResponse;
+      return data.profile ?? null;
+    })
+    .catch((error) => {
+      profilePromise = null;
+      throw error;
+    });
+
+  return profilePromise;
 }

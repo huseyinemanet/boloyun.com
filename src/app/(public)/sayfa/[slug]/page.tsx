@@ -9,6 +9,12 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
+export const revalidate = 3600;
+
+export function generateStaticParams() {
+  return [];
+}
+
 export type StaticPageContent = {
   title: string;
   description: string;

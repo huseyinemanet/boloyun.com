@@ -4,17 +4,39 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Tabs as TabsPrimitive } from "radix-ui"
 
+import { useClickSound } from "@/components/audio/click-sound-provider"
 import { cn } from "@/lib/utils"
 
 function Tabs({
   className,
+  defaultValue,
+  onValueChange,
   orientation = "horizontal",
+  value,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Root>) {
+  const { playClickSound } = useClickSound()
+  const currentValueRef = React.useRef(value ?? defaultValue)
+
+  React.useEffect(() => {
+    if (value !== undefined) currentValueRef.current = value
+  }, [value])
+
+  function handleValueChange(nextValue: string) {
+    if (currentValueRef.current !== nextValue) {
+      playClickSound()
+    }
+    currentValueRef.current = nextValue
+    onValueChange?.(nextValue)
+  }
+
   return (
     <TabsPrimitive.Root
       data-slot="tabs"
       data-orientation={orientation}
+      defaultValue={defaultValue}
+      onValueChange={handleValueChange}
+      value={value}
       className={cn(
         "group/tabs flex gap-2 data-horizontal:flex-col",
         className

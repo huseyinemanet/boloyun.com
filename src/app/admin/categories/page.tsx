@@ -1,4 +1,8 @@
 import Link from "next/link";
+import { IconCodeActionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCodeActionFillDuo18";
+import { IconGridCircleListFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGridCircleListFillDuo18";
+import { IconLinkFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconLinkFillDuo18";
+import { IconTextTitleCaseFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconTextTitleCaseFillDuo18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { CategoryIcon } from "@/components/icons/category-icon";
 import { Button } from "@/components/ui/button";
@@ -51,10 +55,26 @@ export default async function AdminCategoriesPage({ searchParams }: AdminCategor
           <Table className="min-w-[680px] table-fixed">
             <TableHeader className="bg-muted/40">
               <TableRow>
-                <TableHead className="w-16">İkon</TableHead>
-                <TableHead>Ad</TableHead>
-                <TableHead className="w-48">Slug</TableHead>
-                <TableHead className="w-28 text-right">Aksiyon</TableHead>
+                <TableHead className="w-16">
+                  <span className="inline-flex items-center justify-center" title="İkon" aria-label="İkon">
+                    <IconGridCircleListFillDuo18 className="size-5" />
+                  </span>
+                </TableHead>
+                <TableHead>
+                  <span className="inline-flex items-center justify-center" title="Ad" aria-label="Ad">
+                    <IconTextTitleCaseFillDuo18 className="size-5" />
+                  </span>
+                </TableHead>
+                <TableHead className="w-48">
+                  <span className="inline-flex items-center justify-center" title="Slug" aria-label="Slug">
+                    <IconLinkFillDuo18 className="size-5" />
+                  </span>
+                </TableHead>
+                <TableHead className="w-28 text-right">
+                  <span className="inline-flex items-center justify-center" title="Aksiyon" aria-label="Aksiyon">
+                    <IconCodeActionFillDuo18 className="size-5" />
+                  </span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

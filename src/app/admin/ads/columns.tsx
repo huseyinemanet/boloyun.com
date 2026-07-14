@@ -3,6 +3,12 @@
 import Link from "next/link";
 import type { Column, ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDownIcon, MoreHorizontalIcon } from "lucide-react";
+import { IconBadgeCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBadgeCheckFillDuo18";
+import { IconBadgeDollarFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBadgeDollarFillDuo18";
+import { IconCodeActionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCodeActionFillDuo18";
+import { IconLaptopMobileFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconLaptopMobileFillDuo18";
+import { IconPriorityHighFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconPriorityHighFillDuo18";
+import { IconPromotionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconPromotionFillDuo18";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +30,7 @@ export function getAdColumns(): ColumnDef<AdTableRow>[] {
   return [
     {
       accessorKey: "name",
-      header: ({ column }) => <SortableHeader column={column} label="Reklam" />,
+      header: ({ column }) => <SortableHeader column={column} label="Reklam" icon={<IconBadgeDollarFillDuo18 className="size-5" />} />,
       cell: ({ row }) => (
         <div className="min-w-[260px] whitespace-normal">
           <p className="font-bold text-foreground">{row.original.name}</p>
@@ -35,7 +41,7 @@ export function getAdColumns(): ColumnDef<AdTableRow>[] {
     {
       id: "slot",
       accessorFn: (ad) => `${ad.slotName} ${ad.slotKey}`,
-      header: ({ column }) => <SortableHeader column={column} label="Slot" />,
+      header: ({ column }) => <SortableHeader column={column} label="Slot" icon={<IconPromotionFillDuo18 className="size-5" />} />,
       cell: ({ row }) => (
         <div className="min-w-[220px] whitespace-normal">
           <p className="font-semibold text-foreground">{row.original.slotName}</p>
@@ -45,25 +51,29 @@ export function getAdColumns(): ColumnDef<AdTableRow>[] {
     },
     {
       accessorKey: "priority",
-      header: ({ column }) => <SortableHeader column={column} label="Öncelik" />,
+      header: ({ column }) => <SortableHeader column={column} label="Öncelik" icon={<IconPriorityHighFillDuo18 className="size-5" />} />,
       cell: ({ row }) => <span className="font-semibold">{row.original.priority ?? 0}</span>,
     },
     {
       id: "device",
       accessorFn: (ad) => getDeviceLabel(ad),
-      header: ({ column }) => <SortableHeader column={column} label="Cihaz" />,
+      header: ({ column }) => <SortableHeader column={column} label="Cihaz" icon={<IconLaptopMobileFillDuo18 className="size-5" />} />,
       cell: ({ row }) => <span className="whitespace-nowrap text-sm font-semibold">{getDeviceLabel(row.original)}</span>,
     },
     {
       id: "status",
       accessorFn: (ad) => (ad.is_active !== false ? "active" : "inactive"),
-      header: ({ column }) => <SortableHeader column={column} label="Durum" />,
+      header: ({ column }) => <SortableHeader column={column} label="Durum" icon={<IconBadgeCheckFillDuo18 className="size-5" />} />,
       cell: ({ row }) => <StatusBadge active={row.original.is_active !== false} />,
       filterFn: (row, columnId, value) => value === "all" || row.getValue(columnId) === value,
     },
     {
       id: "actions",
-      header: () => <span className="sr-only">İşlemler</span>,
+      header: () => (
+        <span className="inline-flex items-center justify-center" title="İşlemler" aria-label="İşlemler">
+          <IconCodeActionFillDuo18 className="size-5" />
+        </span>
+      ),
       cell: ({ row }) => (
         <div className="flex justify-end">
           <DropdownMenu>
@@ -88,7 +98,7 @@ export function getAdColumns(): ColumnDef<AdTableRow>[] {
   ];
 }
 
-function SortableHeader({ column, label }: { column: Column<AdTableRow, unknown>; label: string }) {
+function SortableHeader({ column, label, icon }: { column: Column<AdTableRow, unknown>; label: string; icon: React.ReactNode }) {
   return (
     <Button
       type="button"
@@ -96,9 +106,11 @@ function SortableHeader({ column, label }: { column: Column<AdTableRow, unknown>
       size="sm"
       className="-ml-2"
       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      title={label}
+      aria-label={label}
     >
-      {label}
-      <ArrowUpDownIcon />
+      {icon}
+      <ArrowUpDownIcon aria-hidden="true" />
     </Button>
   );
 }

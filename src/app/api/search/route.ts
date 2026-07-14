@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPopularGameSuggestions, searchPublishedGameSuggestions } from "@/lib/db-games";
 import { consumeRateLimits, getClientIp } from "@/lib/abuse";
+import { cacheHeaders } from "@/lib/cache-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
   const popular = searchParams.get("popular") === "1";
 
   if (!popular && query.length < 2) {
-    return NextResponse.json({ items: [] });
+    return NextResponse.json({ items: [] }, { headers: cacheHeaders("publicDataShort") });
   }
 
   const rate = await consumeRateLimits([{ action: "search-ip", subject: await getClientIp(), limit: 90, windowSeconds: 60 }]);
@@ -22,10 +23,6 @@ export async function GET(request: Request) {
 
   return NextResponse.json(
     { items },
-    {
-      headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
-      },
-    },
+    { headers: cacheHeaders("publicDataShort") },
   );
 }
