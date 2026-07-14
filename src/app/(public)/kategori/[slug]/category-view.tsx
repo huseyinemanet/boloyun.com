@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { SoundLink } from "@/components/audio/sound-link";
 import { notFound } from "next/navigation";
 import { AdminPagination } from "@/components/admin/admin-pagination";
 import { GameSection } from "@/components/game/game-section";
@@ -53,24 +53,24 @@ export async function CategoryView({ slug, page }: { slug: string; page: number 
         itemListJsonLd(`${category.name}${page > 1 ? ` - Sayfa ${page}` : ""}`, categoryGames.items.map((game) => `/oyun/${game.slug}`)),
       ]} /> : null}
       <section className="rounded-md border border-border bg-card p-4">
-        <h1 className="text-2xl font-black">{category.name}{page > 1 ? ` - Sayfa ${page}` : ""}</h1>
+        <h1 className="text-2xl font-semibold">{category.name}{page > 1 ? ` - Sayfa ${page}` : ""}</h1>
         {category.description ? <p className="mt-2 max-w-4xl text-sm leading-6 text-muted-foreground">{category.description}</p> : null}
       </section>
       <AdSlot slotKey="category_page_top" />
       {categoryGames.items.length ? (
         <>
           <AdminPagination currentPage={page} perPage={PER_PAGE} total={categoryGames.total} basePath={`/kategori/${slug}`} itemName="oyun" pathStyle="segment" />
-          <GameSection title={category.name} games={categoryGames.items} />
+          <GameSection title={category.name} games={categoryGames.items} eagerCount={4} />
           <AdminPagination currentPage={page} perPage={PER_PAGE} total={categoryGames.total} basePath={`/kategori/${slug}`} itemName="oyun" pathStyle="segment" />
         </>
       ) : (
         <section className="rounded-md border border-border bg-card p-6 text-sm font-semibold text-muted-foreground">Bu kategoride henüz yayınlanmış oyun yok.</section>
       )}
       <nav aria-label="İlgili kategoriler" className="rounded-md border border-border bg-card p-4">
-        <h2 className="text-lg font-black">Diğer Oyun Kategorileri</h2>
+        <h2 className="text-lg font-semibold">Diğer Oyun Kategorileri</h2>
         <div className="mt-3 flex flex-wrap gap-2">
           {categories.filter((item) => item.slug !== slug).slice(0, 12).map((item) => (
-            <Link key={item.id} href={`/kategori/${item.slug}`} className="rounded-md bg-muted px-3 py-2 text-xs font-bold hover:bg-accent">{item.name}</Link>
+            <SoundLink key={item.id} href={`/kategori/${item.slug}`} className="rounded-md bg-muted px-3 py-2 text-xs font-bold hover:bg-accent">{item.name}</SoundLink>
           ))}
         </div>
       </nav>

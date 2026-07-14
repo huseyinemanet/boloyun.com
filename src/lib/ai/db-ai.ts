@@ -570,7 +570,7 @@ async function getPublishedGame(id: string) {
   return data as GameRow | null;
 }
 
-async function getRuntimeConfig(provider: AiProvider, options: { requireEnabled: boolean }): Promise<AiRuntimeConfig> {
+export async function getRuntimeConfig(provider: AiProvider, options: { requireEnabled: boolean }): Promise<AiRuntimeConfig> {
   const row = await getProviderConfigRow(provider);
   if (!row) throw new Error(`${provider} ayarı bulunamadı.`);
   if (options.requireEnabled && !row.enabled) throw new Error(`${provider} aktif değil.`);

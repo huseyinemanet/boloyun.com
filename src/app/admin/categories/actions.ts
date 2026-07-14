@@ -16,6 +16,7 @@ export type CategoryFormState = {
 export async function saveCategoryAction(_previousState: CategoryFormState, formData: FormData): Promise<CategoryFormState> {
   await requireAdmin();
 
+  const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const slug = String(formData.get("slug") ?? "").trim();
   const fieldErrors: CategoryFormState["fieldErrors"] = {};
@@ -49,7 +50,7 @@ export async function saveCategoryAction(_previousState: CategoryFormState, form
 
   return {
     status: "success",
-    message: "Kategori kaydedildi.",
+    message: id ? "Kategori güncellendi." : "Kategori eklendi.",
     fieldErrors: {},
   };
 }

@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CategoryIcon } from "@/components/icons/category-icon";
 import type { CategoryRow } from "@/lib/db-categories";
 import { cn } from "@/lib/utils";
+import { SoundLink } from "@/components/audio/sound-link";
 
 export function SidebarCategoryLink({ category }: { category: CategoryRow }) {
   const pathname = usePathname();
@@ -12,7 +12,7 @@ export function SidebarCategoryLink({ category }: { category: CategoryRow }) {
   const active = pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <Link
+    <SoundLink
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
@@ -26,6 +26,6 @@ export function SidebarCategoryLink({ category }: { category: CategoryRow }) {
         className={active ? "bg-primary-foreground/15 text-primary-foreground group-hover:bg-primary-foreground/20" : undefined}
       />
       <span className="truncate">{category.name}</span>
-    </Link>
+    </SoundLink>
   );
 }

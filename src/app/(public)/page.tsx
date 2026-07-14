@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { AdSlot } from "@/components/ads/ad-slot";
 import { parseAdminPage } from "@/components/admin/admin-pagination";
 import { GameSection } from "@/components/game/game-section";
@@ -16,6 +17,8 @@ const PER_PAGE = 60;
 type HomeProps = {
   searchParams: Promise<{
     page?: string;
+    code?: string;
+    next?: string;
   }>;
 };
 
@@ -34,7 +37,12 @@ export async function generateMetadata({ searchParams }: HomeProps): Promise<Met
 }
 
 export default async function Home({ searchParams }: HomeProps) {
-  const currentPage = parseAdminPage((await searchParams).page);
+  const params = await searchParams;
+  if (params.code) {
+    const next = params.next ? `&next=${encodeURIComponent(params.next)}` : "";
+    redirect(`/auth/callback?code=${encodeURIComponent(params.code)}${next}`);
+  }
+  const currentPage = parseAdminPage(params.page);
   const [publishedGames, allGames, settings, configuredSections, profile] = await Promise.all([
     getPublishedGames(80),
     getPublishedGamesPage({ page: currentPage, perPage: PER_PAGE }),
@@ -52,7 +60,7 @@ export default async function Home({ searchParams }: HomeProps) {
       {settings.seo.structuredDataEnabled ? <JsonLd data={[websiteJsonLd(), organizationJsonLd(), itemListJsonLd(`${settings.general.siteName}'daki oyunlar`, visibleGames.map((game) => `/oyun/${game.slug}`))]} /> : null}
       <section className="py-4 text-card-foreground">
         <div className="max-w-3xl">
-          <h1 className="text-2xl font-black sm:text-3xl">{settings.appearance.heroTitle}</h1>
+          <h1 className="text-2xl font-semibold sm:text-3xl">{settings.appearance.heroTitle}</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
             {settings.appearance.heroDescription}
           </p>
@@ -61,8 +69,8 @@ export default async function Home({ searchParams }: HomeProps) {
 
       <AdSlot slotKey="homepage_top_banner" />
 
-      {visibleConfiguredSections.length ? visibleConfiguredSections.map(({ section, games }, index) => <div key={section.id ?? `${section.sectionType}-${index}`} className={section.visibility === "desktop" ? "hidden md:block" : section.visibility === "mobile" ? "md:hidden" : ""}><GameSection title={section.title} games={games} />{index > 0 && index % 2 === 1 ? <div className="mt-5"><AdSlot slotKey="homepage_between_sections" /></div> : null}</div>) : <>
-        <div id="yeni-oyunlar" className="scroll-mt-24"><GameSection title="Yeni Oyunlar" games={publishedGames.slice(0, 24)} /></div>
+      {visibleConfiguredSections.length ? visibleConfiguredSections.map(({ section, games }, index) => <div key={section.id ?? `${section.sectionType}-${index}`} className={section.visibility === "desktop" ? "hidden md:block" : section.visibility === "mobile" ? "md:hidden" : ""}><GameSection title={section.title} games={games} eagerCount={index === 0 ? 4 : 0} />{index > 0 && index % 2 === 1 ? <div className="mt-5"><AdSlot slotKey="homepage_between_sections" /></div> : null}</div>) : <>
+        <div id="yeni-oyunlar" className="scroll-mt-24"><GameSection title="Yeni Oyunlar" games={publishedGames.slice(0, 24)} eagerCount={4} /></div>
         <div id="populer-oyunlar" className="scroll-mt-24"><GameSection title="Popüler Oyunlar" games={publishedGames.slice(24, 48)} /></div>
         <div id="trend-oyunlar" className="scroll-mt-24"><GameSection title="Trend Oyunlar" games={publishedGames.slice(48, 72)} /></div>
       </>}

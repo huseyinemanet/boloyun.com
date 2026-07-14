@@ -1,10 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
 import { LoaderCircleIcon, SearchIcon } from "lucide-react";
+import { SoundLink } from "@/components/audio/sound-link";
 import { Input } from "@/components/ui/input";
 import type { GameSearchSuggestion } from "@/types/game";
 
@@ -198,7 +198,7 @@ export function SearchAutocomplete() {
             <p className="px-3 py-6 text-center text-sm text-muted-foreground">{showingPopular ? "Popüler oyunlar yükleniyor..." : "Oyunlar aranıyor..."}</p>
           ) : results.length ? (
             results.map((game, index) => (
-              <Link
+              <SoundLink
                 key={game.id}
                 id={`${listboxId}-${index}`}
                 href={`/oyun/${game.slug}`}
@@ -217,20 +217,20 @@ export function SearchAutocomplete() {
                     {game.shortDescription || "Oyunu aç ve hemen oynamaya başla."}
                   </span>
                 </span>
-              </Link>
+              </SoundLink>
             ))
           ) : (
             <p className="px-3 py-6 text-center text-sm text-muted-foreground">{showingPopular ? "Popüler oyun bulunamadı." : "Bu aramayla eşleşen oyun bulunamadı."}</p>
           )}
 
           {!loading && !showingPopular ? (
-            <Link
+            <SoundLink
               href={`/arama?q=${encodeURIComponent(normalizedQuery)}`}
               onClick={() => setOpen(false)}
               className="mt-1 flex items-center justify-center rounded-md border-t border-border px-3 py-2 text-sm font-bold text-primary hover:bg-accent"
             >
               Tüm sonuçları göster
-            </Link>
+            </SoundLink>
           ) : null}
         </div>
       ) : null}

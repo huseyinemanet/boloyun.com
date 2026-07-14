@@ -2,6 +2,7 @@
 
 import { type FormEvent, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -53,28 +54,35 @@ export function UserCreateForm() {
 
     if (Object.keys(fieldErrors).length) {
       setState({ message: "Lütfen işaretli alanları kontrol edin.", fieldErrors, values });
+      toast.error("Lütfen işaretli alanları kontrol edin.");
       return;
     }
 
     startTransition(async () => {
-      const response = await fetch("/api/admin/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
+      try {
+        const response = await fetch("/api/admin/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(values),
+        });
 
-      if (response.ok) {
-        router.push("/admin/users");
-        router.refresh();
-        return;
+        if (response.ok) {
+          router.push("/admin/users?notice=created");
+          router.refresh();
+          return;
+        }
+
+        const result = await response.json().catch(() => null) as Partial<FormState> | null;
+        toast.error(result?.message || "Kullanıcı oluşturulamadı.");
+        setState({
+          message: result?.message || "Kullanıcı oluşturulamadı.",
+          fieldErrors: result?.fieldErrors ?? {},
+          values: result?.values ?? values,
+        });
+      } catch {
+        toast.error("Kullanıcı oluşturulamadı.");
+        setState({ message: "Kullanıcı oluşturulamadı.", fieldErrors: {}, values });
       }
-
-      const result = await response.json().catch(() => null) as Partial<FormState> | null;
-      setState({
-        message: result?.message || "Kullanıcı oluşturulamadı.",
-        fieldErrors: result?.fieldErrors ?? {},
-        values: result?.values ?? values,
-      });
     });
   }
 
@@ -89,7 +97,19 @@ export function UserCreateForm() {
         <Field label="Geçici şifre" name="password" type="password" required defaultValue={state.values.password} error={state.fieldErrors.password} autoComplete="new-password" />
         <label className="block text-sm font-bold">
           Rol
-          <Select name="role" defaultValue={state.values.role}>
+          <Select
+            name="role"
+            value={state.values.role}
+            onValueChange={(value) => {
+              setState((current) => ({
+                ...current,
+                values: {
+                  ...current.values,
+                  role: normalizeAdminUserCreateRole(value),
+                },
+              }));
+            }}
+          >
             <SelectTrigger className="mt-1 h-10 w-full">
               <SelectValue />
             </SelectTrigger>

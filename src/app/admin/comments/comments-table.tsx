@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   flexRender,
   getCoreRowModel,
@@ -81,8 +82,10 @@ export function CommentsTable({ comments, counts, activeFilter }: { comments: Ad
       const action = status === "approved" ? approveCommentAction : status === "pending" ? unapproveCommentAction : status === "spam" ? spamCommentAction : trashCommentAction;
       const formData = createCommentFormData(comment);
       await action(formData);
+      toast.success(commentStatusToastMessage(status));
       router.refresh();
     } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Yorum güncellenemedi.");
       setHiddenIds((current) => withoutId(current, comment.id));
       setErrorMessage(error instanceof Error ? error.message : "Yorum güncellenemedi.");
     } finally {
@@ -99,8 +102,10 @@ export function CommentsTable({ comments, counts, activeFilter }: { comments: Ad
 
     try {
       await deleteTrashedCommentAction(createCommentFormData(comment));
+      toast.success("Yorum kalıcı olarak silindi.");
       router.refresh();
     } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Yorum kalıcı olarak silinemedi.");
       setHiddenIds((current) => withoutId(current, comment.id));
       setErrorMessage(error instanceof Error ? error.message : "Yorum kalıcı olarak silinemedi.");
     } finally {
@@ -160,9 +165,11 @@ export function CommentsTable({ comments, counts, activeFilter }: { comments: Ad
     try {
       if (bulkAction === "delete") await bulkDeleteTrashedCommentsAction(ids);
       else await bulkUpdateCommentsAction(ids, bulkAction);
+      toast.success(bulkCommentToastMessage(bulkAction, ids.length));
       setRowSelection({});
       router.refresh();
     } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Toplu işlem uygulanamadı.");
       setHiddenIds((current) => withoutIds(current, ids));
       setErrorMessage(error instanceof Error ? error.message : "Toplu işlem uygulanamadı.");
     } finally {
@@ -317,4 +324,20 @@ function withoutIds(values: Set<string>, ids: string[]) {
   const next = new Set(values);
   ids.forEach((id) => next.delete(id));
   return next;
+}
+
+function commentStatusToastMessage(status: CommentStatus) {
+  if (status === "approved") return "Yorum onaylandı.";
+  if (status === "pending") return "Yorum beklemeye alındı.";
+  if (status === "spam") return "Yorum spam olarak işaretlendi.";
+  return "Yorum çöpe taşındı.";
+}
+
+function bulkCommentToastMessage(action: BulkActionValue, count: number) {
+  const suffix = `${count.toLocaleString("tr-TR")} yorum`;
+  if (action === "delete") return `${suffix} kalıcı olarak silindi.`;
+  if (action === "approved") return `${suffix} onaylandı.`;
+  if (action === "pending") return `${suffix} beklemeye alındı.`;
+  if (action === "spam") return `${suffix} spam olarak işaretlendi.`;
+  return `${suffix} çöpe taşındı.`;
 }

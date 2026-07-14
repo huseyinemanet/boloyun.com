@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -35,7 +36,6 @@ export function UsersTable({ users, counts, activeFilter }: { users: AdminUser[]
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<BulkAction>("block");
   const [searchQuery, setSearchQuery] = useState("");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
 
   const rows = useMemo(() => {
@@ -70,7 +70,6 @@ export function UsersTable({ users, counts, activeFilter }: { users: AdminUser[]
     if (!ids.length || isPending) return;
 
     setIsPending(true);
-    setErrorMessage(null);
     if (["block", "delete", "make_member"].includes(bulkAction)) {
       setHiddenIds((current) => new Set([...current, ...ids]));
     }
@@ -78,6 +77,7 @@ export function UsersTable({ users, counts, activeFilter }: { users: AdminUser[]
     try {
       await bulkUpdateUsersAction(ids, bulkAction);
       setSelectedIds(new Set());
+      toast.success(getBulkSuccessMessage(bulkAction, ids.length));
       router.refresh();
     } catch (error) {
       setHiddenIds((current) => {
@@ -85,7 +85,7 @@ export function UsersTable({ users, counts, activeFilter }: { users: AdminUser[]
         ids.forEach((id) => next.delete(id));
         return next;
       });
-      setErrorMessage(error instanceof Error ? error.message : "Toplu işlem uygulanamadı.");
+      toast.error(error instanceof Error ? error.message : "Toplu işlem uygulanamadı.");
     } finally {
       setIsPending(false);
     }
@@ -117,8 +117,6 @@ export function UsersTable({ users, counts, activeFilter }: { users: AdminUser[]
       </div>
 
       <Toolbar bulkAction={bulkAction} itemCount={rows.length} isPending={isPending} onBulkActionChange={setBulkAction} onApply={applyBulkAction} />
-
-      {errorMessage ? <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm font-semibold text-destructive">{errorMessage}</p> : null}
 
       <section className="overflow-hidden rounded-md border border-border bg-card">
         <Table className="min-w-[950px]">
@@ -188,6 +186,16 @@ export function UsersTable({ users, counts, activeFilter }: { users: AdminUser[]
       <Toolbar bulkAction={bulkAction} itemCount={rows.length} isPending={isPending} onBulkActionChange={setBulkAction} onApply={applyBulkAction} />
     </div>
   );
+}
+
+function getBulkSuccessMessage(action: BulkAction, count: number) {
+  const suffix = count > 1 ? `${count.toLocaleString("tr-TR")} kullanıcı` : "Kullanıcı";
+
+  if (action === "block") return `${suffix} engellendi.`;
+  if (action === "unblock") return `${suffix} aktifleştirildi.`;
+  if (action === "make_admin") return `${suffix} yönetici yapıldı.`;
+  if (action === "make_member") return `${suffix} üye yapıldı.`;
+  return `${suffix} silindi.`;
 }
 
 function Toolbar({ bulkAction, itemCount, isPending, onBulkActionChange, onApply }: { bulkAction: BulkAction; itemCount: number; isPending: boolean; onBulkActionChange: (value: BulkAction) => void; onApply: () => void }) {

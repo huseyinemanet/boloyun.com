@@ -1,8 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import type { AiActionState } from "./actions";
 
 type ProcessTranslationJobState = {
   status: "success" | "error";
@@ -28,11 +31,16 @@ type ProcessTranslationJobState = {
 };
 
 type JobActionFormProps = {
-  action?: (formData: FormData) => Promise<void>;
+  action?: (state: AiActionState, formData: FormData) => Promise<AiActionState>;
   jobId: string;
   label: string;
   jobStatus: string;
   variant?: "default" | "outline";
+};
+
+const initialAiActionState: AiActionState = {
+  status: "idle",
+  message: "",
 };
 
 export function JobActionForm({ action, jobId, label, jobStatus, variant = "default" }: JobActionFormProps) {
@@ -41,9 +49,33 @@ export function JobActionForm({ action, jobId, label, jobStatus, variant = "defa
   }
   if (!action) return null;
 
+  return <ServerJobActionForm action={action} jobId={jobId} label={label} jobStatus={jobStatus} variant={variant} />;
+}
+
+function ServerJobActionForm({ action, jobId, label, jobStatus, variant }: Required<JobActionFormProps>) {
+  const router = useRouter();
+  const [state, formAction] = useActionState(action, initialAiActionState);
+  const lastToastKey = useRef("");
+
+  useEffect(() => {
+    if (state.status === "idle" || !state.message) return;
+
+    const toastKey = `${state.status}:${state.message}`;
+    if (lastToastKey.current === toastKey) return;
+    lastToastKey.current = toastKey;
+
+    if (state.status === "success") {
+      toast.success(state.message);
+      router.refresh();
+      return;
+    }
+
+    toast.error(state.message);
+  }, [router, state.message, state.status]);
+
   return (
     <form
-      action={action}
+      action={formAction}
       onSubmit={() => {
         console.log("[ai-translation] action.submit", { jobId, label, jobStatus, at: new Date().toISOString() });
       }}
@@ -58,6 +90,7 @@ function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: 
   const [pending, setPending] = useState(false);
   const [stepCount, setStepCount] = useState(0);
   const stopRequested = useRef(false);
+  const processedSteps = useRef(0);
 
   return (
     <form
@@ -67,6 +100,7 @@ function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: 
         console.log("[ai-translation] action.submit", { jobId, label: "İşle", jobStatus, at: new Date().toISOString() });
         window.dispatchEvent(new CustomEvent("ai-translation:process-loop", { detail: { active: true, jobId } }));
         stopRequested.current = false;
+        processedSteps.current = 0;
         setPending(true);
         setStepCount(0);
         try {
@@ -97,7 +131,7 @@ function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: 
             } finally {
               clearTimeout(abortTimeout);
             }
-            const state = await response.json().catch(() => null) as ProcessTranslationJobState | null;
+            const state = await readProcessResponse(response);
             if (!response.ok && isTransientStatus(response.status)) {
               transientFailures += 1;
               const retryDelay = transientRetryDelay(transientFailures);
@@ -113,6 +147,7 @@ function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: 
             }
             transientFailures = 0;
             steps += 1;
+            processedSteps.current = steps;
             setStepCount(steps);
             console.groupCollapsed("[ai-translation] process.step.result");
             console.log(state ?? { status: "error", message: `HTTP ${response.status}` });
@@ -133,13 +168,23 @@ function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: 
             }
             if (!shouldContinueProcessing(state)) {
               console.log("[ai-translation] process.loop.done", { jobId, steps, job: state?.job });
+              showProcessLoopDoneToast(state, steps);
               break;
             }
             await sleep(1250);
           }
         } catch (error) {
-          console.error("[ai-translation] process.client.failed", { jobId, error: error instanceof Error ? error.message : String(error) });
+          const serializedError = serializeClientError(error);
+          console.warn("[ai-translation] process.client.stopped", { jobId, error: serializedError });
+          toast.error("Çeviri işlemi durdu.", {
+            description: clientErrorMessage(serializedError),
+          });
         } finally {
+          if (stopRequested.current) {
+            toast.info("Çeviri işlemi durduruldu.", {
+              description: processedSteps.current ? `${processedSteps.current} adım işlendi.` : "Yeni adım başlatılmadı.",
+            });
+          }
           setPending(false);
           stopRequested.current = false;
           window.dispatchEvent(new CustomEvent("ai-translation:process-loop", { detail: { active: false, jobId } }));
@@ -165,6 +210,66 @@ function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: 
       )}
     </form>
   );
+}
+
+async function readProcessResponse(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return await response.json().catch((error) => ({
+      status: "error",
+      message: `Yanıt JSON olarak okunamadı: ${error instanceof Error ? error.message : String(error)}`,
+    })) as ProcessTranslationJobState;
+  }
+
+  const text = await response.text().catch(() => "");
+  return {
+    status: "error",
+    message: text ? `JSON olmayan yanıt alındı: ${text.slice(0, 180)}` : `Boş yanıt alındı: HTTP ${response.status}`,
+  } as ProcessTranslationJobState;
+}
+
+function serializeClientError(error: unknown) {
+  if (error instanceof DOMException) {
+    return { name: error.name, message: error.message, code: error.code };
+  }
+  if (error instanceof Error) {
+    return { name: error.name, message: error.message, stack: error.stack };
+  }
+  if (typeof error === "object" && error !== null) {
+    try {
+      return JSON.parse(JSON.stringify(error)) as Record<string, unknown>;
+    } catch {
+      return { message: Object.prototype.toString.call(error) };
+    }
+  }
+  return { message: String(error) };
+}
+
+function clientErrorMessage(error: ReturnType<typeof serializeClientError>) {
+  return "message" in error && typeof error.message === "string" ? error.message : "Beklenmeyen bir hata oluştu.";
+}
+
+function showProcessLoopDoneToast(state: ProcessTranslationJobState | null, steps: number) {
+  const description = state?.job
+    ? `${state.job.completed}/${state.job.total} tamamlandı, hata ${state.job.failed}.`
+    : `${steps} adım işlendi.`;
+
+  if (state?.job?.status === "completed") {
+    toast.success("Çeviri işi tamamlandı.", { description });
+    return;
+  }
+
+  if (state?.job?.status === "paused") {
+    toast.info("Çeviri işi durakladı.", { description });
+    return;
+  }
+
+  if (state?.job?.status === "failed") {
+    toast.error("Çeviri işi hata durumunda.", { description });
+    return;
+  }
+
+  toast.success("Çeviri adımı tamamlandı.", { description });
 }
 
 function shouldContinueProcessing(state: ProcessTranslationJobState | null) {

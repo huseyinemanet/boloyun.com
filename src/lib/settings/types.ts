@@ -7,6 +7,7 @@ export const SETTINGS_SECTIONS = [
   "community",
   "integrations",
   "security",
+  "audio",
   "system",
 ] as const;
 
@@ -97,6 +98,11 @@ export type SecuritySettings = {
   enforceIframeAllowlist: boolean;
 };
 
+export type AudioSettings = {
+  clickSoundEnabled: boolean;
+  clickSoundUrl: string;
+};
+
 export type SystemSettings = Record<string, never>;
 
 export type SettingsDataMap = {
@@ -108,26 +114,15 @@ export type SettingsDataMap = {
   community: CommunitySettings;
   integrations: IntegrationSettings;
   security: SecuritySettings;
+  audio: AudioSettings;
   system: SystemSettings;
 };
 
 export type SettingsRecord<S extends SettingsSection = SettingsSection> = {
   section: S;
   value: SettingsDataMap[S];
-  version: number;
   updatedAt: string | null;
   updatedByLabel: string | null;
-};
-
-export type SettingsRevision = {
-  id: string;
-  section: SettingsSection;
-  version: number;
-  snapshot: Record<string, unknown>;
-  changedKeys: string[];
-  changedByLabel: string | null;
-  restoredFromRevisionId: string | null;
-  createdAt: string;
 };
 
 export type PublicSettings = {
@@ -139,4 +134,5 @@ export type PublicSettings = {
   community: CommunitySettings;
   integrations: IntegrationSettings;
   security: SecuritySettings;
+  audio: AudioSettings;
 };

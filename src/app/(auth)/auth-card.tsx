@@ -24,7 +24,7 @@ export function AuthCard({ title, description, children, footer }: AuthCardProps
             <div className="relative hidden border-l border-border bg-muted/30 md:block">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,color-mix(in_oklch,var(--primary),transparent_70%),transparent_34%),linear-gradient(135deg,color-mix(in_oklch,var(--card),var(--primary)_8%),var(--background))]" />
               <div className="relative flex h-full min-h-96 flex-col justify-end p-8">
-                <p className="text-3xl font-black tracking-tight text-foreground">Bol Oyun</p>
+                <p className="text-3xl font-semibold tracking-tight text-foreground">Bol Oyun</p>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">Favoriler, yorumlar ve son oynanan oyunlar tek hesapta kalır.</p>
               </div>
             </div>

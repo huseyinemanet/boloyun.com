@@ -1,6 +1,16 @@
 @import "tailwindcss";
+@import "./typeset.css";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+
+.typeset-docs {
+  --typeset-font-body: var(--font-inter);
+  --typeset-font-heading: var(--font-inter);
+  --typeset-font-mono: var(--font-inter);
+  --typeset-size: 16px;
+  --typeset-leading: 1.6;
+  --typeset-flow: 1em;
+}
 
 @custom-variant dark (&:is(.dark *));
 

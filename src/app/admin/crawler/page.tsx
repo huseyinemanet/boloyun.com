@@ -10,6 +10,8 @@ type Props = {
     inserted?: string;
     skipped?: string;
     scraped?: string;
+    aiGenerated?: string;
+    pendingReview?: string;
     failed?: string;
   }>;
 };
@@ -25,15 +27,16 @@ export default async function AdminCrawlerPage({ searchParams }: Props) {
     <div className="space-y-3">
       <AdminPageHeader
         title="Yeni Oyun Tara"
-        description={<>Miniplay sitemap&apos;ini tarar, veritabanında olmayan oyunları import kuyruğuna ekler. İstersen yeni eklenenleri hemen scrape eder.</>}
+        description={<>Miniplay sitemap&apos;ini tarar, yeni oyun bilgilerini çeker, DeepSeek ile Türkçe içeriği hazırlayıp onay kuyruğuna alır.</>}
       />
 
       {hasResult ? (
-        <section className="grid gap-3 md:grid-cols-5">
+        <section className="grid gap-3 md:grid-cols-6">
           <Stat label="Taranan URL" value={result.discovered ?? "0"} />
           <Stat label="Yeni eklenen" value={result.inserted ?? "0"} />
           <Stat label="Zaten vardı" value={result.skipped ?? "0"} />
-          <Stat label="Scrape edilen" value={result.scraped ?? "0"} />
+          <Stat label="Bilgisi çekilen" value={result.scraped ?? "0"} />
+          <Stat label="Onay kuyruğu" value={result.pendingReview ?? result.aiGenerated ?? "0"} />
           <Stat label="Hata" value={result.failed ?? "0"} />
         </section>
       ) : null}

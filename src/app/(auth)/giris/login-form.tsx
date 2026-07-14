@@ -29,7 +29,7 @@ export function LoginForm({ next, challenge, hasServerFieldError }: LoginFormPro
           <ValidatedInput id="login-password" name="password" type="password" autoComplete="current-password" required serverInvalid={hasServerFieldError} aria-describedby={errorDescription} />
         </Field>
         <Field>
-          <Button className="h-10 w-full px-4 text-sm font-black">Giriş Yap</Button>
+          <Button className="h-10 w-full px-4 text-sm font-semibold">Giriş Yap</Button>
         </Field>
       </FieldGroup>
     </ValidatedAuthForm>

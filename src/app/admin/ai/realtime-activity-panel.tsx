@@ -15,6 +15,7 @@ import {
   type VisibilityState,
 } from "@tanstack/react-table";
 import { ChevronDownIcon } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -90,6 +91,7 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
   const [globalFilter, setGlobalFilter] = useState("");
   const previousStatuses = useRef(new Map(initialActivity.map((item) => [item.id, item.status])));
   const consecutiveErrors = useRef(0);
+  const lastErrorToast = useRef("");
 
   const runningJobIds = useMemo(() => new Set(payload.jobs.filter((job) => job.status === "running").map((job) => job.id)), [payload.jobs]);
   const hasRunningWork = runningJobIds.size > 0;
@@ -247,12 +249,18 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
         }));
         setPayload((current) => ({ ...next, stats: next.stats ?? current.stats }));
         consecutiveErrors.current = 0;
+        lastErrorToast.current = "";
         setLastError(null);
       } catch (error) {
         if (!disposed) {
           consecutiveErrors.current += 1;
           if (consecutiveErrors.current >= 2) {
-            setLastError(error instanceof Error ? error.message : "Aktivite okunamadı.");
+            const message = error instanceof Error ? error.message : "Aktivite okunamadı.";
+            setLastError(message);
+            if (lastErrorToast.current !== message) {
+              lastErrorToast.current = message;
+              toast.error("Canlı AI logları okunamadı.", { description: message });
+            }
           }
         }
       } finally {
@@ -423,7 +431,7 @@ function Metric({ label, value, tone = "muted" }: { label: string; value: string
   return (
     <div>
       <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-      <p className={tone === "danger" ? "mt-1 text-lg font-black text-destructive" : "mt-1 text-lg font-black"}>{value}</p>
+      <p className={tone === "danger" ? "mt-1 text-lg font-semibold text-destructive" : "mt-1 text-lg font-semibold"}>{value}</p>
     </div>
   );
 }

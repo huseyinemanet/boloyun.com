@@ -2,6 +2,8 @@
 
 import Script from "next/script";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { SoundAnchor } from "@/components/audio/sound-anchor";
+import { useClickSound } from "@/components/audio/click-sound-provider";
 import type { Game } from "@/types/game";
 import { Button } from "@/components/ui/button";
 
@@ -36,6 +38,7 @@ export function GamePlayer({
   const [timedOut, setTimedOut] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { playClickSound } = useClickSound();
   const source = useMemo(() => {
     if (game.gameType === "iframe") return game.embedUrl;
     if (game.gameType === "html5") return game.html5Url;
@@ -44,6 +47,7 @@ export function GamePlayer({
   }, [game]);
 
   async function handleStart() {
+    playClickSound();
     if (preRoll) {
       setRemaining(preRollSkipSeconds);
       setPreRollActive(true);
@@ -80,7 +84,7 @@ export function GamePlayer({
   }, [game.gameType, loadTimeoutSeconds, loaded, started]);
 
   if (!allowGuestPlay && !isLoggedIn) {
-    return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center rounded-md border border-border bg-card p-6 text-center`}><div><p className="font-bold">Bu oyunu başlatmak için giriş yapmalısın.</p><Button asChild className="mt-3"><a href="/giris">Giriş Yap</a></Button></div></div>;
+    return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center rounded-md border border-border bg-card p-6 text-center`}><div><p className="font-bold">Bu oyunu başlatmak için giriş yapmalısın.</p><Button asChild className="mt-3"><SoundAnchor href="/giris">Giriş Yap</SoundAnchor></Button></div></div>;
   }
 
   if (!sourceAllowed) {
@@ -88,7 +92,7 @@ export function GamePlayer({
   }
 
   if (preRollActive) {
-    return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center overflow-hidden rounded-md border border-border bg-black p-4`}><div className="w-full max-w-3xl text-center">{preRoll}<Button className="mt-4" disabled={remaining > 0} onClick={startGame}>{remaining > 0 ? `${remaining} saniye sonra geç` : "Oyuna Geç"}</Button></div></div>;
+    return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center overflow-hidden rounded-md border border-border bg-black p-4`}><div className="w-full max-w-3xl text-center">{preRoll}<Button className="mt-4" disabled={remaining > 0} onClick={() => { playClickSound(); void startGame(); }}>{remaining > 0 ? `${remaining} saniye sonra geç` : "Oyuna Geç"}</Button></div></div>;
   }
 
   if (!started) {
@@ -119,9 +123,9 @@ export function GamePlayer({
         <div className="space-y-3">
           <p className="font-semibold">Bu oyun dış sitede açılıyor.</p>
           <Button asChild>
-            <a href={source} target="_blank" rel="noreferrer">
+            <SoundAnchor href={source} target="_blank" rel="noreferrer">
               Oyunu Başlat
-            </a>
+            </SoundAnchor>
           </Button>
         </div>
       </div>
@@ -152,7 +156,7 @@ export function GamePlayer({
       className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} w-full rounded-md border-0 bg-black`}
     />
     {timedOut ? <div className="absolute inset-x-3 bottom-3 rounded-md bg-black/80 p-3 text-center text-sm font-bold text-white">Oyun beklenenden uzun sürede yükleniyor. Kaynağı yeniden deneyebilir veya bozuk oyun olarak bildirebilirsin.</div> : null}
-    {allowFullscreen ? <Button type="button" size="sm" variant="secondary" className="absolute right-3 top-3" onClick={() => containerRef.current?.requestFullscreen()}>Tam Ekran</Button> : null}
+    {allowFullscreen ? <Button type="button" size="sm" variant="secondary" className="absolute right-3 top-3" onClick={() => { playClickSound(); void containerRef.current?.requestFullscreen(); }}>Tam Ekran</Button> : null}
     </div>
   );
 }

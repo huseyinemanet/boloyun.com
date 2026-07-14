@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { LoaderCircleIcon } from "lucide-react";
+import { useClickSound } from "@/components/audio/click-sound-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,7 @@ export function GameActionSubmitButton({
   title,
 }: GameActionSubmitButtonProps) {
   const { pending } = useFormStatus();
+  const { playClickSound } = useClickSound();
 
   return (
     <Button
@@ -38,6 +40,9 @@ export function GameActionSubmitButton({
       aria-busy={pending}
       disabled={pending}
       title={title}
+      onClick={(event) => {
+        if (!event.defaultPrevented && !pending && event.button === 0) playClickSound();
+      }}
     >
       <span className="grid size-[18px] shrink-0 place-items-center">
         {pending ? <LoaderCircleIcon className="size-[18px] animate-spin" aria-hidden="true" /> : children}

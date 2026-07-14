@@ -59,7 +59,7 @@ export async function createUserAction(formData: FormData) {
     redirectWithCreateUserError(error instanceof Error ? error.message : "Kullanıcı oluşturulamadı.");
   }
 
-  redirect("/admin/users");
+  redirect("/admin/users?notice=created");
 }
 
 export async function updateUserAction(formData: FormData) {
@@ -87,7 +87,7 @@ export async function updateUserAction(formData: FormData) {
 
   revalidatePath("/admin/users");
   revalidatePath(`/admin/users/${id}/edit`);
-  redirect("/admin/users");
+  redirect("/admin/users?notice=updated");
 }
 
 export async function bulkUpdateUsersAction(ids: string[], action: "block" | "unblock" | "delete" | "make_admin" | "make_member") {

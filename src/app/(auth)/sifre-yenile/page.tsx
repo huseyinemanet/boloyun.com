@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { SoundLink } from "@/components/audio/sound-link";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -33,14 +33,14 @@ export default async function UpdatePasswordPage({ searchParams }: Props) {
                 <ValidatedInput id="new-password-confirmation" name="password_confirmation" type="password" autoComplete="new-password" required minLength={8} serverInvalid={error === "mismatch" || error === "form"} aria-describedby={error ? "password-form-error" : undefined} />
               </Field>
               <Field>
-                <Button className="h-10 w-full px-4 text-sm font-black">Şifreyi Güncelle</Button>
+                <Button className="h-10 w-full px-4 text-sm font-semibold">Şifreyi Güncelle</Button>
               </Field>
             </FieldGroup>
           </ValidatedAuthForm>
         ) : (
           <div className="mt-4">
             <AuthMessage type="error">Şifre yenileme bağlantısı geçersiz veya süresi dolmuş.</AuthMessage>
-            <Link href="/sifremi-unuttum" className="mt-4 inline-block text-sm font-semibold text-primary hover:underline">Yeni bağlantı iste</Link>
+            <SoundLink href="/sifremi-unuttum" className="mt-4 inline-block text-sm font-semibold text-primary hover:underline">Yeni bağlantı iste</SoundLink>
           </div>
         )}
     </AuthCard>

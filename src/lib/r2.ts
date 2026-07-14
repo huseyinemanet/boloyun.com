@@ -2,11 +2,12 @@ import "server-only";
 import { createHash, randomUUID } from "crypto";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { isR2Configured } from "@/lib/system-status";
-import { matchesImageSignature } from "@/lib/settings/media-validation";
+import { matchesAudioSignature, matchesImageSignature, SUPPORTED_AUDIO_MIME_TYPES } from "@/lib/settings/media-validation";
+import { getSiteAssetPublicUrl } from "@/lib/site-assets";
 
 const acceptedInputMimeTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
 const limits = {
-  avatar: { width: 1024, height: 1024, pixels: 4_000_000 },
+  avatar: { width: 4096, height: 4096, pixels: 16_000_000 },
   logo: { width: 2400, height: 1200, pixels: 8_000_000 },
   favicon: { width: 512, height: 512, pixels: 1_000_000 },
   cover: { width: 3840, height: 2160, pixels: 16_000_000 },
@@ -20,6 +21,14 @@ export type UploadedSiteAsset = {
   width: number;
   height: number;
   mimeType: "image/webp";
+};
+
+export type UploadedSiteAudioAsset = {
+  url: string;
+  key: string;
+  sha256: string;
+  bytes: number;
+  mimeType: (typeof SUPPORTED_AUDIO_MIME_TYPES)[number];
 };
 
 export async function uploadSiteAsset(file: File, kind: "logo" | "favicon" | "cover" | "avatar", allowedMimeTypes: string[], maxMb: number) {
@@ -47,18 +56,41 @@ export async function uploadSiteAsset(file: File, kind: "logo" | "favicon" | "co
     throw new Error("Görsel güvenli biçimde yeniden kodlanamadı.");
   }
 
-  const { publicBaseUrl } = getR2Config();
   const sha256 = createHash("sha256").update(outputBytes).digest("hex");
   const key = `site-assets/${kind}/${sha256.slice(0, 16)}-${randomUUID()}.webp`;
   await env.SITE_ASSETS.put(key, outputBytes, { httpMetadata: { contentType: "image/webp", cacheControl: "public, max-age=31536000, immutable" } });
   return {
-    url: `${publicBaseUrl}/${key}`,
+    url: getSiteAssetPublicUrl(key),
     key,
     sha256,
     bytes: outputBytes.byteLength,
     width: dimensions.width,
     height: dimensions.height,
     mimeType: "image/webp" as const,
+  };
+}
+
+export async function uploadSiteAudioAsset(file: File, maxMb: number): Promise<UploadedSiteAudioAsset> {
+  if (!isR2Configured()) throw new Error("Cloudflare R2 yapılandırılmamış.");
+  if (!isSupportedAudioMimeType(file.type)) throw new Error("Yalnızca MP3, WAV, OGG veya WebM ses dosyaları yüklenebilir.");
+  if (file.size < 1 || file.size > maxMb * 1024 * 1024) throw new Error(`Dosya en fazla ${maxMb} MB olabilir.`);
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!matchesAudioSignature(bytes, file.type)) throw new Error("Dosya içeriği bildirilen ses türüyle eşleşmiyor.");
+
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const extension = audioExtension(file.type);
+  const key = `site-assets/audio/${sha256.slice(0, 16)}-${randomUUID()}.${extension}`;
+  const { env } = await getCloudflareContext({ async: true });
+  if (!env.SITE_ASSETS) throw new Error("Cloudflare R2 binding yapılandırılmamış.");
+  await env.SITE_ASSETS.put(key, bytes, { httpMetadata: { contentType: file.type, cacheControl: "public, max-age=31536000, immutable" } });
+
+  return {
+    url: getSiteAssetPublicUrl(key),
+    key,
+    sha256,
+    bytes: bytes.byteLength,
+    mimeType: file.type,
   };
 }
 
@@ -102,15 +134,13 @@ export async function deleteSiteAsset(key: string) {
   await env.SITE_ASSETS.delete(key);
 }
 
-function getR2Config() {
-  if (!isR2Configured()) throw new Error("Cloudflare R2 yapılandırılmamış.");
-  return {
-    publicBaseUrl: requiredEnv("R2_PUBLIC_BASE_URL").replace(/\/$/, ""),
-  };
+function isSupportedAudioMimeType(value: string): value is (typeof SUPPORTED_AUDIO_MIME_TYPES)[number] {
+  return SUPPORTED_AUDIO_MIME_TYPES.includes(value as (typeof SUPPORTED_AUDIO_MIME_TYPES)[number]);
 }
 
-function requiredEnv(name: string) {
-  const value = process.env[name];
-  if (!value) throw new Error(`${name} eksik.`);
-  return value;
+function audioExtension(mimeType: (typeof SUPPORTED_AUDIO_MIME_TYPES)[number]) {
+  if (mimeType === "audio/wav" || mimeType === "audio/x-wav") return "wav";
+  if (mimeType === "audio/ogg") return "ogg";
+  if (mimeType === "audio/webm") return "webm";
+  return "mp3";
 }

@@ -3,9 +3,11 @@ import {
   getDiscoveredImportsBySourceUrls,
   insertNewDiscoveredImports,
   markImportFailed,
+  markImportPendingReview,
   markImportScraped,
   type GameImportQueueItem,
 } from "@/import/db/game-imports";
+import { generateGameContent } from "@/import/ai/generate-game-content";
 import { scrapeGame } from "@/import/scrape/scrape-game";
 import { discoverGameUrls } from "@/import/sitemap/discover";
 import { getCurrentProfile } from "@/lib/auth";
@@ -24,6 +26,8 @@ type CrawlerStats = {
   pendingDiscovered: number;
   scrapeLimit: number;
   scraped: number;
+  aiGenerated: number;
+  pendingReview: number;
   failed: number;
 };
 
@@ -68,6 +72,8 @@ export async function POST(request: Request) {
           pendingDiscovered: 0,
           scrapeLimit: shouldScrape && scrapeLimit !== "all" ? scrapeLimit : 0,
           scraped: 0,
+          aiGenerated: 0,
+          pendingReview: 0,
           failed: 0,
         },
         send,
@@ -92,7 +98,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 type CrawlerEvent =
   | {
       type: "progress";
-      phase: "discover" | "duplicates" | "insert" | "pending" | "scrape" | "complete";
+      phase: "discover" | "duplicates" | "insert" | "pending" | "scrape" | "ai" | "complete";
       message: string;
       stats: CrawlerStats;
     }
@@ -180,7 +186,7 @@ async function runCrawler({
           send({
             type: "progress",
             phase: "pending",
-            message: `${progress.found.toLocaleString("tr-TR")} mevcut discovered kayıt scrape kuyruğuna alındı. Kontrol: ${progress.checked.toLocaleString("tr-TR")} / ${progress.total.toLocaleString("tr-TR")}.`,
+            message: `${progress.found.toLocaleString("tr-TR")} mevcut discovered kayıt işleme kuyruğuna alındı. Kontrol: ${progress.checked.toLocaleString("tr-TR")} / ${progress.total.toLocaleString("tr-TR")}.`,
             stats,
           });
         },
@@ -195,7 +201,7 @@ async function runCrawler({
       send({
         type: "progress",
         phase: "complete",
-        message: shouldScrape ? "Scrape edilecek yeni kayıt yok." : "Scrape kapalı, keşif tamamlandı.",
+        message: shouldScrape ? "İşlenecek yeni kayıt yok." : "Otomatik işleme kapalı, keşif tamamlandı.",
         stats,
       });
     }
@@ -205,7 +211,7 @@ async function runCrawler({
       send({
         type: "progress",
         phase: "scrape",
-        message: `${index + 1} / ${scrapeTargets.length} scrape ediliyor: ${item.source_url}`,
+        message: `${index + 1} / ${scrapeTargets.length} oyun bilgisi çekiliyor: ${item.source_url}`,
         stats,
       });
 
@@ -213,20 +219,57 @@ async function runCrawler({
         const parsed = await scrapeGame(item.source_url, "miniplay", signal);
         await markImportScraped(item.id, parsed);
         stats.scraped += 1;
+        send({
+          type: "progress",
+          phase: "ai",
+          message: `${index + 1} / ${scrapeTargets.length} AI içeriği hazırlanıyor: ${parsed.originalTitle}`,
+          stats,
+        });
+
+        const generated = await generateGameContent(parsed);
+        await markImportPendingReview(item.id, parsed, generated);
+        stats.aiGenerated += 1;
+        stats.pendingReview += 1;
+        send({
+          type: "progress",
+          phase: "ai",
+          message: `${parsed.originalTitle} onay kuyruğuna alındı.`,
+          stats,
+        });
       } catch (error) {
-        await markImportFailed(item.id, error instanceof Error ? error.message : "Bilinmeyen hata");
+        const message = error instanceof Error ? error.message : "Bilinmeyen hata";
+        try {
+          await markImportFailed(item.id, message);
+        } catch (markError) {
+          console.error("[crawler] failed_item_mark_failed_error", {
+            importId: item.id,
+            sourceUrl: item.source_url,
+            originalError: message,
+            markError: markError instanceof Error ? markError.message : String(markError),
+          });
+        }
         stats.failed += 1;
+        send({
+          type: "progress",
+          phase: "scrape",
+          message: `Hata kaydedildi, sonraki oyuna geçiliyor: ${message}`,
+          stats,
+        });
       }
     }
 
-    revalidatePath("/admin");
-    revalidatePath("/admin/crawler");
-    revalidatePath("/admin/imports");
+    try {
+      revalidatePath("/admin");
+      revalidatePath("/admin/crawler");
+      revalidatePath("/admin/imports");
+    } catch (error) {
+      console.error("[crawler] revalidate_failed", { error: error instanceof Error ? error.message : String(error) });
+    }
 
     send({
       type: "done",
       ok: true,
-      message: `Tamamlandı. ${stats.discovered.toLocaleString("tr-TR")} URL tarandı.`,
+      message: `Tamamlandı. ${stats.discovered.toLocaleString("tr-TR")} URL tarandı, ${stats.pendingReview.toLocaleString("tr-TR")} oyun onay kuyruğuna alındı.`,
       stats,
     });
   } catch (error) {

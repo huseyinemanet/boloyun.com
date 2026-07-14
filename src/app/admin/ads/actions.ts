@@ -58,7 +58,7 @@ export async function saveAdSlotAction(_previousState: AdSlotFormState, formData
   revalidatePath("/admin/ads");
   return {
     status: "success",
-    message: "Reklam slotu kaydedildi.",
+    message: "Reklam slotu güncellendi.",
     fieldErrors: {},
   };
 }
@@ -66,6 +66,7 @@ export async function saveAdSlotAction(_previousState: AdSlotFormState, formData
 export async function saveAdAction(_previousState: AdFormState, formData: FormData): Promise<AdFormState> {
   await requireAdmin();
 
+  const id = String(formData.get("id") ?? "").trim();
   const slotId = String(formData.get("slot_id") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   const adCode = String(formData.get("ad_code") ?? "").trim();
@@ -105,7 +106,7 @@ export async function saveAdAction(_previousState: AdFormState, formData: FormDa
   revalidatePath("/oyun/[slug]", "page");
   return {
     status: "success",
-    message: "Reklam kaydedildi.",
+    message: id ? "Reklam güncellendi." : "Reklam eklendi.",
     fieldErrors: {},
   };
 }

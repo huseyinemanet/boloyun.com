@@ -355,7 +355,7 @@ export default async function StaticPage({ params }: Props) {
       <JsonLd data={breadcrumbJsonLd([{ name: "Ana Sayfa", path: "/" }, { name: page.title, path: `/sayfa/${slug}` }])} />
       <div className="max-w-3xl">
         <p className="text-xs font-bold uppercase tracking-wide text-primary">Bol Oyun</p>
-        <h1 className="mt-2 text-2xl font-black text-foreground md:text-3xl">{page.title}</h1>
+        <h1 className="mt-2 text-2xl font-semibold text-foreground md:text-3xl">{page.title}</h1>
         <p className="mt-3 text-sm leading-6 text-foreground">{page.description}</p>
         <p className="mt-3 text-xs font-semibold text-muted-foreground">Son güncelleme: {page.updatedAt}</p>
       </div>
@@ -363,7 +363,7 @@ export default async function StaticPage({ params }: Props) {
       <div className="mt-7 max-w-3xl space-y-7">
         {page.sections.map((section) => (
           <section key={section.heading}>
-            <h2 className="text-lg font-black text-foreground">{section.heading}</h2>
+            <h2 className="text-lg font-semibold text-foreground">{section.heading}</h2>
             <div className="mt-3 space-y-3 text-sm leading-7 text-foreground">
               {section.paragraphs.map((paragraph) => (
                 <p key={paragraph}>{paragraph}</p>

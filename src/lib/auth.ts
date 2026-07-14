@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { redirect, unstable_rethrow } from "next/navigation";
+import { normalizeSiteAssetUrl } from "@/lib/site-assets";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -57,7 +58,7 @@ export const getCurrentProfile = cache(async function getCurrentProfile(): Promi
       userId: row.user_id,
       username: row.username,
       email: user.email ?? "",
-      avatarUrl: row.avatar_url,
+      avatarUrl: normalizeSiteAssetUrl(row.avatar_url),
       firstName: row.first_name,
       lastName: row.last_name,
       displayName: row.display_name,

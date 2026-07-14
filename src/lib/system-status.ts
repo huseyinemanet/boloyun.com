@@ -55,5 +55,12 @@ export function isCdnConfigured() {
 export function isEmailConfigured() {
   const provider = process.env.EMAIL_SERVICE_PROVIDER?.trim().toLocaleLowerCase("tr-TR");
   const fromAddress = process.env.EMAIL_FROM_ADDRESS?.trim();
-  return provider === "brevo" && Boolean(fromAddress && /^[^\s@]+@boloyun\.com$/i.test(fromAddress));
+  const brevoApiKey = process.env.BREVO_API_KEY?.trim();
+  const brevoMarketingListId = Number(process.env.BREVO_MARKETING_LIST_ID);
+
+  return provider === "brevo" &&
+    Boolean(fromAddress && /^[^\s@]+@boloyun\.com$/i.test(fromAddress)) &&
+    Boolean(brevoApiKey) &&
+    Number.isInteger(brevoMarketingListId) &&
+    brevoMarketingListId > 0;
 }

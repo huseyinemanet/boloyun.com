@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { SoundLink } from "@/components/audio/sound-link";
 
 const links = [
   ["Kullanım Şartları", "kullanim-sartlari"],
@@ -15,9 +15,9 @@ export function Footer() {
     <footer className="mt-8 border-t border-border bg-card">
       <div className="mx-auto flex flex-wrap gap-3 px-4 py-6 text-sm text-muted-foreground">
         {links.map(([label, slug]) => (
-          <Link key={slug} href={`/sayfa/${slug}`} className="hover:text-primary">
+          <SoundLink key={slug} href={`/sayfa/${slug}`} className="hover:text-primary">
             {label}
-          </Link>
+          </SoundLink>
         ))}
       </div>
     </footer>

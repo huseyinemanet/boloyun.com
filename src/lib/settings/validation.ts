@@ -103,6 +103,11 @@ export function validateSettingsSection<S extends SettingsSection>(section: S, i
         iframeAllowlist: domainArray(value.iframeAllowlist),
         enforceIframeAllowlist: boolean(value.enforceIframeAllowlist, "Iframe izin listesi"),
       } as SettingsDataMap[S];
+    case "audio":
+      return {
+        clickSoundEnabled: boolean(value.clickSoundEnabled, "Tıklama sesi"),
+        clickSoundUrl: assetUrl(value.clickSoundUrl, "Tıklama sesi dosyası"),
+      } as SettingsDataMap[S];
     case "system":
       return {} as SettingsDataMap[S];
   }

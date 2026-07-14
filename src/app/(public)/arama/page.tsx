@@ -21,11 +21,11 @@ export default async function SearchPage({ searchParams }: Props) {
   return (
     <div className="space-y-4">
       <section className="rounded-md border border-border bg-card p-4">
-        <h1 className="text-2xl font-black">Oyun Ara</h1>
+        <h1 className="text-2xl font-semibold">Oyun Ara</h1>
         <p className="mt-2 text-sm text-muted-foreground">{q ? `"${q}" için ${results.length} sonuç bulundu.` : "Aramak istediğin oyunu yaz."}</p>
       </section>
       <AdSlot slotKey="search_results_top" />
-      <GameSection title="Arama Sonuçları" games={results} />
+      <GameSection title="Arama Sonuçları" games={results} eagerCount={4} />
     </div>
   );
 }

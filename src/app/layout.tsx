@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Header } from "@/components/layout/header";
+import { Toaster } from "@/components/ui/sonner";
 import { getPublicSettings } from "@/lib/db-settings";
 import { ConsentScripts } from "@/components/integrations/consent-scripts";
+import { ClickSoundProvider } from "@/components/audio/click-sound-provider";
 import "./globals.css";
 
 const inter = Inter({
-  subsets: ["latin", "latin-ext"],
+  subsets: ["latin"],
   variable: "--font-inter",
-  display: "swap",
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -32,15 +33,18 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { integrations } = await getPublicSettings();
+  const { audio, integrations } = await getPublicSettings();
 
   return (
     <html lang="tr" className={`dark font-sans ${inter.variable}`} style={{ colorScheme: "dark" }}>
       <body className="min-h-screen bg-background text-foreground antialiased">
-        <a href="#main-content" className="skip-link">Ana içeriğe geç</a>
-        <Header />
-        {children}
-        <ConsentScripts settings={integrations} />
+        <ClickSoundProvider settings={audio}>
+          <a href="#main-content" className="skip-link">Ana içeriğe geç</a>
+          <Header />
+          {children}
+          <ConsentScripts settings={integrations} />
+          <Toaster position="top-center" />
+        </ClickSoundProvider>
       </body>
     </html>
   );

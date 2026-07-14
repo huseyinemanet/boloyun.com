@@ -1,4 +1,5 @@
 import type { ParsedGame } from "@/import/parsers/types";
+import type { GeneratedGameContent } from "@/import/ai/generate-game-content";
 import type { DiscoveredGameUrl } from "@/import/sitemap/discover";
 import { normalizeImportCategories } from "@/import/taxonomy/category-normalizer";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
@@ -224,6 +225,48 @@ export async function markImportScraped(id: string, parsed: ParsedGame) {
 
   if (error) {
     throw new Error(`Scraped kaydi guncellenemedi: ${error.message}`);
+  }
+}
+
+export async function markImportPendingReview(id: string, parsed: ParsedGame, generated: GeneratedGameContent) {
+  const supabase = getRequiredSupabaseServiceClient();
+  const { error } = await supabase
+    .from("game_imports")
+    .update({
+      source_domain: parsed.sourceDomain,
+      original_title: parsed.originalTitle,
+      original_description: parsed.originalDescription,
+      original_how_to_play: parsed.originalHowToPlay,
+      original_controls: parsed.originalControls,
+      original_developer: parsed.originalDeveloper,
+      original_categories: normalizeImportCategories(parsed.originalCategories, 8).map((category) => category.name),
+      original_tags: parsed.originalTags,
+      thumbnail_url: parsed.thumbnailUrl,
+      detected_game_type: parsed.detectedGameType,
+      detected_embed_url: parsed.detectedEmbedUrl,
+      detected_swf_url: parsed.detectedSwfUrl,
+      detected_html5_url: parsed.detectedHtml5Url,
+      detected_external_url: parsed.detectedExternalUrl,
+      ai_title_tr: generated.title_tr,
+      ai_short_description_tr: generated.short_description_tr,
+      ai_long_description_tr: generated.long_description_tr,
+      ai_how_to_play_tr: generated.how_to_play_tr,
+      ai_controls_tr: generated.controls_tr,
+      ai_features_tr: generated.features_tr,
+      ai_developer_tr: generated.developer_tr,
+      ai_seo_title_tr: generated.seo_title_tr,
+      ai_seo_description_tr: generated.seo_description_tr,
+      ai_categories_tr: generated.categories_tr,
+      ai_tags_tr: generated.tags_tr,
+      import_status: "pending_review",
+      error_message: null,
+      raw_html_snapshot: parsed.rawHtmlSnapshot,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(`AI hazir import kaydi guncellenemedi: ${error.message}`);
   }
 }
 

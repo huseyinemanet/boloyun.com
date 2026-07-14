@@ -16,6 +16,7 @@ export type TagFormState = {
 
 export async function saveTagAction(_previousState: TagFormState, formData: FormData): Promise<TagFormState> {
   await requireAdmin();
+  const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const slug = String(formData.get("slug") ?? "").trim();
   const ogImageUrl = String(formData.get("og_image_url") ?? "").trim();
@@ -52,7 +53,7 @@ export async function saveTagAction(_previousState: TagFormState, formData: Form
 
   return {
     status: "success",
-    message: "Etiket kaydedildi.",
+    message: id ? "Etiket güncellendi." : "Etiket eklendi.",
     fieldErrors: {},
   };
 }

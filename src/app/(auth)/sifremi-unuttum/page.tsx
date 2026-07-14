@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { SoundLink } from "@/components/audio/sound-link";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { BotProtectionFields } from "@/components/security/bot-protection-fields";
@@ -26,11 +26,11 @@ export default async function ForgotPasswordPage({ searchParams }: Props) {
             <ValidatedInput id="recovery-email" name="email" type="email" autoComplete="email" required serverInvalid={hasEmailError} aria-describedby={hasEmailError ? "recovery-form-error" : undefined} />
           </Field>
           <Field>
-            <Button className="h-10 w-full px-4 text-sm font-black">Şifre Bağlantısı Gönder</Button>
+            <Button className="h-10 w-full px-4 text-sm font-semibold">Şifre Bağlantısı Gönder</Button>
           </Field>
         </FieldGroup>
       </ValidatedAuthForm>
-      <Link href="/giris" className="mt-4 inline-block text-sm font-semibold text-primary hover:underline">Girişe dön</Link>
+      <SoundLink href="/giris" className="mt-4 inline-block text-sm font-semibold text-primary hover:underline">Girişe dön</SoundLink>
     </AuthCard>
   );
 }

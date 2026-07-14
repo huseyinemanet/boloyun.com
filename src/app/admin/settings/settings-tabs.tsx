@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SoundLink } from "@/components/audio/sound-link";
 import { cn } from "@/lib/utils";
 
 const tabs = [
@@ -13,6 +13,7 @@ const tabs = [
   ["community", "Üyelik ve Yorumlar"],
   ["integrations", "Entegrasyonlar"],
   ["security", "Güvenlik"],
+  ["audio", "Ses"],
   ["system", "Sistem"],
 ] as const;
 
@@ -25,7 +26,7 @@ export function SettingsTabs() {
           const href = `/admin/settings/${key}`;
           const active = pathname === href;
           return (
-            <Link
+            <SoundLink
               key={key}
               href={href}
               aria-current={active ? "page" : undefined}
@@ -35,7 +36,7 @@ export function SettingsTabs() {
               )}
             >
               {label}
-            </Link>
+            </SoundLink>
           );
         })}
       </div>

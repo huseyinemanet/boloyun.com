@@ -44,13 +44,13 @@ export async function TagView({ slug, page }: { slug: string; page: number }) {
         itemListJsonLd(`${tag.name} oyunları`, tagGames.items.map((game) => `/oyun/${game.slug}`)),
       ]} /> : null}
       <section className="rounded-md border border-border bg-card p-4">
-        <h1 className="text-2xl font-black">{tag.name} Oyunları{page > 1 ? ` - Sayfa ${page}` : ""}</h1>
+        <h1 className="text-2xl font-semibold">{tag.name} Oyunları{page > 1 ? ` - Sayfa ${page}` : ""}</h1>
         {tag.description ? <p className="mt-2 max-w-4xl text-sm leading-6 text-muted-foreground">{tag.description}</p> : null}
       </section>
       {tagGames.items.length ? (
         <>
           <AdminPagination currentPage={page} perPage={PER_PAGE} total={tagGames.total} basePath={`/etiket/${slug}`} itemName="oyun" pathStyle="segment" />
-          <GameSection title={`${tag.name} Oyunları`} games={tagGames.items} />
+          <GameSection title={`${tag.name} Oyunları`} games={tagGames.items} eagerCount={4} />
           <AdminPagination currentPage={page} perPage={PER_PAGE} total={tagGames.total} basePath={`/etiket/${slug}`} itemName="oyun" pathStyle="segment" />
         </>
       ) : (

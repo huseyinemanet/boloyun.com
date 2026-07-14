@@ -79,7 +79,7 @@ export async function updateGameAction(formData: FormData) {
   revalidateTag("categories", "max");
   revalidateTag("tags", "max");
   revalidatePath("/admin/games");
-  redirect("/admin/games");
+  redirect("/admin/games?notice=updated");
 }
 
 function splitTags(value: string) {

@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
-import { useEffect } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
+import { toast } from "sonner";
 import { AdminCheckboxField } from "@/components/admin/admin-checkbox-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,10 +25,23 @@ type TagFormProps = {
 export function TagForm({ tag }: TagFormProps) {
   const router = useRouter();
   const [state, formAction] = useActionState(saveTagAction, initialTagFormState);
+  const lastToastKey = useRef("");
 
   useEffect(() => {
-    if (state.status === "success") router.refresh();
-  }, [router, state.status]);
+    if (state.status === "idle" || !state.message) return;
+
+    const toastKey = `${state.status}:${state.message}`;
+    if (lastToastKey.current === toastKey) return;
+    lastToastKey.current = toastKey;
+
+    if (state.status === "success") {
+      toast.success(state.message);
+      router.refresh();
+      return;
+    }
+
+    toast.error(state.message);
+  }, [router, state.message, state.status]);
 
   return (
     <form action={formAction} noValidate autoComplete="off" className="h-fit space-y-3 rounded-md border border-border bg-card p-4">

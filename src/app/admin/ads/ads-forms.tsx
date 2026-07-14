@@ -1,7 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { AdminCheckboxField } from "@/components/admin/admin-checkbox-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +26,7 @@ const initialAdFormState: AdFormState = {
 
 export function AdSlotForm({ slot }: { slot: AdSlotRow }) {
   const [state, formAction] = useActionState(saveAdSlotAction, initialAdSlotFormState);
+  useAdFormToast(state);
 
   return (
     <form action={formAction} noValidate autoComplete="off" className="mt-4 grid gap-3">
@@ -44,6 +47,7 @@ export function AdSlotForm({ slot }: { slot: AdSlotRow }) {
 
 export function AdForm({ slots, selectedSlot, ad }: { slots: AdSlotRow[]; selectedSlot?: AdSlotRow; ad?: AdRow }) {
   const [state, formAction] = useActionState(saveAdAction, initialAdFormState);
+  useAdFormToast(state);
 
   return (
     <form action={formAction} noValidate autoComplete="off" className="mt-4 grid gap-3">
@@ -87,6 +91,22 @@ export function AdForm({ slots, selectedSlot, ad }: { slots: AdSlotRow[]; select
       <SubmitButton label={ad ? "Reklamı Güncelle" : "Reklam Ekle"} />
     </form>
   );
+}
+
+function useAdFormToast(state: Pick<AdFormState | AdSlotFormState, "status" | "message">) {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.status === "idle" || !state.message) return;
+
+    if (state.status === "success") {
+      toast.success(state.message);
+      router.refresh();
+      return;
+    }
+
+    toast.error(state.message);
+  }, [router, state]);
 }
 
 function SubmitButton({ label }: { label: string }) {

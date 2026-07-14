@@ -16,6 +16,7 @@ import { IconSlidersVerticalFillDuo18 } from "nucleo-ui-fill-duo-18/components/I
 import { IconTag2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconTag2FillDuo18";
 import { IconUsersFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconUsersFillDuo18";
 import { useEffect, useState, type MouseEvent } from "react";
+import { useClickSound } from "@/components/audio/click-sound-provider";
 import { cn } from "@/lib/utils";
 
 const adminLinks = [
@@ -37,6 +38,7 @@ const PENDING_SPINNER_TIMEOUT_MS = 8000;
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const { playClickSound } = useClickSound();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const visiblePendingHref = pendingHref && !isAdminLinkActive(pathname, pendingHref) ? pendingHref : null;
 
@@ -63,6 +65,7 @@ export function AdminSidebar() {
       return;
     }
 
+    playClickSound();
     setPendingHref(href);
   }
 

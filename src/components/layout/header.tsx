@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { IconCircleLogoutFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCircleLogoutFillDuo18";
 import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
 import { IconProfileBasicFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconProfileBasicFillDuo18";
@@ -14,10 +13,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { RandomGameLink } from "@/components/layout/random-game-link";
 import { SearchAutocomplete } from "@/components/layout/search-autocomplete";
 import { getPublicSettings } from "@/lib/db-settings";
+import { SoundLink } from "@/components/audio/sound-link";
 
 const sectionLinks = [
   { href: "/#yeni-oyunlar", label: "Yeni Oyunlar" },
@@ -32,21 +31,21 @@ export async function Header() {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
       <div className="mx-auto flex h-16 items-center gap-4 px-3 md:gap-5 md:px-4">
-        <Link href="/" className="flex shrink-0 items-center" aria-label={`${settings.general.siteName} ana sayfa`}>
+        <SoundLink href="/" className="flex shrink-0 items-center" aria-label={`${settings.general.siteName} ana sayfa`}>
           <BolOyunLogo className="h-8 w-auto select-none sm:h-10" />
-        </Link>
+        </SoundLink>
 
         <SearchAutocomplete />
 
         <nav aria-label="Oyun bölümleri" className="hidden shrink-0 items-center gap-2 lg:flex">
           {sectionLinks.map((item) => (
-            <Link
+            <SoundLink
               key={item.href}
               href={item.href}
               className="rounded-md px-2.5 py-2 text-sm font-bold text-muted-foreground transition hover:bg-accent hover:text-foreground"
             >
               {item.label}
-            </Link>
+            </SoundLink>
           ))}
         </nav>
 
@@ -70,43 +69,43 @@ export async function Header() {
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuItem asChild>
-                  <Link href="/profil" className="gap-2">
+                  <SoundLink href="/profil" className="gap-2">
                     <IconProfileBasicFillDuo18 className="size-[18px] shrink-0" aria-hidden="true" />
                     Profil
-                  </Link>
+                  </SoundLink>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/profil#favoriler" className="gap-2">
+                  <SoundLink href="/profil#favoriler" className="gap-2">
                     <IconHeartFillDuo18 className="size-[18px] shrink-0" aria-hidden="true" />
                     Favorilerim
-                  </Link>
+                  </SoundLink>
                 </DropdownMenuItem>
                 {profile.role === "admin" ? (
                   <DropdownMenuItem asChild>
-                    <Link href="/admin" className="gap-2">
+                    <SoundLink href="/admin" className="gap-2">
                       <IconShieldCheckFillDuo18 className="size-[18px] shrink-0" aria-hidden="true" />
                       Admin
-                    </Link>
+                    </SoundLink>
                   </DropdownMenuItem>
                 ) : null}
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <form action="/auth/signout" method="post">
                 <DropdownMenuItem asChild>
-                  <Button type="submit" variant="ghost" className="h-7 w-full justify-start gap-2 text-left text-foreground">
+                  <button type="submit" className="w-full gap-2 text-left text-foreground">
                     <IconCircleLogoutFillDuo18 className="size-[18px] shrink-0" aria-hidden="true" />
                     Çıkış
-                  </Button>
+                  </button>
                 </DropdownMenuItem>
               </form>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
           <div className="flex shrink-0 items-center gap-2">
-            <Link href="/giris" className="inline-flex h-10 items-center justify-center rounded-md border border-border px-3 text-sm font-semibold leading-none">
+            <SoundLink href="/giris" className="inline-flex h-10 items-center justify-center rounded-md border border-border px-3 text-sm font-semibold leading-none">
               Giriş Yap
-            </Link>
-            {settings.general.registrationsEnabled && settings.community.registrationsEnabled ? <Link href="/kayit" className="hidden h-10 items-center justify-center rounded-md bg-primary px-3 text-sm font-semibold leading-none text-primary-foreground sm:inline-flex">Kayıt Ol</Link> : null}
+            </SoundLink>
+            {settings.general.registrationsEnabled && settings.community.registrationsEnabled ? <SoundLink href="/kayit" className="hidden h-10 items-center justify-center rounded-md bg-primary px-3 text-sm font-semibold leading-none text-primary-foreground sm:inline-flex">Kayıt Ol</SoundLink> : null}
           </div>
         )}
       </div>

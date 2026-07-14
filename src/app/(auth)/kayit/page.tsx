@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { SoundLink } from "@/components/audio/sound-link";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -58,9 +58,9 @@ export default async function RegisterPage({ searchParams }: Props) {
             <Field orientation="horizontal" className="items-center bg-transparent p-0">
               <Checkbox id="terms_accepted" name="terms_accepted" required aria-invalid={hasTermsError} aria-describedby={hasTermsError ? errorDescription : undefined} aria-label="Kullanım şartlarını ve gizlilik politikasını kabul ediyorum" />
               <p className="text-sm font-semibold leading-5">
-                <Link href="/sayfa/kullanim-sartlari" className="text-primary hover:underline">Kullanım şartlarını</Link>
+                <SoundLink href="/sayfa/kullanim-sartlari" className="text-primary hover:underline">Kullanım şartlarını</SoundLink>
                 {" ve "}
-                <Link href="/sayfa/gizlilik-politikasi" className="text-primary hover:underline">gizlilik politikasını</Link>
+                <SoundLink href="/sayfa/gizlilik-politikasi" className="text-primary hover:underline">gizlilik politikasını</SoundLink>
                 {" kabul ediyorum."}
               </p>
             </Field>
@@ -69,13 +69,13 @@ export default async function RegisterPage({ searchParams }: Props) {
               <span className="text-sm leading-5 text-muted-foreground">Yeni oyunlar ve duyurular için e-posta almak istiyorum.</span>
             </Field>
             <Field>
-              <Button className="h-10 w-full px-4 text-sm font-black">Kayıt Ol</Button>
+              <Button className="h-10 w-full px-4 text-sm font-semibold">Kayıt Ol</Button>
             </Field>
           </FieldGroup>
         </ValidatedAuthForm>
       ) : null}
       <p className="mt-4 text-sm font-semibold">
-        Zaten hesabın var mı? <Link href="/giris" className="text-primary hover:underline">Giriş Yap</Link>
+        Zaten hesabın var mı? <SoundLink href="/giris" className="text-primary hover:underline">Giriş Yap</SoundLink>
       </p>
     </AuthCard>
   );

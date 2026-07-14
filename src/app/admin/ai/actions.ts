@@ -15,6 +15,11 @@ import {
 } from "@/lib/ai/db-ai";
 import { isAiProvider, parseBatchSize } from "@/lib/ai/types";
 
+export type AiActionState = {
+  status: "idle" | "success" | "error";
+  message: string;
+};
+
 export type ProcessTranslationJobState = {
   status: "idle" | "success" | "error";
   message: string;
@@ -35,25 +40,32 @@ export type ProcessTranslationJobState = {
   }>;
 };
 
-export async function saveAiProviderAction(formData: FormData) {
+export async function submitAiProviderConfigAction(_state: AiActionState, formData: FormData): Promise<AiActionState> {
   await requireAdmin();
   const provider = String(formData.get("provider") ?? "");
-  if (!isAiProvider(provider)) throw new Error("Geçersiz AI provider.");
-  await saveProviderConfig({
-    provider,
-    model: String(formData.get("model") ?? ""),
-    apiKey: String(formData.get("api_key") ?? ""),
-    enabled: formData.get("enabled") === "on",
-  });
-  revalidatePath("/admin/ai");
-}
+  const intent = String(formData.get("intent") ?? "save");
+  if (!isAiProvider(provider)) return { status: "error", message: "Geçersiz AI provider." };
 
-export async function testAiProviderAction(formData: FormData) {
-  await requireAdmin();
-  const provider = String(formData.get("provider") ?? "");
-  if (!isAiProvider(provider)) throw new Error("Geçersiz AI provider.");
-  await testProviderConfig(provider);
-  revalidatePath("/admin/ai");
+  try {
+    if (intent === "test") {
+      await testProviderConfig(provider);
+      revalidatePath("/admin/ai");
+      return { status: "success", message: "DeepSeek bağlantısı başarılı." };
+    }
+
+    await saveProviderConfig({
+      provider,
+      model: String(formData.get("model") ?? ""),
+      apiKey: String(formData.get("api_key") ?? ""),
+      enabled: formData.get("enabled") === "on",
+    });
+    revalidatePath("/admin/ai");
+    return { status: "success", message: "DeepSeek ayarı kaydedildi." };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "AI ayarı kaydedilemedi.";
+    console.error("[ai-translation] provider.action.failed", { provider, intent, error: message });
+    return { status: "error", message };
+  }
 }
 
 export async function createTranslationJobAction(formData: FormData) {
@@ -67,15 +79,22 @@ export async function createTranslationJobAction(formData: FormData) {
   revalidatePath("/admin/ai");
 }
 
-export async function saveTranslationAutomationAction(formData: FormData) {
+export async function saveTranslationAutomationAction(_state: AiActionState, formData: FormData): Promise<AiActionState> {
   await requireAdmin();
-  await saveTranslationAutomation({
-    enabled: formData.get("enabled") === "on",
-    dailyTarget: Number(formData.get("daily_target") ?? 1000),
-    perRunLimit: 2,
-    retryFailed: formData.get("retry_failed") === "on",
-  });
-  revalidatePath("/admin/ai");
+  try {
+    await saveTranslationAutomation({
+      enabled: formData.get("enabled") === "on",
+      dailyTarget: Number(formData.get("daily_target") ?? 1000),
+      perRunLimit: 2,
+      retryFailed: formData.get("retry_failed") === "on",
+    });
+    revalidatePath("/admin/ai");
+    return { status: "success", message: "Otomatik çeviri ayarı güncellendi." };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Otomatik çeviri ayarı kaydedilemedi.";
+    console.error("[ai-translation] automation.save.failed", { error: message });
+    return { status: "error", message };
+  }
 }
 
 export async function runTranslationAutomationNowAction() {
@@ -135,18 +154,32 @@ export async function processTranslationJobStateAction(_state: ProcessTranslatio
   }
 }
 
-export async function pauseTranslationJobAction(formData: FormData) {
+export async function pauseTranslationJobAction(_state: AiActionState, formData: FormData): Promise<AiActionState> {
   await requireAdmin();
   const id = String(formData.get("job_id") ?? "");
-  if (!id) throw new Error("Çeviri işi eksik.");
-  await pauseTranslationJob(id);
-  revalidatePath("/admin/ai");
+  if (!id) return { status: "error", message: "Çeviri işi eksik." };
+  try {
+    await pauseTranslationJob(id);
+    revalidatePath("/admin/ai");
+    return { status: "success", message: "Çeviri işi duraklatıldı." };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Çeviri işi duraklatılamadı.";
+    console.error("[ai-translation] job.pause.failed", { jobId: id, error: message });
+    return { status: "error", message };
+  }
 }
 
-export async function resumeTranslationJobAction(formData: FormData) {
+export async function resumeTranslationJobAction(_state: AiActionState, formData: FormData): Promise<AiActionState> {
   await requireAdmin();
   const id = String(formData.get("job_id") ?? "");
-  if (!id) throw new Error("Çeviri işi eksik.");
-  await resumeTranslationJob(id);
-  revalidatePath("/admin/ai");
+  if (!id) return { status: "error", message: "Çeviri işi eksik." };
+  try {
+    await resumeTranslationJob(id);
+    revalidatePath("/admin/ai");
+    return { status: "success", message: "Çeviri işi devam ettirildi." };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Çeviri işi devam ettirilemedi.";
+    console.error("[ai-translation] job.resume.failed", { jobId: id, error: message });
+    return { status: "error", message };
+  }
 }

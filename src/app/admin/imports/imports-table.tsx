@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   flexRender,
   getCoreRowModel,
@@ -50,6 +51,11 @@ const columnWidths: Record<string, string> = {
   actions: "w-16",
 };
 
+const statusSuccessMessages: Record<"rejected" | "needs_fix", string> = {
+  rejected: "Oyun reddedildi.",
+  needs_fix: "Oyun düzeltme gerekli olarak işaretlendi.",
+};
+
 export function ImportsTable({ imports }: { imports: ScrapedGameImport[] }) {
   const router = useRouter();
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
@@ -80,10 +86,17 @@ export function ImportsTable({ imports }: { imports: ScrapedGameImport[] }) {
 
     try {
       await approveImportByIdAction(item.id);
+      toast.success("Oyun yayınlandı.", {
+        description: getImportTitle(item),
+      });
       router.refresh();
     } catch (error) {
       setHiddenIds((current) => withoutSetIds(current, [item.id]));
-      setErrorMessage(error instanceof Error ? error.message : "Oyun yayınlanamadı.");
+      const message = error instanceof Error ? error.message : "Oyun yayınlanamadı.";
+      setErrorMessage(message);
+      toast.error("Oyun yayınlanamadı.", {
+        description: message,
+      });
     } finally {
       setPendingIds((current) => withoutSetIds(current, [item.id]));
     }
@@ -100,6 +113,9 @@ export function ImportsTable({ imports }: { imports: ScrapedGameImport[] }) {
 
     try {
       await updateImportStatusAction(item.id, status);
+      toast.success(statusSuccessMessages[status], {
+        description: getImportTitle(item),
+      });
       router.refresh();
     } catch (error) {
       setStatusOverrides((current) => {
@@ -108,7 +124,11 @@ export function ImportsTable({ imports }: { imports: ScrapedGameImport[] }) {
         else delete next[item.id];
         return next;
       });
-      setErrorMessage(error instanceof Error ? error.message : "Import durumu güncellenemedi.");
+      const message = error instanceof Error ? error.message : "Import durumu güncellenemedi.";
+      setErrorMessage(message);
+      toast.error("Import durumu güncellenemedi.", {
+        description: message,
+      });
     } finally {
       setPendingIds((current) => withoutSetIds(current, [item.id]));
     }
@@ -186,16 +206,26 @@ export function ImportsTable({ imports }: { imports: ScrapedGameImport[] }) {
       setRowSelection({});
 
       if (failedResults.length > 0) {
-        setErrorMessage(
-          successfulIds.length > 0
-            ? `${successfulIds.length} oyun yayınlandı, ${failedResults.length} oyun yayınlanamadı. İlk hata: ${failedResults[0]?.error}`
-            : `Seçilen oyunlar yayınlanamadı. İlk hata: ${failedResults[0]?.error}`,
-        );
+        const message = successfulIds.length > 0
+          ? `${successfulIds.length} oyun yayınlandı, ${failedResults.length} oyun yayınlanamadı. İlk hata: ${failedResults[0]?.error}`
+          : `Seçilen oyunlar yayınlanamadı. İlk hata: ${failedResults[0]?.error}`;
+        setErrorMessage(message);
+        toast.warning(successfulIds.length > 0 ? "Toplu yayınlama kısmen tamamlandı." : "Toplu yayınlama tamamlanamadı.", {
+          description: message,
+        });
+      } else {
+        toast.success("Seçilen oyunlar yayınlandı.", {
+          description: `${successfulIds.length} oyun yayına alındı.`,
+        });
       }
 
       router.refresh();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Seçilen oyunlar yayınlanamadı.");
+      const message = error instanceof Error ? error.message : "Seçilen oyunlar yayınlanamadı.";
+      setErrorMessage(message);
+      toast.error("Seçilen oyunlar yayınlanamadı.", {
+        description: message,
+      });
     } finally {
       setPendingIds((current) => withoutSetIds(current, ids));
       setIsBulkPublishing(false);

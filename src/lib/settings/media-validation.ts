@@ -1,10 +1,19 @@
 export const SUPPORTED_IMAGE_MIME_TYPES = ["image/png", "image/jpeg", "image/webp", "image/x-icon", "image/vnd.microsoft.icon"] as const;
+export const SUPPORTED_AUDIO_MIME_TYPES = ["audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav", "audio/ogg", "audio/webm"] as const;
 
 export function matchesImageSignature(bytes: Uint8Array, mime: string) {
   if (mime === "image/png") return startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
   if (mime === "image/jpeg") return startsWith(bytes, [0xff, 0xd8, 0xff]);
   if (mime === "image/webp") return ascii(bytes, 0, "RIFF") && ascii(bytes, 8, "WEBP");
   if (mime === "image/x-icon" || mime === "image/vnd.microsoft.icon") return startsWith(bytes, [0x00, 0x00, 0x01, 0x00]);
+  return false;
+}
+
+export function matchesAudioSignature(bytes: Uint8Array, mime: string) {
+  if (mime === "audio/mpeg" || mime === "audio/mp3") return ascii(bytes, 0, "ID3") || (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0);
+  if (mime === "audio/wav" || mime === "audio/x-wav") return ascii(bytes, 0, "RIFF") && ascii(bytes, 8, "WAVE");
+  if (mime === "audio/ogg") return ascii(bytes, 0, "OggS");
+  if (mime === "audio/webm") return startsWith(bytes, [0x1a, 0x45, 0xdf, 0xa3]);
   return false;
 }
 

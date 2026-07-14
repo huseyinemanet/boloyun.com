@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { AdminCheckboxField } from "@/components/admin/admin-checkbox-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,8 @@ type CrawlerStats = {
   pendingDiscovered: number;
   scrapeLimit: number;
   scraped: number;
+  aiGenerated: number;
+  pendingReview: number;
   failed: number;
 };
 
@@ -42,6 +45,8 @@ const emptyStats: CrawlerStats = {
   pendingDiscovered: 0,
   scrapeLimit: 0,
   scraped: 0,
+  aiGenerated: 0,
+  pendingReview: 0,
   failed: 0,
 };
 
@@ -113,9 +118,13 @@ export function CrawlerRunner() {
         handleCrawlerEvent(JSON.parse(buffer) as CrawlerEvent);
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Crawler çalıştırılamadı.";
       setOk(false);
-      setMessage(error instanceof Error ? error.message : "Crawler çalıştırılamadı.");
-      setLogs((current) => [error instanceof Error ? error.message : "Crawler çalıştırılamadı.", ...current].slice(0, 8));
+      setMessage(errorMessage);
+      setLogs((current) => [errorMessage, ...current].slice(0, 8));
+      toast.error("Tarama çalıştırılamadı.", {
+        description: errorMessage,
+      });
     } finally {
       setIsRunning(false);
     }
@@ -128,6 +137,15 @@ export function CrawlerRunner() {
 
     if (event.type === "done") {
       setOk(event.ok);
+      if (event.ok) {
+        toast.success("Tarama tamamlandı.", {
+          description: `${event.stats.inserted.toLocaleString("tr-TR")} yeni oyun eklendi, ${event.stats.pendingReview.toLocaleString("tr-TR")} oyun onay kuyruğuna alındı.`,
+        });
+      } else {
+        toast.error("Tarama tamamlanamadı.", {
+          description: event.message,
+        });
+      }
     }
   }
 
@@ -159,7 +177,7 @@ export function CrawlerRunner() {
           <span className="mt-1 block text-xs font-normal text-muted-foreground">500, 5.000, 10.000 veya 100.000 yazabilirsin. Üst sınır 100.000.</span>
         </label>
         <label className="block text-sm font-bold">
-          Yeni eklenenlerden kaçı hemen scrape edilsin?
+          Yeni eklenenlerden kaçı hemen işlensin?
           <Input
             name="scrape_limit"
             type="number"
@@ -169,11 +187,11 @@ export function CrawlerRunner() {
             disabled={isRunning}
             className="mt-1 h-10 disabled:bg-muted/40"
           />
-          <span className="mt-1 block text-xs font-normal text-muted-foreground">Boş bırakırsan yeni bulunan kayıtların tamamı scrape edilir. Sayı girersen o kadarını işler.</span>
+          <span className="mt-1 block text-xs font-normal text-muted-foreground">Boş bırakırsan yeni bulunan kayıtların tamamı işlenir. Sayı girersen o kadarını işler.</span>
         </label>
         <AdminCheckboxField
           name="scrape_now"
-          label="Yeni bulunan oyunların bilgilerini hemen çek"
+          label="Yeni bulunan oyunları scrape et, AI içeriğini hazırla ve onay kuyruğuna al"
           defaultChecked
           disabled={isRunning}
           fieldClassName="md:col-span-2"
@@ -204,10 +222,12 @@ export function CrawlerRunner() {
             <ProgressStat label="Yeni eklenen" value={stats.inserted} />
             <ProgressStat label="Zaten vardı" value={stats.skipped} />
             <ProgressStat label="Bekleyen discovered" value={stats.pendingDiscovered} />
-            <ProgressStat label="Scrape edilen" value={stats.scraped} />
-            <ProgressStat label="Scrape hata" value={stats.failed} />
+            <ProgressStat label="Bilgisi çekilen" value={stats.scraped} />
+            <ProgressStat label="AI içerik" value={stats.aiGenerated} />
+            <ProgressStat label="Onay kuyruğu" value={stats.pendingReview} />
+            <ProgressStat label="Hata" value={stats.failed} />
             <ProgressStat label="Uygulanan limit" value={stats.limit} />
-            <ProgressStat label="Scrape limiti" value={stats.scrapeLimit} />
+            <ProgressStat label="İşlem limiti" value={stats.scrapeLimit} />
           </div>
 
           {logs.length > 0 ? (

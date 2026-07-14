@@ -1,4 +1,4 @@
-import { PlusIcon } from "lucide-react";
+import { IconSquareDashedTextPlusFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconSquareDashedTextPlusFillDuo18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Button } from "@/components/ui/button";
 import { getAdminStaticPages } from "@/lib/db-static-pages";
@@ -17,7 +17,7 @@ export default async function AdminStaticPagesPage() {
         actions={(
           <Button asChild variant="outline" className="h-10 font-bold">
             <a href="/admin/static-pages/new">
-              <PlusIcon />
+              <IconSquareDashedTextPlusFillDuo18 className="size-4" />
               Yeni Sayfa Ekle
             </a>
           </Button>

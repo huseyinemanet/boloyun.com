@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { SoundAnchor } from "@/components/audio/sound-anchor";
+import { SoundLink } from "@/components/audio/sound-link";
 import { Button } from "@/components/ui/button";
 import { getCurrentProfile } from "@/lib/auth";
 import { safeLocalPath } from "@/lib/security/navigation";
@@ -29,11 +30,11 @@ export default async function LoginPage({ searchParams }: Props) {
       {error ? <AuthMessage id="login-form-error" type="error">{loginError}</AuthMessage> : null}
 
       <Field>
-        <Button asChild variant="outline" className="h-10 w-full px-4 text-sm font-black">
-          <Link href={`/auth/google?next=${encodeURIComponent(next)}`} className="gap-2">
+        <Button asChild variant="outline" className="h-10 w-full px-4 text-sm font-semibold">
+          <SoundAnchor href={`/auth/google?next=${encodeURIComponent(next)}`} className="gap-2">
             <GoogleLogo className="size-4 shrink-0" />
             Google ile Giriş Yap
-          </Link>
+          </SoundAnchor>
         </Button>
       </Field>
 
@@ -42,8 +43,8 @@ export default async function LoginPage({ searchParams }: Props) {
       <LoginForm next={next} challenge={challenge === "1"} hasServerFieldError={hasFieldError} />
 
       <div className="mt-4 flex flex-wrap justify-between gap-2 text-sm font-semibold">
-        <Link href="/kayit" className="text-primary hover:underline">Kayıt Ol</Link>
-        <Link href="/sifremi-unuttum" className="text-primary hover:underline">Şifremi Unuttum</Link>
+        <SoundLink href="/kayit" className="text-primary hover:underline">Kayıt Ol</SoundLink>
+        <SoundLink href="/sifremi-unuttum" className="text-primary hover:underline">Şifremi Unuttum</SoundLink>
       </div>
     </AuthCard>
   );

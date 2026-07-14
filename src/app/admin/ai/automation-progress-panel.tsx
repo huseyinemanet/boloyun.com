@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useFormStatus } from "react-dom";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 import type { AiTranslationAutomation, AiTranslationJob, AiTranslationStats } from "@/lib/ai/types";
-import { saveTranslationAutomationAction } from "./actions";
+import { saveTranslationAutomationAction, type AiActionState } from "./actions";
 
 type AutomationProgressPanelProps = {
   automation: AiTranslationAutomation;
@@ -21,9 +24,17 @@ type DashboardSnapshot = {
   serverTime?: string;
 };
 
+const initialAiActionState: AiActionState = {
+  status: "idle",
+  message: "",
+};
+
 export function AutomationProgressPanel({ automation: initialAutomation, stats: initialStats }: AutomationProgressPanelProps) {
+  const router = useRouter();
+  const [actionState, formAction] = useActionState(saveTranslationAutomationAction, initialAiActionState);
   const [automation, setAutomation] = useState(initialAutomation);
   const [stats, setStats] = useState(initialStats);
+  const lastToastKey = useRef("");
 
   useEffect(() => {
     function handleDashboardSnapshot(event: Event) {
@@ -35,6 +46,22 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
     window.addEventListener("ai-translation:dashboard", handleDashboardSnapshot);
     return () => window.removeEventListener("ai-translation:dashboard", handleDashboardSnapshot);
   }, []);
+
+  useEffect(() => {
+    if (actionState.status === "idle" || !actionState.message) return;
+
+    const toastKey = `${actionState.status}:${actionState.message}`;
+    if (lastToastKey.current === toastKey) return;
+    lastToastKey.current = toastKey;
+
+    if (actionState.status === "success") {
+      toast.success(actionState.message);
+      router.refresh();
+      return;
+    }
+
+    toast.error(actionState.message);
+  }, [actionState.message, actionState.status, router]);
 
   const isDone = stats.totalPublished > 0 && stats.completed >= stats.totalPublished;
   const totalPercent = isDone ? 100 : stats.totalPublished > 0 ? Math.floor((stats.completed / stats.totalPublished) * 100) : 0;
@@ -91,19 +118,29 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
         </p>
       ) : null}
 
-      <form action={saveTranslationAutomationAction} className="mt-4 grid items-end gap-3 md:grid-cols-[180px_auto_1fr]">
-        <label className="grid gap-1 text-sm font-bold">
+      <form action={formAction} className="mt-4 grid items-end gap-3 md:grid-cols-[180px_auto_1fr]">
+        <label className="grid gap-1 text-sm font-semibold">
           Günlük hedef
           <Input name="daily_target" type="number" min={1} max={5000} defaultValue={automation.dailyTarget} />
         </label>
-        <label className="flex h-10 items-center gap-2 text-sm font-semibold text-muted-foreground">
+        <label className="flex h-10 items-center gap-2 text-sm font-medium text-muted-foreground">
           <Checkbox name="enabled" defaultChecked={automation.enabled} />
           Açık
         </label>
         <input type="hidden" name="retry_failed" value="on" />
-        <Button type="submit" variant="outline" className="w-full md:w-auto">Kaydet</Button>
+        <AutomationSubmitButton />
       </form>
     </section>
+  );
+}
+
+function AutomationSubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button type="submit" variant="outline" className="w-full md:w-auto" disabled={pending}>
+      {pending ? "Kaydediliyor..." : "Kaydet"}
+    </Button>
   );
 }
 

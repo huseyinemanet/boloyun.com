@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PencilIcon, PlusIcon } from "lucide-react";
+import { IconPromotionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconPromotionFillDuo18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group";
@@ -37,7 +38,7 @@ export default async function AdminAdsPage({ searchParams }: AdminAdsPageProps) 
             </div>
             <Button asChild variant="outline" size="lg" className="font-semibold">
               <Link href={newAdHref}>
-                <PlusIcon />
+                <IconPromotionFillDuo18 className="size-4" />
                 Yeni reklam
               </Link>
             </Button>

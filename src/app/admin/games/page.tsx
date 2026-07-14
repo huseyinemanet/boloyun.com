@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { getAdminGamesPage } from "@/lib/db-games";
 import type { PublishStatus } from "@/types/game";
 import { decodeKeysetCursor, parseKeysetDirection } from "@/lib/keyset-pagination";
+import { GameNoticeToast } from "./game-notice-toast";
 
 export const dynamic = "force-dynamic";
 const PER_PAGE = 50;
@@ -19,6 +20,7 @@ type AdminGamesPageProps = {
   searchParams: Promise<{
     cursor?: string;
     direction?: string;
+    notice?: string;
   }>;
 };
 
@@ -30,6 +32,8 @@ export default async function AdminGamesPage({ searchParams }: AdminGamesPagePro
 
   return (
     <div className="space-y-3">
+      <GameNoticeToast notice={params.notice} />
+
       <AdminPageHeader title="Oyunlar" description="Yayındaki, taslak ve pasif oyunları buradan düzenleyebilirsin." />
 
       <AdminCursorPagination basePath="/admin/games" itemCount={games.length} itemName="oyun" previousCursor={previousCursor} nextCursor={nextCursor} />

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { DEFAULT_SETTINGS } from "@/lib/settings/defaults";
 import { isGameSourceAllowed } from "@/lib/settings/game-security";
-import { matchesImageSignature } from "@/lib/settings/media-validation";
+import { matchesAudioSignature, matchesImageSignature } from "@/lib/settings/media-validation";
 import { SETTINGS_SECTIONS } from "@/lib/settings/types";
 import { renderSeoTemplate, validateSettingsSection } from "@/lib/settings/validation";
 import { sanitizeSvgInput } from "@/lib/sanitize/html";
@@ -42,6 +42,16 @@ test("image signatures must match the declared MIME type", () => {
   assert.equal(matchesImageSignature(Uint8Array.from([0xff, 0xd8, 0xff]), "image/jpeg"), true);
 });
 
+test("audio signatures must match the declared MIME type", () => {
+  assert.equal(matchesAudioSignature(Uint8Array.from([0xff, 0xfb, 0x90, 0x64]), "audio/mpeg"), true);
+  assert.equal(matchesAudioSignature(Uint8Array.from([0x49, 0x44, 0x33, 0x04]), "audio/mp3"), true);
+  assert.equal(matchesAudioSignature(bytes("RIFF0000WAVE"), "audio/wav"), true);
+  assert.equal(matchesAudioSignature(bytes("OggS0000"), "audio/ogg"), true);
+  assert.equal(matchesAudioSignature(Uint8Array.from([0x1a, 0x45, 0xdf, 0xa3]), "audio/webm"), true);
+  assert.equal(matchesAudioSignature(bytes("<svg></svg>"), "audio/mpeg"), false);
+  assert.equal(matchesAudioSignature(bytes("RIFF0000WEBP"), "audio/wav"), false);
+});
+
 test("SVG temizleyici yalnız güvenli etiket ve nitelikleri kabul eder", () => {
   assert.equal(sanitizeSvgInput('<svg viewBox="0 0 24 24"><path d="M1 2" fill="none"/></svg>'), '<svg viewBox="0 0 24 24"><path d="M1 2" fill="none"/></svg>');
   for (const unsafe of [
@@ -52,3 +62,7 @@ test("SVG temizleyici yalnız güvenli etiket ve nitelikleri kabul eder", () => 
     '<svg><use href="data:image/svg+xml,x"/></svg>',
   ]) assert.equal(sanitizeSvgInput(unsafe), "");
 });
+
+function bytes(value: string) {
+  return Uint8Array.from([...value].map((character) => character.charCodeAt(0)));
+}

@@ -1,18 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import Link from "next/link";
-import { ArrowDownIcon, ArrowUpIcon, HistoryIcon, PlusIcon, RotateCcwIcon, SaveIcon, Trash2Icon, UploadIcon } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
+import { ArrowDownIcon, ArrowUpIcon, Trash2Icon } from "lucide-react";
+import { toast } from "sonner";
+import { IconAddSectionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconAddSectionFillDuo18";
+import { IconCloudUploadFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCloudUploadFillDuo18";
+import { IconDatabaseCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconDatabaseCheckFillDuo18";
+import { IconFolderImportFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconFolderImportFillDuo18";
+import { IconMediaPauseFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMediaPauseFillDuo18";
+import { IconMediaPlayFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMediaPlayFillDuo18";
+import { IconSavedItemsFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconSavedItemsFillDuo18";
+import { IconUndo3FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconUndo3FillDuo18";
+import { IconVersionsFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconVersionsFillDuo18";
 import { AdminCheckboxField } from "@/components/admin/admin-checkbox-field";
+import { SoundButton } from "@/components/audio/sound-button";
+import { SoundLink } from "@/components/audio/sound-link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { HomepageSectionInput } from "@/lib/db-homepage-sections";
-import type { SettingsRecord, SettingsRevision, SettingsSection } from "@/lib/settings/types";
+import type { SettingsRecord, SettingsSection } from "@/lib/settings/types";
 import { renderSeoTemplate } from "@/lib/settings/validation";
 import type { SystemStatus } from "@/lib/system-status";
-import { clearSettingsCacheAction, restoreSettingsAction, saveSettingsAction } from "./actions";
+import { clearSettingsCacheAction, saveSettingsAction } from "./actions";
 
 type Draft = Record<string, unknown>;
 
@@ -25,27 +37,24 @@ const sectionDescriptions: Record<SettingsSection, string> = {
   community: "Üyelik, kullanıcı adı, yorum ve etkileşim kuralları.",
   integrations: "Analitik sağlayıcı kimlikleri ve servis bağlantılarının durumu.",
   security: "Dosya yükleme ve oyun iframe domain güvenliği.",
+  audio: "Site genelindeki tıklama sesini ve kullanılan ses dosyasını yönet.",
   system: "Uygulama sağlığı, servis durumu ve bakım işlemleri.",
 };
 
 export function SettingsForm({
   record,
-  revisions,
   homepageSections: initialHomepageSections,
   systemStatus,
 }: {
   record: SettingsRecord;
-  revisions: SettingsRevision[];
   homepageSections: HomepageSectionInput[];
   systemStatus: SystemStatus | null;
 }) {
   const initialDraft = useMemo(() => ({ ...record.value }) as Draft, [record.value]);
   const [baseline, setBaseline] = useState<Draft>(initialDraft);
   const [draft, setDraft] = useState<Draft>(initialDraft);
-  const [version, setVersion] = useState(record.version);
   const [homepageBaseline, setHomepageBaseline] = useState(initialHomepageSections);
   const [homepageSections, setHomepageSections] = useState(initialHomepageSections);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -65,6 +74,7 @@ export function SettingsForm({
     setHomepageSections(homepageBaseline.map((section) => ({ ...section, manualGameIds: [...section.manualGameIds] })));
     setError(null);
     setMessage("Kaydedilmemiş değişiklikler sıfırlandı.");
+    toast.success("Kaydedilmemiş değişiklikler sıfırlandı.");
   }
 
   function save() {
@@ -72,33 +82,17 @@ export function SettingsForm({
     setMessage(null);
     startTransition(async () => {
       try {
-        const result = await saveSettingsAction({ section: record.section, version, value: draft, homepageSections: record.section === "appearance" ? homepageSections : undefined });
+        const result = await saveSettingsAction({ section: record.section, value: draft, homepageSections: record.section === "appearance" ? homepageSections : undefined });
         const saved = { ...result.record.value } as Draft;
         setDraft(saved);
         setBaseline(saved);
-        setVersion(result.record.version);
         setHomepageBaseline(homepageSections.map((section) => ({ ...section, manualGameIds: [...section.manualGameIds] })));
-        setMessage(`Ayarlar sürüm ${result.record.version} olarak kaydedildi.`);
+        setMessage("Ayarlar kaydedildi.");
+        toast.success("Ayarlar kaydedildi.");
       } catch (caught) {
-        setError(errorMessage(caught));
-      }
-    });
-  }
-
-  function restore(revision: SettingsRevision) {
-    if (isDirty && !window.confirm("Kaydedilmemiş değişiklikler silinecek. Devam edilsin mi?")) return;
-    setError(null);
-    startTransition(async () => {
-      try {
-        const result = await restoreSettingsAction(record.section, revision.id, version);
-        const saved = { ...result.record.value } as Draft;
-        setDraft(saved);
-        setBaseline(saved);
-        setVersion(result.record.version);
-        setMessage(`Sürüm ${revision.version} geri yüklendi ve yeni sürüm ${result.record.version} oluşturuldu.`);
-        setHistoryOpen(false);
-      } catch (caught) {
-        setError(errorMessage(caught));
+        const message = errorMessage(caught);
+        setError(message);
+        toast.error(message);
       }
     });
   }
@@ -106,13 +100,11 @@ export function SettingsForm({
   return (
     <div className="space-y-3 pb-24">
       <div>
-        <h2 className="text-lg font-black">{sectionTitle(record.section)}</h2>
+        <h2 className="text-lg font-semibold">{sectionTitle(record.section)}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{sectionDescriptions[record.section]}</p>
       </div>
 
       {renderSection(record.section, draft, update, homepageSections, setHomepageSections, systemStatus)}
-
-      {historyOpen ? <RevisionHistory revisions={revisions} currentVersion={version} pending={pending} onRestore={restore} /> : null}
 
       {error ? <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm font-semibold text-destructive">{error}</p> : null}
       {message ? <p role="status" className="rounded-md border border-success/30 bg-success/10 p-3 text-sm font-semibold text-success">{message}</p> : null}
@@ -120,12 +112,11 @@ export function SettingsForm({
       <div className="sticky bottom-3 z-30 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card/95 p-3 shadow-xl backdrop-blur">
         <div>
           <p className="text-sm font-bold">{isDirty ? `${changeCount} değişiklik kaydedilmedi` : "Tüm değişiklikler kaydedildi"}</p>
-          <p className="text-xs text-muted-foreground">Sürüm {version}{record.updatedByLabel ? ` · Son değişiklik: ${record.updatedByLabel}` : ""}</p>
+          {record.updatedByLabel ? <p className="text-xs text-muted-foreground">Son değişiklik: {record.updatedByLabel}</p> : null}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" aria-label="Sürüm Geçmişi" onClick={() => setHistoryOpen((open) => !open)}><HistoryIcon /><span className="hidden sm:inline">Sürüm Geçmişi</span></Button>
-          <Button type="button" variant="outline" aria-label="Değişiklikleri Sıfırla" onClick={reset} disabled={!isDirty || pending}><RotateCcwIcon /><span className="hidden sm:inline">Değişiklikleri Sıfırla</span></Button>
-          <Button type="button" aria-label="Değişiklikleri Kaydet" onClick={save} disabled={!isDirty || pending || record.section === "system"}><SaveIcon /><span className="hidden sm:inline">{pending ? "Kaydediliyor…" : "Değişiklikleri Kaydet"}</span></Button>
+          <SoundButton type="button" variant="outline" aria-label="Değişiklikleri Sıfırla" onClick={reset} disabled={!isDirty || pending}><IconUndo3FillDuo18 className="size-4" /><span className="hidden sm:inline">Değişiklikleri Sıfırla</span></SoundButton>
+          <SoundButton type="button" aria-label="Değişiklikleri Kaydet" onClick={save} disabled={!isDirty || pending || record.section === "system"}><IconSavedItemsFillDuo18 className="size-4" /><span className="hidden sm:inline">{pending ? "Kaydediliyor…" : "Değişiklikleri Kaydet"}</span></SoundButton>
         </div>
       </div>
     </div>
@@ -149,6 +140,7 @@ function renderSection(
     case "community": return <CommunityFields draft={draft} update={update} />;
     case "integrations": return <IntegrationFields draft={draft} update={update} status={systemStatus} />;
     case "security": return <SecurityFields draft={draft} update={update} status={systemStatus} />;
+    case "audio": return <AudioFields draft={draft} update={update} />;
     case "system": return <SystemFields status={systemStatus} />;
   }
 }
@@ -200,7 +192,7 @@ function SeoFields({ draft, update }: FieldsProps) {
 }
 
 function AdFields({ draft, update }: FieldsProps) {
-  return <div className="grid gap-3 xl:grid-cols-2"><Card title="Global reklam davranışı"><ToggleField label="Reklamları etkinleştir" checked={bool(draft.enabled)} onChange={(v) => update("enabled", v)} /><ToggleField label="Üyelere reklam göster" checked={bool(draft.showToMembers)} onChange={(v) => update("showToMembers", v)} /><ToggleField label="Oyun açılış reklamı" checked={bool(draft.preRollEnabled)} onChange={(v) => update("preRollEnabled", v)} /><NumberField label="Reklam geçme süresi" value={num(draft.preRollSkipSeconds)} min={0} max={60} onChange={(v) => update("preRollSkipSeconds", v)} /></Card><Card title="Reklam içerikleri"><p className="text-sm text-muted-foreground">Header, ana sayfa, kategori ve oyun slotlarının kodları ayrı reklam yöneticisinde tutulur.</p><Button asChild variant="outline"><Link href="/admin/ads">Reklam Yönetimi’ni Aç</Link></Button><TextAreaField label="ads.txt içeriği" value={str(draft.adsTxt)} rows={8} onChange={(v) => update("adsTxt", v)} /></Card></div>;
+  return <div className="grid gap-3 xl:grid-cols-2"><Card title="Global reklam davranışı"><ToggleField label="Reklamları etkinleştir" checked={bool(draft.enabled)} onChange={(v) => update("enabled", v)} /><ToggleField label="Üyelere reklam göster" checked={bool(draft.showToMembers)} onChange={(v) => update("showToMembers", v)} /><ToggleField label="Oyun açılış reklamı" checked={bool(draft.preRollEnabled)} onChange={(v) => update("preRollEnabled", v)} /><NumberField label="Reklam geçme süresi" value={num(draft.preRollSkipSeconds)} min={0} max={60} onChange={(v) => update("preRollSkipSeconds", v)} /></Card><Card title="Reklam içerikleri"><p className="text-sm text-muted-foreground">Header, ana sayfa, kategori ve oyun slotlarının kodları ayrı reklam yöneticisinde tutulur.</p><Button asChild variant="outline"><SoundLink href="/admin/ads">Reklam Yönetimi’ni Aç</SoundLink></Button><TextAreaField label="ads.txt içeriği" value={str(draft.adsTxt)} rows={8} onChange={(v) => update("adsTxt", v)} /></Card></div>;
 }
 
 function CommunityFields({ draft, update }: FieldsProps) {
@@ -215,10 +207,21 @@ function SecurityFields({ draft, update, status }: FieldsProps & { status: Syste
   return <div className="grid gap-3 xl:grid-cols-2"><Card title="Dosya yükleme"><NumberField label="Maksimum yükleme boyutu (MB)" value={num(draft.uploadMaxMb)} min={1} max={20} onChange={(v) => update("uploadMaxMb", v)} /><ListField label="İzin verilen MIME türleri" value={strings(draft.allowedUploadMimeTypes)} onChange={(v) => update("allowedUploadMimeTypes", v)} /></Card><Card title="Iframe domain izin listesi"><ToggleField label="İzin listesini zorunlu tut" description="Açılmadan önce mevcut oyun domainlerini aşağıdaki listeye ekleyin." checked={bool(draft.enforceIframeAllowlist)} onChange={(v) => update("enforceIframeAllowlist", v)} /><ListField label="İzin verilen domainler" value={strings(draft.iframeAllowlist)} onChange={(v) => update("iframeAllowlist", v)} />{status?.detectedIframeDomains.length ? <div><p className="text-xs font-bold">Mevcut oyunlarda algılanan domainler</p><p className="mt-1 break-words text-xs text-muted-foreground">{status.detectedIframeDomains.join(", ")}</p></div> : null}</Card></div>;
 }
 
+function AudioFields({ draft, update }: FieldsProps) {
+  return <div className="grid gap-3 xl:grid-cols-2">
+    <Card title="Tıklama sesi">
+      <SwitchField label="Tıklama sesini etkinleştir" description="Public, auth ve admin yüzeylerinde seçilmiş link ve aksiyonlarda sesi çalar." checked={bool(draft.clickSoundEnabled)} onChange={(value) => update("clickSoundEnabled", value)} />
+    </Card>
+    <Card title="Ses dosyası">
+      <AudioUploadField value={str(draft.clickSoundUrl)} onChange={(value) => update("clickSoundUrl", value)} />
+    </Card>
+  </div>;
+}
+
 function SystemFields({ status }: { status: SystemStatus | null }) {
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  return <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><SystemCard title="Uygulama sürümü" value={status?.appVersion ?? "-"} /><SystemCard title="Veritabanı" value={status?.database ?? "Bağlantı yok"} /><SystemCard title="Cloudflare R2" value={status?.r2 ?? "Yapılandırılmadı"} /><SystemCard title="Son import hareketi" value={status?.lastImportAt ? formatRelativeDate(status.lastImportAt) : "Kayıt yok"} /></div><Card title="Bakım işlemleri"><p className="text-sm text-muted-foreground">Ayarlar ve public oyun listeleri için kullanılan Next veri önbelleklerini geçersiz kılar.</p><Button type="button" variant="outline" disabled={pending} onClick={() => startTransition(async () => { const result = await clearSettingsCacheAction(); setMessage(`Önbellek ${new Date(result.clearedAt).toLocaleTimeString("tr-TR")} tarihinde temizlendi.`); })}>{pending ? "Temizleniyor…" : "Önbelleği Temizle"}</Button>{message ? <p className="text-sm font-semibold text-success">{message}</p> : null}</Card></div>;
+  return <div className="space-y-3"><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4"><SystemCard title="Uygulama sürümü" value={status?.appVersion ?? "-"} icon={<IconVersionsFillDuo18 className="size-4" />} /><SystemCard title="Veritabanı" value={status?.database ?? "Bağlantı yok"} icon={<IconDatabaseCheckFillDuo18 className="size-4" />} /><SystemCard title="Cloudflare R2" value={status?.r2 ?? "Yapılandırılmadı"} icon={<IconCloudUploadFillDuo18 className="size-4" />} /><SystemCard title="Son import hareketi" value={status?.lastImportAt ? formatRelativeDate(status.lastImportAt) : "Kayıt yok"} icon={<IconFolderImportFillDuo18 className="size-4" />} /></div><section className="space-y-3 py-1"><div><h3 className="font-semibold">Bakım işlemleri</h3><p className="mt-2 text-sm text-muted-foreground">Ayarlar ve public oyun listeleri için kullanılan Next veri önbelleklerini geçersiz kılar.</p></div><SoundButton type="button" variant="outline" disabled={pending} onClick={() => startTransition(async () => { try { const result = await clearSettingsCacheAction(); const nextMessage = `Önbellek ${new Date(result.clearedAt).toLocaleTimeString("tr-TR")} tarihinde temizlendi.`; setMessage(nextMessage); toast.success(nextMessage); } catch (caught) { toast.error(errorMessage(caught)); } })}>{pending ? "Temizleniyor…" : "Önbelleği Temizle"}</SoundButton>{message ? <p className="text-sm font-semibold text-success">{message}</p> : null}</section></div>;
 }
 
 function formatRelativeDate(value: string) {
@@ -242,37 +245,127 @@ function HomepageSectionsEditor({ sections, setSections }: { sections: HomepageS
   function updateSection(index: number, patch: Partial<HomepageSectionInput>) { setSections((current) => current.map((section, itemIndex) => itemIndex === index ? { ...section, ...patch } : section)); }
   function move(index: number, direction: -1 | 1) { setSections((current) => { const next = [...current]; const target = index + direction; if (target < 0 || target >= next.length) return current; [next[index], next[target]] = [next[target], next[index]]; return next.map((item, order) => ({ ...item, sortOrder: order })); }); }
   function add() { setSections((current) => [...current, { id: null, title: "Yeni Bölüm", sectionType: "latest_games", sourceType: "", sourceId: "", manualGameIds: [], limitCount: 12, sortOrder: current.length, visibility: "all", status: "active" }]); }
-  return <Card title="Ana sayfa bölümleri" actions={<Button type="button" size="sm" variant="outline" onClick={add}><PlusIcon />Bölüm Ekle</Button>}><p className="text-xs text-muted-foreground">Bölümler yukarıdan aşağıya ana sayfadaki sırayı belirler. Manuel oyun kimliklerini her satıra bir UUID gelecek şekilde girin.</p>{sections.length ? <div className="space-y-3">{sections.map((section, index) => <div key={section.id ?? `new-${index}`} className="rounded-md border border-border bg-background p-3"><div className="flex items-start justify-between gap-2"><p className="text-xs font-black">{index + 1}. bölüm</p><div className="flex gap-1"><Button type="button" size="icon" variant="ghost" disabled={index === 0} onClick={() => move(index, -1)} aria-label="Yukarı taşı"><ArrowUpIcon /></Button><Button type="button" size="icon" variant="ghost" disabled={index === sections.length - 1} onClick={() => move(index, 1)} aria-label="Aşağı taşı"><ArrowDownIcon /></Button><Button type="button" size="icon" variant="ghost" onClick={() => setSections((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label="Bölümü sil"><Trash2Icon /></Button></div></div><div className="mt-2 grid gap-3 md:grid-cols-2 xl:grid-cols-4"><TextField label="Başlık" value={section.title} onChange={(v) => updateSection(index, { title: v })} /><SelectField label="Tür" value={section.sectionType} options={sectionTypeOptions} onChange={(v) => updateSection(index, { sectionType: v as HomepageSectionInput["sectionType"] })} /><NumberField label="Oyun sayısı" value={section.limitCount} min={1} max={60} onChange={(v) => updateSection(index, { limitCount: v })} /><SelectField label="Durum" value={section.status} options={[["active", "Aktif"], ["inactive", "Kapalı"]]} onChange={(v) => updateSection(index, { status: v as "active" | "inactive" })} /></div>{section.sectionType === "category_based" || section.sectionType === "tag_based" ? <div className="mt-3"><TextField label="Kaynak UUID" value={section.sourceId} onChange={(v) => updateSection(index, { sourceId: v, sourceType: section.sectionType === "category_based" ? "category" : "tag" })} /></div> : null}{section.sectionType === "manual_games" ? <div className="mt-3"><ListField label="Manuel oyun UUID’leri" value={section.manualGameIds} onChange={(v) => updateSection(index, { manualGameIds: v })} /></div> : null}</div>)}</div> : <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">Henüz özel bölüm yok. Mevcut sabit ana sayfa düzeni fallback olarak kullanılacak.</p>}</Card>;
+  return <Card title="Ana sayfa bölümleri" actions={<SoundButton type="button" size="sm" variant="outline" onClick={add}><IconAddSectionFillDuo18 className="size-4" />Bölüm Ekle</SoundButton>}><p className="text-xs text-muted-foreground">Bölümler yukarıdan aşağıya ana sayfadaki sırayı belirler. Manuel oyun kimliklerini her satıra bir UUID gelecek şekilde girin.</p>{sections.length ? <div className="space-y-3">{sections.map((section, index) => <div key={section.id ?? `new-${index}`} className="rounded-md border border-border bg-background p-3"><div className="flex items-start justify-between gap-2"><p className="text-xs font-semibold">{index + 1}. bölüm</p><div className="flex gap-1"><SoundButton type="button" size="icon" variant="ghost" disabled={index === 0} onClick={() => move(index, -1)} aria-label="Yukarı taşı"><ArrowUpIcon /></SoundButton><SoundButton type="button" size="icon" variant="ghost" disabled={index === sections.length - 1} onClick={() => move(index, 1)} aria-label="Aşağı taşı"><ArrowDownIcon /></SoundButton><SoundButton type="button" size="icon" variant="ghost" onClick={() => setSections((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label="Bölümü sil"><Trash2Icon /></SoundButton></div></div><div className="mt-2 grid gap-3 md:grid-cols-2 xl:grid-cols-4"><TextField label="Başlık" value={section.title} onChange={(v) => updateSection(index, { title: v })} /><SelectField label="Tür" value={section.sectionType} options={sectionTypeOptions} onChange={(v) => updateSection(index, { sectionType: v as HomepageSectionInput["sectionType"] })} /><NumberField label="Oyun sayısı" value={section.limitCount} min={1} max={60} onChange={(v) => updateSection(index, { limitCount: v })} /><SelectField label="Durum" value={section.status} options={[["active", "Aktif"], ["inactive", "Kapalı"]]} onChange={(v) => updateSection(index, { status: v as "active" | "inactive" })} /></div>{section.sectionType === "category_based" || section.sectionType === "tag_based" ? <div className="mt-3"><TextField label="Kaynak UUID" value={section.sourceId} onChange={(v) => updateSection(index, { sourceId: v, sourceType: section.sectionType === "category_based" ? "category" : "tag" })} /></div> : null}{section.sectionType === "manual_games" ? <div className="mt-3"><ListField label="Manuel oyun UUID’leri" value={section.manualGameIds} onChange={(v) => updateSection(index, { manualGameIds: v })} /></div> : null}</div>)}</div> : <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">Henüz özel bölüm yok. Mevcut sabit ana sayfa düzeni fallback olarak kullanılacak.</p>}</Card>;
 }
 
 const sectionTypeOptions: Array<[string, string]> = [["latest_games", "Yeni oyunlar"], ["popular_games", "Popüler oyunlar"], ["trending_games", "Trend oyunlar"], ["manual_games", "Manuel oyunlar"], ["category_based", "Kategori bazlı"], ["tag_based", "Etiket bazlı"], ["random_picks", "Rastgele seçimler"]];
 
-function Card({ title, children, className = "", actions }: { title: string; children: React.ReactNode; className?: string; actions?: React.ReactNode }) { return <section className={`rounded-md border border-border bg-card p-4 ${className}`}><div className="mb-3 flex items-center justify-between gap-3"><h3 className="font-black">{title}</h3>{actions}</div><div className="grid gap-3">{children}</div></section>; }
-function StatusCard({ title, status = "Yapılandırılmadı" }: { title: string; status?: string }) { return <div className="rounded-md border border-border bg-card p-4"><p className="text-sm font-black">{title}</p><p className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-bold ${status === "Yapılandırıldı" || status === "Bağlı" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>{status}</p></div>; }
-function SystemCard({ title, value }: { title: string; value: string }) { return <div className="rounded-md border border-border bg-card p-4"><p className="text-xs font-bold text-muted-foreground">{title}</p><p className="mt-2 text-lg font-black">{value}</p></div>; }
+function Card({ title, children, className = "", actions }: { title: string; children: React.ReactNode; className?: string; actions?: React.ReactNode }) { return <section className={`rounded-md border border-border bg-card p-4 ${className}`}><div className="mb-3 flex items-center justify-between gap-3"><h3 className="font-semibold">{title}</h3>{actions}</div><div className="grid gap-3">{children}</div></section>; }
+function StatusCard({ title, status = "Yapılandırılmadı" }: { title: string; status?: string }) { return <div className="rounded-md border border-border bg-card p-4"><p className="text-sm font-semibold">{title}</p><p className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-bold ${status === "Yapılandırıldı" || status === "Bağlı" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>{status}</p></div>; }
+function SystemCard({ title, value, icon }: { title: string; value: string; icon?: React.ReactNode }) { return <div className="rounded-md border border-border bg-card p-3"><div className="flex items-start justify-between gap-2"><p className="text-xs font-semibold text-muted-foreground">{title}</p>{icon ? <span className="text-primary/80">{icon}</span> : null}</div><p className="mt-1 text-lg font-semibold">{value}</p></div>; }
 function TextField({ label, value, onChange, type = "text", disabled = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; disabled?: boolean }) { return <label className="grid gap-1 text-sm font-bold">{label}<Input type={type} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} /></label>; }
 function TextAreaField({ label, value, onChange, rows = 4 }: { label: string; value: string; onChange: (value: string) => void; rows?: number }) { return <label className="grid gap-1 text-sm font-bold">{label}<Textarea value={value} rows={rows} onChange={(event) => onChange(event.target.value)} /></label>; }
 function NumberField({ label, value, onChange, min, max }: { label: string; value: number; onChange: (value: number) => void; min: number; max: number }) { return <label className="grid gap-1 text-sm font-bold">{label}<Input type="number" value={value} min={min} max={max} onChange={(event) => onChange(Number(event.target.value))} /></label>; }
 function SelectField({ label, value, options, onChange }: { label: string; value: string; options: Array<[string, string]>; onChange: (value: string) => void }) { return <label className="grid gap-1 text-sm font-bold">{label}<Select value={value} onValueChange={onChange}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{options.map(([key, text]) => <SelectItem key={key} value={key}>{text}</SelectItem>)}</SelectContent></Select></label>; }
 function ToggleField({ label, description, checked, onChange }: { label: string; description?: string; checked: boolean; onChange: (value: boolean) => void }) { return <AdminCheckboxField label={label} description={description} checked={checked} onCheckedChange={(value) => onChange(value === true)} />; }
+function SwitchField({ label, description, checked, onChange }: { label: string; description?: string; checked: boolean; onChange: (value: boolean) => void }) { const id = useId(); return <div className="flex items-center gap-4"><Switch id={id} checked={checked} onCheckedChange={onChange} /><label htmlFor={id} className="grid gap-1 text-sm"><span className="font-bold">{label}</span>{description ? <span className="text-xs font-medium leading-5 text-muted-foreground">{description}</span> : null}</label></div>; }
 function ListField({ label, value, onChange }: { label: string; value: string[]; onChange: (value: string[]) => void }) { return <label className="grid gap-1 text-sm font-bold">{label}<Textarea value={value.join("\n")} rows={5} onChange={(event) => onChange(event.target.value.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean))} /></label>; }
+
+function AudioUploadField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!value) {
+      audioRef.current = null;
+      return;
+    }
+
+    const audio = new Audio(value);
+    audio.preload = "auto";
+    const stop = () => setPlaying(false);
+    audio.addEventListener("ended", stop);
+    audio.addEventListener("pause", stop);
+    audioRef.current = audio;
+
+    return () => {
+      audio.pause();
+      audio.removeEventListener("ended", stop);
+      audio.removeEventListener("pause", stop);
+      audioRef.current = null;
+      setPlaying(false);
+    };
+  }, [value]);
+
+  async function upload(file?: File) {
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    const body = new FormData();
+    body.set("file", file);
+
+    try {
+      const response = await fetch("/api/admin/settings/audio", { method: "POST", body });
+      const result = await response.json() as { url?: string; error?: string };
+      if (!response.ok || !result.url) throw new Error(result.error || "Ses dosyası yüklenemedi.");
+      onChange(result.url);
+      toast.success("Ses dosyası R2’ye yüklendi.");
+    } catch (caught) {
+      const message = errorMessage(caught);
+      setError(message);
+      toast.error(message);
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  async function togglePreview() {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (!audio.paused) {
+      audio.pause();
+      setPlaying(false);
+      return;
+    }
+
+    try {
+      audio.currentTime = 0;
+      const result = audio.play();
+      if (result) await result;
+      setPlaying(true);
+    } catch {
+      setPlaying(false);
+      toast.error("Ses önizlemesi başlatılamadı.");
+    }
+  }
+
+  return <div className="grid gap-3">
+    <label className="grid gap-1 text-sm font-bold">
+      Ses dosyası yükle
+      <Input ref={inputRef} type="file" accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/ogg,audio/webm" disabled={uploading} onChange={(event) => upload(event.target.files?.[0])} />
+    </label>
+    <div className="flex items-center gap-2">
+      <SoundButton type="button" size="icon" variant="outline" aria-label={playing ? "Önizlemeyi duraklat" : "Önizlemeyi oynat"} title={playing ? "Önizlemeyi duraklat" : "Önizlemeyi oynat"} onClick={togglePreview} disabled={!value || uploading}>
+        {playing ? <IconMediaPauseFillDuo18 className="size-4" /> : <IconMediaPlayFillDuo18 className="size-4" />}
+      </SoundButton>
+      <div className="min-w-0">
+        <p className="truncate text-xs font-semibold">{value || "Ses dosyası seçilmedi."}</p>
+        <p className="text-xs text-muted-foreground">{uploading ? "Yükleniyor…" : "MP3, WAV, OGG veya WebM yükleyebilirsin."}</p>
+      </div>
+    </div>
+    {error ? <p className="text-xs font-semibold text-destructive">{error}</p> : null}
+  </div>;
+}
 
 function AssetField({ label, value, kind, onChange }: { label: string; value: string; kind: "logo" | "favicon" | "cover"; onChange: (value: string) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  async function upload(file?: File) { if (!file) return; setUploading(true); setError(null); const body = new FormData(); body.set("file", file); body.set("kind", kind); try { const response = await fetch("/api/admin/settings/assets", { method: "POST", body }); const result = await response.json() as { url?: string; error?: string }; if (!response.ok || !result.url) throw new Error(result.error || "Dosya yüklenemedi."); onChange(result.url); } catch (caught) { setError(errorMessage(caught)); } finally { setUploading(false); if (inputRef.current) inputRef.current.value = ""; } }
-  return <div className="grid gap-2"><TextField label={label} value={value} onChange={onChange} /><input ref={inputRef} type="file" className="hidden" accept="image/png,image/jpeg,image/webp,image/x-icon,image/vnd.microsoft.icon" onChange={(event) => upload(event.target.files?.[0])} /><Button type="button" variant="outline" disabled={uploading} onClick={() => inputRef.current?.click()}><UploadIcon />{uploading ? "Yükleniyor…" : "R2’ye Yükle"}</Button>{error ? <p className="text-xs font-semibold text-destructive">{error}</p> : null}</div>;
+  async function upload(file?: File) { if (!file) return; setUploading(true); setError(null); const body = new FormData(); body.set("file", file); body.set("kind", kind); try { const response = await fetch("/api/admin/settings/assets", { method: "POST", body }); const result = await response.json() as { url?: string; error?: string }; if (!response.ok || !result.url) throw new Error(result.error || "Dosya yüklenemedi."); onChange(result.url); toast.success(`${label} R2’ye yüklendi.`); } catch (caught) { const message = errorMessage(caught); setError(message); toast.error(message); } finally { setUploading(false); if (inputRef.current) inputRef.current.value = ""; } }
+  return <div className="grid gap-2"><TextField label={label} value={value} onChange={onChange} /><input ref={inputRef} type="file" className="hidden" accept="image/png,image/jpeg,image/webp,image/x-icon,image/vnd.microsoft.icon" onChange={(event) => upload(event.target.files?.[0])} /><SoundButton type="button" variant="outline" disabled={uploading} onClick={() => inputRef.current?.click()}><IconCloudUploadFillDuo18 className="size-4" />{uploading ? "Yükleniyor…" : "R2’ye Yükle"}</SoundButton>{error ? <p className="text-xs font-semibold text-destructive">{error}</p> : null}</div>;
 }
-
-function RevisionHistory({ revisions, currentVersion, pending, onRestore }: { revisions: SettingsRevision[]; currentVersion: number; pending: boolean; onRestore: (revision: SettingsRevision) => void }) { return <Card title="Sürüm geçmişi">{revisions.length ? revisions.map((revision) => <div key={revision.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border p-3"><div><p className="text-sm font-black">Sürüm {revision.version}{revision.version === currentVersion ? " · Güncel" : ""}</p><p className="text-xs text-muted-foreground">{new Date(revision.createdAt).toLocaleString("tr-TR")} · {revision.changedByLabel || "Sistem"}</p><p className="mt-1 text-xs text-muted-foreground">{revision.changedKeys.length ? revision.changedKeys.join(", ") : "Değişiklik yok"}</p></div><Button type="button" variant="outline" disabled={pending || revision.version === currentVersion} onClick={() => onRestore(revision)}>Bu Sürüme Dön</Button></div>) : <p className="text-sm text-muted-foreground">Sürüm geçmişi bulunamadı.</p>}</Card>; }
 
 function useUnsavedChangesWarning(isDirty: boolean) {
   useEffect(() => { if (!isDirty) return; const beforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; }; const click = (event: MouseEvent) => { const anchor = (event.target as Element | null)?.closest("a"); if (!anchor || anchor.target === "_blank" || anchor.origin !== window.location.origin) return; if (!window.confirm("Kaydedilmemiş değişiklikler var. Sayfadan ayrılmak istiyor musunuz?")) { event.preventDefault(); event.stopPropagation(); } }; window.addEventListener("beforeunload", beforeUnload); document.addEventListener("click", click, true); return () => { window.removeEventListener("beforeunload", beforeUnload); document.removeEventListener("click", click, true); }; }, [isDirty]);
 }
 
 function countChangedKeys(left: Draft, right: Draft) { return [...new Set([...Object.keys(left), ...Object.keys(right)])].filter((key) => JSON.stringify(left[key]) !== JSON.stringify(right[key])).length; }
-function sectionTitle(section: SettingsSection) { return ({ general: "Genel", appearance: "Görünüm ve Ana Sayfa", games: "Oyunlar", seo: "SEO", ads: "Reklamlar", community: "Üyelik ve Yorumlar", integrations: "Entegrasyonlar", security: "Güvenlik", system: "Sistem" } as const)[section]; }
+function sectionTitle(section: SettingsSection) { return ({ general: "Genel", appearance: "Görünüm ve Ana Sayfa", games: "Oyunlar", seo: "SEO", ads: "Reklamlar", community: "Üyelik ve Yorumlar", integrations: "Entegrasyonlar", security: "Güvenlik", audio: "Ses", system: "Sistem" } as const)[section]; }
 function str(value: unknown) { return typeof value === "string" ? value : ""; }
 function bool(value: unknown) { return value === true; }
 function num(value: unknown) { return typeof value === "number" ? value : 0; }

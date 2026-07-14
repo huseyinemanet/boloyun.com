@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { insertNewDiscoveredImports, markImportFailed, markImportScraped } from "@/import/db/game-imports";
+import { generateGameContent } from "@/import/ai/generate-game-content";
+import { insertNewDiscoveredImports, markImportFailed, markImportPendingReview, markImportScraped } from "@/import/db/game-imports";
 import { scrapeGame } from "@/import/scrape/scrape-game";
 import { discoverGameUrls } from "@/import/sitemap/discover";
 import { requireAdmin } from "@/lib/auth";
@@ -19,6 +20,8 @@ export async function crawlNewGamesAction(formData: FormData) {
   const scrapeLimit = rawScrapeLimit.trim() ? parsePositiveInt(rawScrapeLimit, insertResult.inserted.length) : insertResult.inserted.length;
   const scrapeTargets = shouldScrape ? insertResult.inserted.slice(0, scrapeLimit) : [];
   let scrapedCount = 0;
+  let aiGeneratedCount = 0;
+  let pendingReviewCount = 0;
   let failedCount = 0;
 
   for (const item of scrapeTargets) {
@@ -26,8 +29,16 @@ export async function crawlNewGamesAction(formData: FormData) {
       const parsed = await scrapeGame(item.source_url, "miniplay");
       await markImportScraped(item.id, parsed);
       scrapedCount += 1;
+      const generated = await generateGameContent(parsed);
+      await markImportPendingReview(item.id, parsed, generated);
+      aiGeneratedCount += 1;
+      pendingReviewCount += 1;
     } catch (error) {
-      await markImportFailed(item.id, error instanceof Error ? error.message : "Bilinmeyen hata");
+      try {
+        await markImportFailed(item.id, error instanceof Error ? error.message : "Bilinmeyen hata");
+      } catch {
+        // The streaming route is the primary path; keep the legacy action moving item by item.
+      }
       failedCount += 1;
     }
   }
@@ -41,6 +52,8 @@ export async function crawlNewGamesAction(formData: FormData) {
     inserted: String(insertResult.insertedCount),
     skipped: String(insertResult.skippedCount),
     scraped: String(scrapedCount),
+    aiGenerated: String(aiGeneratedCount),
+    pendingReview: String(pendingReviewCount),
     failed: String(failedCount),
   });
 

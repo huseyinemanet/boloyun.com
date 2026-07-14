@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Image from "next/image";
-import Link from "next/link";
+import { SoundLink } from "@/components/audio/sound-link";
 import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
 import { IconThumbsDownFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsDownFillDuo18";
 import { IconThumbsUpFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsUpFillDuo18";
@@ -145,7 +145,7 @@ export default async function GameDetailPage({ params, searchParams }: Props) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-black">{game.title}</h1>
+                <h1 className="text-2xl font-semibold">{game.title}</h1>
                 <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{game.shortDescription}</p>
               </div>
             </div>
@@ -200,7 +200,7 @@ export default async function GameDetailPage({ params, searchParams }: Props) {
       ) : null}
 
       <section className="rounded-md border border-border bg-card p-4">
-        <h2 className="mb-3 text-lg font-black">Benzer Oyunlar</h2>
+        <h2 className="mb-3 text-lg font-semibold">Benzer Oyunlar</h2>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {similarGames.map((similar) => (
             <GameCard key={similar.id} game={similar} />
@@ -285,7 +285,7 @@ function Breadcrumbs({ gameTitle, categories }: { gameTitle: string; categories:
       <BreadcrumbList className="font-medium">
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <Link href="/">Oyunlar</Link>
+            <SoundLink href="/">Oyunlar</SoundLink>
           </BreadcrumbLink>
         </BreadcrumbItem>
       {primaryCategory ? (
@@ -293,7 +293,7 @@ function Breadcrumbs({ gameTitle, categories }: { gameTitle: string; categories:
             <BreadcrumbSeparator />
             <BreadcrumbItem>
               <BreadcrumbLink asChild>
-                <Link href={`/kategori/${primaryCategory.slug}`}>{primaryCategory.name}</Link>
+                <SoundLink href={`/kategori/${primaryCategory.slug}`}>{primaryCategory.name}</SoundLink>
               </BreadcrumbLink>
             </BreadcrumbItem>
         </>
@@ -366,9 +366,9 @@ function TaxonomyChips({ categories, tags }: { categories: GameTaxonomyLink[]; t
   return (
     <div className="flex flex-wrap gap-2 text-xs font-semibold">
       {items.map((item) => (
-        <Link key={item.href} href={item.href} className="rounded-md bg-muted px-2 py-1 text-foreground hover:bg-accent">
+        <SoundLink key={item.href} href={item.href} className="rounded-md bg-muted px-2 py-1 text-foreground hover:bg-accent">
           {item.name}
-        </Link>
+        </SoundLink>
       ))}
     </div>
   );
@@ -396,7 +396,7 @@ function CommentsSection({
     <section id="yorumlar" className="scroll-mt-24 rounded-md border border-border bg-card p-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-black">Yorumlar</h2>
+          <h2 className="text-lg font-semibold">Yorumlar</h2>
           <p className="mt-1 text-sm text-muted-foreground">Yorumlar onaydan sonra yayınlanır.</p>
         </div>
         <span className="rounded-md bg-muted px-2 py-1 text-xs font-bold text-foreground">
@@ -410,7 +410,7 @@ function CommentsSection({
         <CommentForm gameId={gameId} slug={slug} />
       ) : !isLoggedIn ? (
         <p className="mt-4 rounded-md bg-muted/40 p-4 text-sm font-semibold text-muted-foreground">
-          Yorum yazmak için <Link href="/giris" className="text-primary hover:underline">giriş yap</Link> veya <Link href="/kayit" className="text-primary hover:underline">kayıt ol</Link>.
+          Yorum yazmak için <SoundLink href="/giris" className="text-primary hover:underline">giriş yap</SoundLink> veya <SoundLink href="/kayit" className="text-primary hover:underline">kayıt ol</SoundLink>.
         </p>
       ) : (
         <p className="mt-4 rounded-md bg-muted/40 p-4 text-sm font-semibold text-muted-foreground">
@@ -463,7 +463,7 @@ function toLogError(error: unknown) {
 function InfoBlock({ title, body }: { title: string; body: string }) {
   return (
     <div>
-      <h2 className="mb-2 text-base font-black">{title}</h2>
+      <h2 className="mb-2 text-base font-semibold">{title}</h2>
       <p className="text-sm leading-6 text-foreground">{body}</p>
     </div>
   );
@@ -472,7 +472,7 @@ function InfoBlock({ title, body }: { title: string; body: string }) {
 function ListBlock({ title, items }: { title: string; items: string[] }) {
   return (
     <div>
-      <h2 className="mb-2 text-base font-black">{title}</h2>
+      <h2 className="mb-2 text-base font-semibold">{title}</h2>
       <ul className="space-y-1 text-sm text-foreground">
         {items.map((item) => (
           <li key={item}>- {item}</li>

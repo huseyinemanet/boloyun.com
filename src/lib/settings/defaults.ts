@@ -66,6 +66,10 @@ export const DEFAULT_SETTINGS: SettingsDataMap = {
     iframeAllowlist: [],
     enforceIframeAllowlist: false,
   },
+  audio: {
+    clickSoundEnabled: true,
+    clickSoundUrl: "/sounds/click.mp3",
+  },
   system: {},
 };
 
