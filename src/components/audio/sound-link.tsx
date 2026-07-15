@@ -20,18 +20,9 @@ export const SoundLink = forwardRef<HTMLAnchorElement, SoundLinkProps | NativeSo
     if (shouldPlayLinkSound(event, pathname)) playClickSound();
   }
 
-  if ("native" in props && props.native) {
-    const anchorProps = { ...(props as NativeSoundLinkProps & Partial<LinkProps>) };
-    delete anchorProps.native;
-    delete anchorProps.prefetch;
-    delete anchorProps.replace;
-    delete anchorProps.scroll;
-    delete anchorProps.shallow;
-    delete anchorProps.locale;
-    return <a ref={ref} {...anchorProps} onClick={handleClick} />;
-  }
-
-  return <Link ref={ref} {...(props as SoundLinkProps)} onClick={handleClick} />;
+  const linkProps = { ...(props as SoundLinkProps & { native?: boolean }) };
+  delete linkProps.native;
+  return <Link ref={ref} {...linkProps} onClick={handleClick} />;
 });
 
 export function shouldPlayLinkSound(event: MouseEvent<HTMLAnchorElement>, pathname: string) {

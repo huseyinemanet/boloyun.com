@@ -3,6 +3,7 @@
 import Script from "next/script";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { SoundAnchor } from "@/components/audio/sound-anchor";
+import { SoundLink } from "@/components/audio/sound-link";
 import { useClickSound } from "@/components/audio/click-sound-provider";
 import type { Game } from "@/types/game";
 import { Button } from "@/components/ui/button";
@@ -113,7 +114,7 @@ export function GamePlayer({
   }
 
   if (!allowGuestPlay && !loggedIn) {
-    return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center rounded-md border border-border bg-card p-6 text-center`}><div><p className="font-bold">Bu oyunu başlatmak için giriş yapmalısın.</p><Button asChild className="mt-3"><SoundAnchor href="/giris">Giriş Yap</SoundAnchor></Button></div></div>;
+    return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center rounded-md border border-border bg-card p-6 text-center`}><div><p className="font-bold">Bu oyunu başlatmak için giriş yapmalısın.</p><Button asChild className="mt-3"><SoundLink href="/giris">Giriş Yap</SoundLink></Button></div></div>;
   }
 
   if (!sourceAllowed) {
