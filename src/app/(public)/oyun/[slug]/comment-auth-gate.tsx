@@ -8,7 +8,7 @@ export function CommentAuthGate({ gameId, slug }: { gameId: string; slug: string
   const { loaded, profile } = useViewerState();
 
   if (!loaded) {
-    return <div><p className="mt-4 rounded-md bg-muted/40 p-4 text-sm font-semibold text-muted-foreground">Yorum alanı hazırlanıyor...</p></div>;
+    return null;
   }
 
   if (profile) {
