@@ -1,18 +1,21 @@
-import * as cheerio from "cheerio";
 import type { ParsedGame } from "./types";
 import { stripHtml } from "@/lib/sanitize/html";
+import { firstMetaContent, htmlText, readElements, readTags } from "./html-reader";
 
 export function parseGenericGame(html: string, sourceUrl: string): ParsedGame {
-  const $ = cheerio.load(html);
   const url = new URL(sourceUrl);
-  const iframeSrc = $("#game-player").attr("data-src") ?? $("iframe[data-src]").first().attr("data-src") ?? $("iframe").first().attr("src");
+  const iframes = readTags(html, "iframe");
+  const iframeSrc =
+    iframes.find((tag) => tag.attributes.id === "game-player")?.attributes["data-src"] ??
+    iframes.find((tag) => tag.attributes["data-src"])?.attributes["data-src"] ??
+    iframes[0]?.attributes.src;
   const swfUrl = html.match(/https?:\/\/[^"']+\.swf/i)?.[0];
-  const jsonLd = readJsonLd($);
-  const title = asText(jsonLd?.name) || $("h1").first().text().trim() || $("title").text().trim();
+  const jsonLd = readJsonLd(html);
+  const title = asText(jsonLd?.name) || readElements(html, "h1")[0]?.text || readElements(html, "title")[0]?.text || "";
   const description =
     asText(jsonLd?.description) ||
-    $('meta[property="og:description"]').attr("content") ||
-    $('meta[name="description"]').attr("content") ||
+    firstMetaContent(html, "property", "og:description") ||
+    firstMetaContent(html, "name", "description") ||
     "";
 
   return {
@@ -23,7 +26,7 @@ export function parseGenericGame(html: string, sourceUrl: string): ParsedGame {
     originalControls: [],
     originalCategories: normalizeList(jsonLd?.genre),
     originalTags: normalizeList(jsonLd?.keywords),
-    thumbnailUrl: getImage(jsonLd?.image) ?? $('meta[property="og:image"]').attr("content"),
+    thumbnailUrl: getImage(jsonLd?.image) ?? firstMetaContent(html, "property", "og:image"),
     detectedGameType: swfUrl ? "swf" : iframeSrc ? "iframe" : "external",
     detectedEmbedUrl: iframeSrc,
     detectedSwfUrl: swfUrl,
@@ -32,14 +35,14 @@ export function parseGenericGame(html: string, sourceUrl: string): ParsedGame {
   };
 }
 
-function readJsonLd($: cheerio.CheerioAPI): Record<string, unknown> | null {
-  const blocks = $('script[type="application/ld+json"]')
-    .map((_, element) => $(element).text())
-    .get();
+function readJsonLd(html: string): Record<string, unknown> | null {
+  const blocks = readElements(html, "script")
+    .filter((element) => element.attributes.type?.toLocaleLowerCase("en-US") === "application/ld+json")
+    .map((element) => element.innerHtml);
 
   for (const block of blocks) {
     try {
-      const parsed = JSON.parse(block) as Record<string, unknown>;
+      const parsed = JSON.parse(htmlText(block)) as Record<string, unknown>;
       if (parsed["@type"] === "WebApplication" || parsed["@type"] === "VideoGame") {
         return parsed;
       }

@@ -1,38 +1,36 @@
-import * as cheerio from "cheerio";
 import type { ParsedGame } from "./types";
 import { parseGenericGame } from "./generic.parser";
 import { stripHtml } from "@/lib/sanitize/html";
+import { firstElementHtmlByClass, firstElementTextByClass, firstElementTextWithClassFragment, firstMetaContent, htmlText, readElements, readTags } from "./html-reader";
 
 export function parseMiniplayGame(html: string, sourceUrl: string): ParsedGame {
-  const $ = cheerio.load(html);
   const generic = parseGenericGame(html, sourceUrl);
+  const iframes = readTags(html, "iframe");
   const iframeSrc =
-    $("#game-player").attr("data-src") ??
-    $("iframe#game-player").attr("data-src") ??
-    $(".js-ctc-iframe-url").text().match(/src=['"]([^'"]+)['"]/)?.[1] ??
+    iframes.find((tag) => tag.attributes.id === "game-player")?.attributes["data-src"] ??
+    firstElementTextByClass(html, "js-ctc-iframe-url").match(/src=['"]([^'"]+)['"]/)?.[1] ??
     generic.detectedEmbedUrl;
   const swfUrl = html.match(/https?:\/\/[^"']+\.swf/i)?.[0] ?? generic.detectedSwfUrl;
-  const html5Url =
-    $('[data-game-url], [data-html5-url]').first().attr("data-game-url") ??
-    $('[data-html5-url]').first().attr("data-html5-url");
-  const categories = $(".breadcrumb a[itemprop='item'], .tag[href], a.tag")
-    .map((_, element) => $(element).text().trim())
-    .get()
+  const gameSourceTag = readTags(html, "div").concat(readTags(html, "a")).find((tag) => tag.attributes["data-game-url"] || tag.attributes["data-html5-url"]);
+  const html5Url = gameSourceTag?.attributes["data-game-url"] ?? gameSourceTag?.attributes["data-html5-url"];
+  const categories = readElements(html, "a")
+    .filter((element) => element.attributes.itemprop === "item" || element.attributes.class?.split(/\s+/).includes("tag"))
+    .map((element) => element.text)
     .filter(Boolean)
     .slice(0, 8);
-  const howToPlay = firstNonEmptyText($, [".rich-html-desc", ".game-about", ".description"]);
-  const controls = readControls($);
+  const howToPlay = ["rich-html-desc", "game-about", "description"].map((name) => firstElementTextByClass(html, name)).find(Boolean) ?? "";
+  const controls = readControls(html);
 
   return {
     ...generic,
-    originalTitle: getBestTitle($, sourceUrl, generic.originalTitle),
-    originalDescription: stripHtml($('meta[itemprop="description"]').attr("content") ?? $('meta[property="og:description"]').attr("content") ?? generic.originalDescription),
+    originalTitle: getBestTitle(html, sourceUrl, generic.originalTitle),
+    originalDescription: stripHtml(firstMetaContent(html, "itemprop", "description") ?? firstMetaContent(html, "property", "og:description") ?? generic.originalDescription),
     originalHowToPlay: stripHtml(howToPlay),
     originalControls: controls.length ? controls : generic.originalControls,
-    originalDeveloper: $("[class*='developer'], [class*='author']").first().text().trim(),
+    originalDeveloper: firstElementTextWithClassFragment(html, ["developer", "author"]),
     originalCategories: categories.length ? categories : generic.originalCategories,
-    originalTags: readKeywords($, generic.originalTags),
-    thumbnailUrl: $('meta[property="og:image"]').attr("content") ?? generic.thumbnailUrl,
+    originalTags: readKeywords(html, generic.originalTags),
+    thumbnailUrl: firstMetaContent(html, "property", "og:image") ?? generic.thumbnailUrl,
     detectedGameType: swfUrl ? "swf" : html5Url ? "html5" : iframeSrc ? "iframe" : "external",
     detectedEmbedUrl: iframeSrc,
     detectedSwfUrl: swfUrl,
@@ -41,14 +39,14 @@ export function parseMiniplayGame(html: string, sourceUrl: string): ParsedGame {
   };
 }
 
-function readControls($: cheerio.CheerioAPI) {
-  return $(".game-controls li")
-    .map((_, element) => {
-      const typeClass = $(element).find(".type").attr("class") ?? "";
-      const action = $(element).find(".action").text().trim();
+function readControls(html: string) {
+  const controlsHtml = firstElementHtmlByClass(html, "game-controls");
+  return readElements(controlsHtml, "li")
+    .map((element) => {
+      const typeClass = readTags(element.innerHtml, "span").find((tag) => tag.attributes.class?.split(/\s+/).includes("type"))?.attributes.class ?? "";
+      const action = firstElementTextByClass(element.innerHtml, "action");
       return formatControl(typeClass, action);
     })
-    .get()
     .filter(Boolean);
 }
 
@@ -90,12 +88,12 @@ function translateControlAction(action: string) {
   return dictionary[normalized] ?? action.trim();
 }
 
-function getBestTitle($: cheerio.CheerioAPI, sourceUrl: string, fallback: string) {
-  const titleTag = $("title").text().replace(/ free online game on Miniplay\.com/i, "").trim();
+function getBestTitle(html: string, sourceUrl: string, fallback: string) {
+  const titleTag = (readElements(html, "title")[0]?.text ?? "").replace(/ free online game on Miniplay\.com/i, "").trim();
   const slugTitle = titleFromSlug(sourceUrl);
   const candidates = [
-    $("h1").first().text().trim(),
-    $('meta[property="og:title"]').attr("content") ?? "",
+    readElements(html, "h1")[0]?.text ?? "",
+    firstMetaContent(html, "property", "og:title") ?? "",
     fallback,
     titleTag,
     slugTitle,
@@ -113,13 +111,13 @@ function titleFromSlug(sourceUrl: string) {
     .join(" ");
 }
 
-function readKeywords($: cheerio.CheerioAPI, fallback: string[]) {
-  const keywords = $('script[type="application/ld+json"]')
-    .map((_, element) => $(element).text())
-    .get()
+function readKeywords(html: string, fallback: string[]) {
+  const keywords = readElements(html, "script")
+    .filter((element) => element.attributes.type?.toLocaleLowerCase("en-US") === "application/ld+json")
+    .map((element) => element.innerHtml)
     .flatMap((block) => {
       try {
-        const parsed = JSON.parse(block) as { keywords?: string };
+        const parsed = JSON.parse(htmlText(block)) as { keywords?: string };
         return parsed.keywords ? parsed.keywords.split(",") : [];
       } catch {
         return [];
@@ -129,17 +127,4 @@ function readKeywords($: cheerio.CheerioAPI, fallback: string[]) {
     .filter(Boolean);
 
   return keywords.length ? [...new Set(keywords)] : fallback;
-}
-
-function firstNonEmptyText($: cheerio.CheerioAPI, selectors: string[]) {
-  for (const selector of selectors) {
-    const text = $(selector)
-      .map((_, element) => $(element).text().trim())
-      .get()
-      .find((value) => value.length > 0);
-
-    if (text) return text;
-  }
-
-  return "";
 }
