@@ -30,8 +30,13 @@ export function parseTranslatedContent(raw: string): TranslatedGameContent {
 }
 
 export function normalizeTranslatedContent(input: GameTranslationInput, output: TranslatedGameContent): TranslatedGameContent {
+  const seoTitle = normalizeSeoTitle(input.title, output.seo_title);
+  const seoDescription = normalizeSeoDescription(input.title, output.seo_description, output.short_description);
+
   return {
     ...output,
+    seo_title: seoTitle,
+    seo_description: seoDescription,
     controls: output.controls.length > 0 || input.controls.length > 0 ? output.controls : ["Kontroller oyun içinde gösterilir."],
     features: output.features.length > 0 || input.features.length > 0 ? output.features : ["Kolayca başlayabileceğin sade ve eğlenceli oynanış."],
   };
@@ -75,6 +80,22 @@ function keepsTitle(title: string, seoTitle: string) {
   const cleanTitle = title.trim().toLocaleLowerCase("tr-TR");
   if (!cleanTitle) return true;
   return seoTitle.toLocaleLowerCase("tr-TR").includes(cleanTitle);
+}
+
+function normalizeSeoTitle(title: string, seoTitle: string) {
+  const trimmed = seoTitle.trim();
+  if (trimmed.length >= 10 && keepsTitle(title, trimmed)) return trimmed;
+  return `${title.trim()} Oyna`;
+}
+
+function normalizeSeoDescription(title: string, seoDescription: string, shortDescription: string) {
+  const trimmed = seoDescription.trim();
+  if (trimmed.length >= 10) return trimmed;
+
+  const fallback = shortDescription.trim();
+  if (fallback.length >= 10) return fallback;
+
+  return `${title.trim()} oyununu Bol Oyun'da ücretsiz keşfet ve hemen oyna.`;
 }
 
 function readString(record: Record<string, unknown>, key: keyof TranslatedGameContent) {

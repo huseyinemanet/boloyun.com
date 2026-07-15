@@ -262,15 +262,17 @@ export async function processTranslationJob(jobId: string, options: { limit?: nu
 
   let processed = 0;
   let failed = 0;
+  let attempted = 0;
   for (const item of items) {
     const result = await processTranslationItem(jobId, item, config);
+    attempted += 1;
     if (result === "failed" || result === "skipped") failed += 1;
     if (result === "completed" || result === "skipped") processed += 1;
     await sleep(75);
   }
 
-  logAi("job.process.done", { jobId, processed: items.length });
-  return Object.assign(await refreshJobCounts(jobId), { processed, failedStep: failed });
+  logAi("job.process.done", { jobId, attempted, processed, failed });
+  return Object.assign(await refreshJobCounts(jobId), { attempted, processed, failedStep: failed });
 }
 
 export async function pauseTranslationJob(jobId: string) {

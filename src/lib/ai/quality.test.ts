@@ -38,6 +38,13 @@ test("kaynak kontroller boşsa güvenli fallback ile normalize edilir", () => {
   assert.ok(normalized.features[0]?.includes("oynanış"));
 });
 
+test("kısa SEO alanları güvenli fallback ile tamamlanır", () => {
+  const normalized = normalizeTranslatedContent(input, { ...output, seo_title: "Oyna", seo_description: "" });
+  assert.equal(normalized.seo_title, "City Car Stunt 2 Oyna");
+  assert.equal(normalized.seo_description, output.short_description);
+  assert.doesNotThrow(() => validateTranslatedContent(input, normalized));
+});
+
 test("İngilizce ağırlıklı çıktı reddedilir", () => {
   assert.equal(looksMostlyEnglish("The game lets you play with your keyboard and collect score across levels with enemies."), true);
   assert.equal(looksMostlyEnglish("Oyunu başlat, klavye ile ilerle ve puanları topla."), false);

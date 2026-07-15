@@ -18,6 +18,7 @@ export async function POST(request: Request) {
       status: "success",
       message: `Adım tamamlandı: ${job.completedCount}/${job.totalCount}, hata ${job.failedCount}.`,
       jobId,
+      attempted: "attempted" in job && typeof job.attempted === "number" ? job.attempted : 0,
       processed: "processed" in job && typeof job.processed === "number" ? job.processed : 0,
       failed: "failedStep" in job && typeof job.failedStep === "number" ? job.failedStep : 0,
       continued: job.status !== "paused" && job.status !== "cancelled" && job.status !== "completed" && job.completedCount + job.failedCount < job.totalCount,

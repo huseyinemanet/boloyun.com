@@ -38,6 +38,9 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
   const [stats, setStats] = useState(initialStats);
   const [bulkRunning, setBulkRunning] = useState(false);
   const [bulkSteps, setBulkSteps] = useState(0);
+  const [bulkAttempted, setBulkAttempted] = useState(0);
+  const [bulkCompletedOrSkipped, setBulkCompletedOrSkipped] = useState(0);
+  const [bulkFailedOrSkipped, setBulkFailedOrSkipped] = useState(0);
   const lastToastKey = useRef("");
   const stopBulkRequested = useRef(false);
 
@@ -139,10 +142,17 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
               stopBulkRequested.current = false;
               setBulkRunning(true);
               setBulkSteps(0);
+              setBulkAttempted(0);
+              setBulkCompletedOrSkipped(0);
+              setBulkFailedOrSkipped(0);
               window.dispatchEvent(new CustomEvent("ai-translation:process-loop", { detail: { active: true } }));
               try {
-                const steps = await runBulkLoop((step, nextAutomation) => {
+                const steps = await runBulkLoop((snapshot) => {
+                  const { step, attempted, completedOrSkipped, failedOrSkipped, automation: nextAutomation } = snapshot;
                   setBulkSteps(step);
+                  setBulkAttempted(attempted);
+                  setBulkCompletedOrSkipped(completedOrSkipped);
+                  setBulkFailedOrSkipped(failedOrSkipped);
                   if (nextAutomation) setAutomation(nextAutomation);
                 }, stopBulkRequested);
                 if (stopBulkRequested.current) {
@@ -164,7 +174,9 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
           </Button>
         )}
         <p className="text-sm text-muted-foreground">
-          Her batch kontrollü çalışır; geçici hatada 3 kez dener, sonra güvenli şekilde durur.
+          {bulkRunning
+            ? `${bulkAttempted.toLocaleString("tr-TR")} deneme yapıldı · ${bulkCompletedOrSkipped.toLocaleString("tr-TR")} tamamlandı/atlandı · ${bulkFailedOrSkipped.toLocaleString("tr-TR")} hata`
+            : "Her batch kontrollü çalışır; geçici hatada 3 kez dener, sonra güvenli şekilde durur."}
         </p>
       </div>
     </section>
@@ -189,11 +201,20 @@ function automationStatusText(automation: AiTranslationAutomation) {
 }
 
 async function runBulkLoop(
-  onStep: (step: number, automation?: AiTranslationAutomation) => void,
+  onStep: (snapshot: {
+    step: number;
+    attempted: number;
+    completedOrSkipped: number;
+    failedOrSkipped: number;
+    automation?: AiTranslationAutomation;
+  }) => void,
   stopRequested: React.MutableRefObject<boolean>,
 ) {
   let steps = 0;
   let transientFailures = 0;
+  let attemptedTotal = 0;
+  let completedOrSkippedTotal = 0;
+  let failedOrSkippedTotal = 0;
 
   while (!stopRequested.current) {
     const controller = new AbortController();
@@ -210,6 +231,9 @@ async function runBulkLoop(
         message?: string;
         automation?: AiTranslationAutomation;
         job?: { status: string; completedCount: number; failedCount: number; totalCount: number; id: string; updatedAt: string };
+        attempted?: number;
+        processed?: number;
+        failed?: number;
       } | null;
 
       if (!response.ok || result?.status === "error") {
@@ -242,7 +266,16 @@ async function runBulkLoop(
 
       if (result?.status === "skipped") break;
       steps += 1;
-      onStep(steps, result?.automation);
+      attemptedTotal += Math.max(0, result?.attempted ?? 0);
+      completedOrSkippedTotal += Math.max(0, result?.processed ?? 0);
+      failedOrSkippedTotal += Math.max(0, result?.failed ?? 0);
+      onStep({
+        step: steps,
+        attempted: attemptedTotal,
+        completedOrSkipped: completedOrSkippedTotal,
+        failedOrSkipped: failedOrSkippedTotal,
+        automation: result?.automation,
+      });
       await sleep(BULK_STEP_DELAY_MS);
     } catch (error) {
       if (transientFailures < BULK_RETRY_LIMIT) {
