@@ -370,7 +370,7 @@ export async function runTranslationAutomationTick(source = "cron", options: { l
 
   let jobId: string | null = automation.currentJobId;
   try {
-    jobId = await resolveAutomationJob(automation);
+    jobId = await resolveAutomationJob(automation, { resumePaused: source !== "cron" });
     if (!jobId) {
       const message = "Çevrilecek aday bulunamadı.";
       await supabase.from("ai_translation_automation").update({
@@ -728,10 +728,20 @@ async function acquireAutomationLock(automation: AiTranslationAutomation) {
   return true;
 }
 
-async function resolveAutomationJob(automation: AiTranslationAutomation) {
+async function resolveAutomationJob(automation: AiTranslationAutomation, options: { resumePaused?: boolean } = {}) {
   if (automation.currentJobId) {
     try {
       const job = await getJob(automation.currentJobId);
+      if (job.status === "paused" && options.resumePaused) {
+        const supabase = requiredServiceClient();
+        const { error } = await supabase.from("ai_translation_jobs").update({
+          status: "queued",
+          updated_at: new Date().toISOString(),
+        }).eq("id", job.id).eq("status", "paused");
+        if (error) throw new Error(`Duraklatılan çeviri işi devam ettirilemedi: ${error.message}`);
+        logAi("automation.job.resumed", { jobId: job.id });
+        return job.id;
+      }
       if (job.status !== "completed" && job.status !== "cancelled") return job.id;
     } catch (error) {
       logAiError("automation.job.current_missing", error, { jobId: automation.currentJobId });
