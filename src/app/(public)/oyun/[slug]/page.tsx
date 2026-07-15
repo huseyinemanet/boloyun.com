@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { Suspense } from "react";
 import { SoundLink } from "@/components/audio/sound-link";
 import { notFound } from "next/navigation";
 import { AdSlot } from "@/components/ads/ad-slot";
@@ -17,7 +16,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { getApprovedCommentsForGame, getTopCommentsForGame, type GameComment } from "@/lib/db-comments";
 import { getPrebuildGameSlugs, getPublicGamePageBySlug, type GameTaxonomyLink } from "@/lib/db-games";
 import { breadcrumbJsonLd, videoGameJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
@@ -25,11 +23,8 @@ import { getPublicSettings } from "@/lib/db-settings";
 import { isGameSourceAllowed } from "@/lib/settings/game-security";
 import { renderSeoTemplate } from "@/lib/settings/validation";
 import { AdminEditGameLink } from "./admin-edit-game-link";
-import { CommentAuthGate } from "./comment-auth-gate";
-import { CommentStatusNotice } from "./comment-status-notice";
-import { CommentsTabs } from "./comments-tabs";
 import { GameUserActions } from "./game-user-actions";
-import type { Game } from "@/types/game";
+import { LazyComments } from "./lazy-comments";
 
 export const revalidate = 3600;
 
@@ -80,8 +75,6 @@ export default async function GameDetailPage({ params }: Props) {
       ? detail.latestCategoryGames
       : detail.relatedGames;
   const source = game.gameType === "iframe" ? game.embedUrl : game.gameType === "html5" ? game.html5Url : game.gameType === "swf" ? game.swfUrl : game.externalUrl;
-  const latestCategoryGames = detail.latestCategoryGames;
-  const popularCategoryGames = detail.popularCategoryGames;
   const breadcrumbEntries = [
     { name: "Ana Sayfa", path: "/" },
     ...(primaryCategory ? [{ name: primaryCategory.name, path: `/kategori/${primaryCategory.slug}` }] : []),
@@ -190,14 +183,6 @@ export default async function GameDetailPage({ params }: Props) {
 
       <TaxonomyChips categories={categories} tags={tags} />
 
-      {primaryCategory && latestCategoryGames.length ? (
-        <GameGrid title={categorySectionTitle("Son", primaryCategory.name)} games={latestCategoryGames} />
-      ) : null}
-
-      {primaryCategory && popularCategoryGames.length ? (
-        <GameGrid title={categorySectionTitle("En Çok Oynanan", primaryCategory.name)} games={popularCategoryGames} />
-      ) : null}
-
       <section className="rounded-md border border-border bg-card p-4">
         <h2 className="mb-3 text-lg font-semibold">Benzer Oyunlar</h2>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -209,43 +194,9 @@ export default async function GameDetailPage({ params }: Props) {
 
       {settings.community.commentsEnabled ? <AdSlot slotKey="game_page_before_comments" /> : null}
 
-      {settings.community.commentsEnabled ? (
-        <Suspense fallback={<CommentsSkeleton />}>
-          <DeferredCommentsSection gameId={game.id} slug={game.slug} />
-        </Suspense>
-      ) : null}
+      {settings.community.commentsEnabled ? <LazyComments gameId={game.id} slug={game.slug} /> : null}
     </article>
   );
-}
-
-async function DeferredCommentsSection({ gameId, slug }: { gameId: string; slug: string }) {
-  const [latestComments, topComments] = await Promise.all([
-    optionalGameQuery(slug, "latest-comments", getApprovedCommentsForGame(gameId), [] as GameComment[]),
-    optionalGameQuery(slug, "top-comments", getTopCommentsForGame(gameId), [] as GameComment[]),
-  ]);
-  return <CommentsSection gameId={gameId} slug={slug} latestComments={latestComments} topComments={topComments} />;
-}
-
-function CommentsSkeleton() {
-  return <section className="min-h-48 animate-pulse rounded-md border border-border bg-card p-4" aria-label="Yorumlar yükleniyor" />;
-}
-
-function GameGrid({ title, games }: { title: string; games: Game[] }) {
-  return (
-    <section className="rounded-md border border-border bg-card p-4">
-      <h2 className="mb-3 text-lg font-semibold">{title}</h2>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {games.map((game) => <GameCard key={game.id} game={game} />)}
-      </div>
-    </section>
-  );
-}
-
-function categorySectionTitle(prefix: string, categoryName: string) {
-  const normalized = categoryName.trim();
-  return normalized.toLocaleLowerCase("tr").endsWith("oyunları")
-    ? `${prefix} ${normalized}`
-    : `${prefix} ${normalized} Oyunları`;
 }
 
 function Breadcrumbs({ gameTitle, categories }: { gameTitle: string; categories: GameTaxonomyLink[] }) {
@@ -306,64 +257,6 @@ function TaxonomyChips({ categories, tags }: { categories: GameTaxonomyLink[]; t
   );
 }
 
-function CommentsSection({
-  gameId,
-  slug,
-  latestComments,
-  topComments,
-}: {
-  gameId: string;
-  slug: string;
-  latestComments: GameComment[];
-  topComments: GameComment[];
-}) {
-  const canWriteComment = isUuid(gameId);
-  const commentCount = latestComments.length;
-
-  return (
-    <section id="yorumlar" className="scroll-mt-24 rounded-md border border-border bg-card p-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold">Yorumlar</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Yorumlar onaydan sonra yayınlanır.</p>
-        </div>
-        <span className="rounded-md bg-muted px-2 py-1 text-xs font-bold text-foreground">
-          {commentCount.toLocaleString("tr-TR")} yorum
-        </span>
-      </div>
-
-      <CommentStatusNotice />
-
-      {canWriteComment ? (
-        <CommentAuthGate gameId={gameId} slug={slug} />
-      ) : (
-        <p className="mt-4 rounded-md bg-muted/40 p-4 text-sm font-semibold text-muted-foreground">
-          Bu demo oyun için yorum kaydı kapalı. Yayındaki oyunlarda yorumlar moderasyon kuyruğuna düşer.
-        </p>
-      )}
-
-      <CommentsTabs topComments={topComments} latestComments={latestComments} />
-    </section>
-  );
-}
-
-function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
-async function optionalGameQuery<T>(slug: string, label: string, promise: Promise<T>, fallback: T): Promise<T> {
-  try {
-    return await promise;
-  } catch (error) {
-    console.error("[game-detail] optional query failed", { slug, label, ...toLogError(error) });
-    return fallback;
-  }
-}
-
-function toLogError(error: unknown) {
-  if (error instanceof Error) return { name: error.name, message: error.message };
-  return { message: String(error) };
-}
 
 function InfoBlock({ title, body }: { title: string; body: string }) {
   return (

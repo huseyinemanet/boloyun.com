@@ -20,7 +20,7 @@ const worker = {
       return handleMe(request, env);
     }
     if (url.pathname === "/api/search") {
-      return handleSearch(request, env);
+      return handleSearch(request, env, ctx);
     }
     if (url.pathname === "/rastgele") {
       return handleRandomGame(request, env);
@@ -152,31 +152,71 @@ async function handleMe(request, env) {
   } : null);
 }
 
-async function handleSearch(request, env) {
+async function handleSearch(request, env, ctx) {
+  if (request.method !== "GET") {
+    return jsonResponse({ error: "Method not allowed" }, { status: 405 });
+  }
+
   const url = new URL(request.url);
   const query = (url.searchParams.get("q") || "").trim().slice(0, 80);
-  const popular = url.searchParams.get("popular") === "1";
   const headers = {
     "content-type": "application/json; charset=utf-8",
-    "cache-control": "public, max-age=30, s-maxage=60, stale-while-revalidate=300",
-    "x-edge-fallback": "search",
+    "cache-control": "public, max-age=60, s-maxage=300, stale-while-revalidate=3600",
+    "x-edge-handler": "search-rpc",
   };
 
-  if (!popular && query.length < 2) return new Response(JSON.stringify({ items: [] }), { headers });
+  if (query.length < 3) return new Response(JSON.stringify({ items: [] }), { headers });
+
+  const cache = caches.default;
+  const normalizedQuery = query.toLocaleLowerCase("tr");
+  const cacheKey = new Request(`${url.origin}${url.pathname}?q=${encodeURIComponent(normalizedQuery)}`);
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
 
   try {
-    const select = "id,title,slug,thumbnail_url,short_description";
-    const limit = popular && query.length < 2 ? 5 : 6;
-    const path = popular && query.length < 2
-      ? `/rest/v1/games?select=${select}&status=eq.published&order=play_count.desc,updated_at.desc&limit=${limit}`
-      : `/rest/v1/games?select=${select}&status=eq.published&title=ilike.*${encodeURIComponent(escapePostgrestLike(query))}*&order=play_count.desc&limit=${limit}`;
-    const rows = await supabaseRest(env, path);
-    const items = Array.isArray(rows) ? rows.map(mapSearchSuggestion) : [];
-    return new Response(JSON.stringify({ items }), { headers });
+    const subjectHash = await hashSearchSubject(request, env);
+    const rateResult = await supabaseRpc(env, "consume_rate_limit", {
+      p_action: "search-ip",
+      p_subject_hash: subjectHash,
+      p_limit: 90,
+      p_window_seconds: 60,
+    });
+    const rate = Array.isArray(rateResult) ? rateResult[0] : rateResult;
+    if (!rate?.allowed) {
+      return new Response(JSON.stringify({ error: "Çok fazla arama yapıldı." }), {
+        status: 429,
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "private, no-store",
+          "retry-after": String(Math.max(1, Number(rate?.retry_after_seconds || 60))),
+        },
+      });
+    }
+
+    const result = await supabaseRpc(env, "search_published_games", {
+      p_query: query,
+      p_limit: 6,
+      p_offset: 0,
+    });
+    const items = Array.isArray(result?.items) ? result.items.map(mapSearchSuggestion) : [];
+    const response = new Response(JSON.stringify({ items }), { headers });
+    ctx.waitUntil(cache.put(cacheKey, response.clone()));
+    return response;
   } catch (error) {
-    console.error("[search] edge fallback failed", { error: error instanceof Error ? error.message : String(error) });
-    return new Response(JSON.stringify({ items: [] }), { headers });
+    console.error("[search] edge RPC failed", { error: error instanceof Error ? error.message : String(error) });
+    return new Response(JSON.stringify({ error: "Arama şu anda kullanılamıyor." }), {
+      status: 503,
+      headers: { "content-type": "application/json; charset=utf-8", "cache-control": "private, no-store" },
+    });
   }
+}
+
+async function hashSearchSubject(request, env) {
+  const ip = (request.headers.get("cf-connecting-ip") || "unknown").trim().slice(0, 128);
+  const secret = env.ABUSE_HASH_SECRET || env.SUPABASE_SERVICE_ROLE_KEY;
+  const bytes = new TextEncoder().encode(`${secret}:${ip.toLocaleLowerCase("en-US")}`);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 async function getProfileForRequest(request, env) {
@@ -428,10 +468,6 @@ function mapSearchSuggestion(game) {
 function normalizeGameThumbnail(value) {
   if (typeof value === "string" && value) return value;
   return "/thumbnails/space.svg";
-}
-
-function escapePostgrestLike(value) {
-  return value.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_").replaceAll("*", "\\*");
 }
 
 function renderGameHtml(game) {
