@@ -41,6 +41,7 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
   const [bulkAttempted, setBulkAttempted] = useState(0);
   const [bulkCompletedOrSkipped, setBulkCompletedOrSkipped] = useState(0);
   const [bulkFailedOrSkipped, setBulkFailedOrSkipped] = useState(0);
+  const [bulkError, setBulkError] = useState<string | null>(null);
   const lastToastKey = useRef("");
   const stopBulkRequested = useRef(false);
 
@@ -81,20 +82,20 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
   const remainingCount = Math.max(0, stats.totalPublished - stats.completed - stats.failed - stats.processing);
   const currentRunText = bulkRunning
     ? bulkAttempted > 0
-      ? `${bulkAttempted.toLocaleString("tr-TR")} oyun denendi, ${bulkCompletedOrSkipped.toLocaleString("tr-TR")} oyun sonuçlandı.`
+      ? `${bulkAttempted.toLocaleString("tr-TR")} oyun denendi, ${bulkCompletedOrSkipped.toLocaleString("tr-TR")} oyun tamamlandı veya atlandı.`
       : bulkSteps > 0
-        ? "Sunucu batch hazırlıyor; ilk sonuç bekleniyor."
-        : "İlk batch başlatılıyor."
-    : "Başlatınca oyunlar sırayla çevrilir; sorunlu oyunlar 3 denemeden sonra atlanır.";
+        ? "İlk oyun çevriliyor; sonuç gelince sayaçlar güncellenecek."
+        : "İlk oyun başlatılıyor."
+    : "Başlatınca oyunlar tek tek çevrilir; sayılar her sonuçtan sonra güncellenir.";
 
   return (
     <section className="rounded-md border border-border bg-card p-4">
       <style>{`
-        @keyframes ai-working-stripes {
+        @keyframes ai-progress-stripes {
           from { background-position: 0 0; }
           to { background-position: 44px 0; }
         }
-        .ai-working-bar {
+        .ai-live-progress [data-slot="progress-indicator"] {
           background-image: linear-gradient(
             45deg,
             color-mix(in srgb, var(--primary) 85%, white 15%) 25%,
@@ -106,7 +107,9 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
             var(--primary)
           );
           background-size: 44px 44px;
-          animation: ai-working-stripes 0.85s linear infinite;
+        }
+        .ai-live-progress.is-running [data-slot="progress-indicator"] {
+          animation: ai-progress-stripes 0.85s linear infinite;
         }
       `}</style>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -120,19 +123,11 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
       </div>
 
       <div className="mt-4 grid gap-4">
-        {bulkRunning ? (
-          <div className="rounded-md border border-primary/30 bg-primary/10 p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-semibold text-primary">Çeviri çalışıyor</p>
-              <p className="text-sm font-medium text-muted-foreground">{currentRunText}</p>
-            </div>
-            <div className="mt-3 h-3 overflow-hidden rounded-full bg-primary/15">
-              <div className="ai-working-bar h-full w-full" />
-            </div>
-          </div>
-        ) : null}
-
-        <Progress value={totalPercent} aria-label="Tamamlanan oyun ilerlemesi">
+        <Progress
+          value={totalPercent}
+          aria-label="Tamamlanan oyun ilerlemesi"
+          className={bulkRunning ? "ai-live-progress is-running" : "ai-live-progress"}
+        >
           <div className="flex items-center justify-between gap-3">
             <ProgressLabel>Tamamlanan oyunlar</ProgressLabel>
             <ProgressValue />
@@ -169,10 +164,11 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
             onClick={async () => {
               stopBulkRequested.current = false;
               setBulkRunning(true);
-              setBulkSteps(0);
+              setBulkSteps(1);
               setBulkAttempted(0);
               setBulkCompletedOrSkipped(0);
               setBulkFailedOrSkipped(0);
+              setBulkError(null);
               window.dispatchEvent(new CustomEvent("ai-translation:process-loop", { detail: { active: true } }));
               try {
                 const steps = await runBulkLoop((snapshot) => {
@@ -190,7 +186,9 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
                 }
                 router.refresh();
               } catch (error) {
-                toast.error("Toplu çeviri durdu.", { description: error instanceof Error ? error.message : "Beklenmeyen hata oluştu." });
+                const message = error instanceof Error ? error.message : "Beklenmeyen hata oluştu.";
+                setBulkError(message);
+                toast.error("Toplu çeviri durdu.", { description: message });
               } finally {
                 setBulkRunning(false);
                 stopBulkRequested.current = false;
@@ -205,21 +203,24 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
           {bulkRunning
             ? bulkFailedOrSkipped > 0
               ? `${bulkFailedOrSkipped.toLocaleString("tr-TR")} oyun bu çalıştırmada sorunlu göründü; sistem takılmadan devam ediyor.`
-              : "İşlem devam ediyor. Tamamlanan sayı başarılı oyun geldikçe artar."
+              : currentRunText
             : currentRunText}
         </p>
       </div>
 
-      <details className="mt-4 text-sm text-muted-foreground">
-        <summary className="cursor-pointer font-semibold">Otomasyon ayarı</summary>
-        <form action={formAction} className="mt-3 flex flex-wrap items-center gap-3">
-          <label className="flex h-10 items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Checkbox name="enabled" defaultChecked={automation.enabled} />
-            Arka plan otomasyonu açık
-          </label>
-          <AutomationSubmitButton />
-        </form>
-      </details>
+      {bulkError ? (
+        <p className="mt-3 rounded-md bg-destructive/10 px-3 py-2 text-sm font-semibold text-destructive">
+          Çeviri başlatılamadı: {bulkError}
+        </p>
+      ) : null}
+
+      <form action={formAction} className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4">
+        <label className="flex h-10 items-center gap-2 text-sm font-medium text-muted-foreground">
+          <Checkbox name="enabled" defaultChecked={automation.enabled} />
+          Arka plan otomasyonu açık
+        </label>
+        <AutomationSubmitButton />
+      </form>
     </section>
   );
 }
@@ -273,7 +274,7 @@ async function runBulkLoop(
       const response = await fetch("/api/admin/ai/automation", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ source: "admin-bulk" }),
+        body: JSON.stringify({ source: "admin-bulk", limit: 1 }),
         signal: controller.signal,
       });
       const result = await response.json().catch(() => null) as {
@@ -287,17 +288,7 @@ async function runBulkLoop(
         failed?: number;
       } | null;
 
-      if (!response.ok || result?.status === "error") {
-        if (isTransientStatus(response.status) && transientFailures < BULK_RETRY_LIMIT) {
-          transientFailures += 1;
-          await sleep(transientRetryDelay(transientFailures));
-          continue;
-        }
-        throw new Error(result?.message || `HTTP ${response.status}`);
-      }
-
-      transientFailures = 0;
-      if (result?.automation) {
+      if (result?.automation || result?.stats) {
         window.dispatchEvent(new CustomEvent("ai-translation:dashboard", {
           detail: { automation: result.automation, stats: result.stats, serverTime: new Date().toISOString() },
         }));
@@ -315,6 +306,16 @@ async function runBulkLoop(
         }));
       }
 
+      if (!response.ok || result?.status === "error") {
+        if (isTransientStatus(response.status) && transientFailures < BULK_RETRY_LIMIT) {
+          transientFailures += 1;
+          await sleep(transientRetryDelay(transientFailures));
+          continue;
+        }
+        throw new Error(result?.message || `HTTP ${response.status}`);
+      }
+
+      transientFailures = 0;
       if (result?.status === "skipped") break;
       steps += 1;
       attemptedTotal += Math.max(0, result?.attempted ?? 0);

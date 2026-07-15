@@ -1,31 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type ColumnFiltersState,
-  type SortingState,
-  type VisibilityState,
-} from "@tanstack/react-table";
-import { ChevronDownIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { AiTranslationActivity, AiTranslationAutomation, AiTranslationJob, AiTranslationStats } from "@/lib/ai/types";
 
@@ -51,21 +29,7 @@ type ActivityTableRow = AiTranslationActivity & {
   isActuallyProcessing: boolean;
 };
 
-const activityColumnLabels: Record<string, string> = {
-  updatedAt: "Zaman",
-  status: "Durum",
-  title: "Oyun",
-  attempts: "Deneme",
-  errorMessage: "Hata",
-};
-
-const activityColumnWidths: Record<string, string> = {
-  updatedAt: "w-44",
-  status: "w-36",
-  title: "w-[420px]",
-  attempts: "w-28",
-  errorMessage: "w-[360px]",
-};
+const LOG_LIMIT = 20;
 
 const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
   dateStyle: "short",
@@ -77,105 +41,29 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
   const [payload, setPayload] = useState<ActivityPayload>({
     stats: initialStats,
     jobs: initialJobs,
-    activity: initialActivity,
+    activity: initialActivity.slice(0, LOG_LIMIT),
     activityTotal: initialActivityTotal,
+    activityLimit: LOG_LIMIT,
     serverTime: initialActivity[0]?.updatedAt ?? initialJobs[0]?.updatedAt ?? "1970-01-01T00:00:00.000Z",
   });
   const [now, setNow] = useState(() => Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [processLoopActive, setProcessLoopActive] = useState(false);
-  const [sorting, setSorting] = useState<SortingState>([{ id: "updatedAt", desc: true }]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [globalFilter, setGlobalFilter] = useState("");
   const previousStatuses = useRef(new Map(initialActivity.map((item) => [item.id, item.status])));
   const consecutiveErrors = useRef(0);
   const lastErrorToast = useRef("");
 
-  const runningJobIds = useMemo(() => new Set(payload.jobs.filter((job) => job.status === "running").map((job) => job.id)), [payload.jobs]);
-  const hasRunningWork = runningJobIds.size > 0;
-  const hasQueuedWork = payload.jobs.some((job) => job.status === "queued");
-  const activityLabel = hasRunningWork ? "İşleniyor" : hasQueuedWork ? "Hazır" : "Durakladı";
-  const activityRows = useMemo<ActivityTableRow[]>(
-    () => payload.activity.map((item) => ({
-      ...item,
-      isActuallyProcessing: item.status === "processing" && runningJobIds.has(item.jobId),
-    })),
-    [payload.activity, runningJobIds],
-  );
-  const activityColumns = useMemo<ColumnDef<ActivityTableRow>[]>(() => [
-    {
-      accessorKey: "updatedAt",
-      header: "Zaman",
-      cell: ({ row }) => (
-        <time className="text-muted-foreground" dateTime={row.original.updatedAt} title={formatDate(row.original.updatedAt)}>
-          {relativeTime(row.original.updatedAt, now)}
-        </time>
-      ),
-    },
-    {
-      accessorKey: "status",
-      header: "Durum",
-      cell: ({ row }) => (
-        <Badge variant={row.original.status === "completed" ? "default" : row.original.status === "failed" ? "destructive" : "outline"}>
-          {itemStatusText(row.original.status, row.original.isActuallyProcessing)}
-        </Badge>
-      ),
-      filterFn: (row, columnId, filterValue) => filterValue === "all" || row.getValue(columnId) === filterValue,
-    },
-    {
-      accessorKey: "title",
-      header: "Oyun",
-      cell: ({ row }) => <GameActivityLink item={row.original} />,
-    },
-    {
-      accessorKey: "attempts",
-      header: "Deneme",
-      cell: ({ row }) => row.original.attempts,
-    },
-    {
-      accessorKey: "errorMessage",
-      header: "Hata",
-      cell: ({ row }) => <span className="block truncate text-muted-foreground">{row.original.errorMessage ?? "-"}</span>,
-    },
-  ], [now]);
-
-  // TanStack Table exposes mutable functions that React Compiler intentionally does not memoize.
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const activityTable = useReactTable({
-    data: activityRows,
-    columns: activityColumns,
-    getRowId: (row) => row.id,
-    state: { sorting, columnFilters, columnVisibility, globalFilter },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
-    onGlobalFilterChange: setGlobalFilter,
-    globalFilterFn: (row, _columnId, filterValue) => {
-      const query = String(filterValue).trim().toLocaleLowerCase("tr");
-      if (!query) return true;
-
-      const item = row.original;
-      return [
-        item.title,
-        itemStatusText(item.status, item.isActuallyProcessing),
-        item.status,
-        item.errorMessage ?? "",
-      ].join(" ").toLocaleLowerCase("tr").includes(query);
-    },
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 15 } },
-  });
-  const statusFilter = String(activityTable.getColumn("status")?.getFilterValue() ?? "all");
-  const filteredCount = activityTable.getFilteredRowModel().rows.length;
-  const pageCount = activityTable.getPageCount();
+  const runningJobIds = new Set(payload.jobs.filter((job) => job.status === "running").map((job) => job.id));
+  const hasRunningWork = runningJobIds.size > 0 || processLoopActive;
+  const activityRows: ActivityTableRow[] = payload.activity.slice(0, LOG_LIMIT).map((item) => ({
+    ...item,
+    isActuallyProcessing: item.status === "processing" && runningJobIds.has(item.jobId),
+  }));
+  const processingTitle = activityRows.find((item) => item.isActuallyProcessing)?.title;
 
   useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), 30000);
+    const interval = setInterval(() => setNow(Date.now()), 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -228,7 +116,7 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
       const controller = new AbortController();
       const abortTimeout = setTimeout(() => controller.abort(), 6000);
       try {
-        const response = await fetch("/api/admin/ai/activity?limit=20", { cache: "no-store", signal: controller.signal });
+        const response = await fetch(`/api/admin/ai/activity?limit=${LOG_LIMIT}`, { cache: "no-store", signal: controller.signal });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const next = await response.json() as ActivityPayload;
         if (next.error) throw new Error(next.error);
@@ -247,7 +135,12 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
             serverTime: next.serverTime,
           },
         }));
-        setPayload((current) => ({ ...next, stats: next.stats ?? current.stats }));
+        setPayload((current) => ({
+          ...next,
+          stats: next.stats ?? current.stats,
+          activity: next.activity.slice(0, LOG_LIMIT),
+          activityLimit: LOG_LIMIT,
+        }));
         consecutiveErrors.current = 0;
         lastErrorToast.current = "";
         setLastError(null);
@@ -267,21 +160,19 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
         clearTimeout(abortTimeout);
         if (!disposed) {
           setIsRefreshing(false);
-          const errorDelay = Math.min(45000, 15000 * Math.max(1, consecutiveErrors.current));
-          const nextDelay = consecutiveErrors.current ? errorDelay : processLoopActive ? 12000 : hasRunningWork ? 10000 : 15000;
+          const errorDelay = Math.min(20000, 5000 * Math.max(1, consecutiveErrors.current));
+          const nextDelay = consecutiveErrors.current ? errorDelay : hasRunningWork ? 1500 : 5000;
           timeout = setTimeout(refresh, nextDelay);
         }
       }
     }
 
-    timeout = setTimeout(refresh, processLoopActive ? 8000 : 2500);
+    timeout = setTimeout(refresh, hasRunningWork ? 500 : 2000);
     return () => {
       disposed = true;
       if (timeout) clearTimeout(timeout);
     };
-  }, [hasRunningWork, processLoopActive]);
-
-  const activeJob = payload.jobs.find((job) => job.status === "running") ?? payload.jobs.find((job) => job.status === "queued") ?? payload.jobs[0];
+  }, [hasRunningWork]);
 
   return (
     <section className="rounded-md border border-border bg-card p-4">
@@ -301,25 +192,24 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
       `}</style>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold">Son AI İşlem Logları</h2>
-          <p className="mt-1 text-sm text-muted-foreground">İşlenen satır parlayarak gösterilir; duraklatılan işlerde animasyon durur.</p>
+          <h2 className="text-lg font-bold">Canlı çeviri akışı</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Son {LOG_LIMIT} işlem gösterilir. Yeni işlem geldikçe liste yenilenir; eski satırlar otomatik düşer.
+          </p>
         </div>
-        <div className="flex items-center gap-3 text-xs font-semibold text-muted-foreground">
-          <span className="relative flex items-center gap-2">
+        <div className="text-right text-xs font-semibold text-muted-foreground">
+          <p className="flex items-center justify-end gap-2">
             <span className={hasRunningWork ? "size-2 rounded-full bg-success" : "size-2 rounded-full bg-muted-foreground/50"} />
-            {activityLabel}
-          </span>
-          <span>{isRefreshing ? "Yenileniyor..." : formatDate(payload.serverTime)}</span>
+            {hasRunningWork ? "Çalışıyor" : "Beklemede"}
+          </p>
+          <p className="mt-1">{isRefreshing ? "Yenileniyor..." : formatDate(payload.serverTime)}</p>
         </div>
       </div>
 
-      {activeJob ? (
-        <div className="mt-4 grid gap-3 rounded-md border border-border bg-background/40 p-3 text-sm sm:grid-cols-4">
-          <Metric label="Aktif iş" value={`${activeJob.completedCount}/${activeJob.totalCount}`} />
-          <Metric label="Durum" value={jobStatusText(activeJob.status)} />
-          <Metric label="Hata" value={String(activeJob.failedCount)} tone={activeJob.failedCount ? "danger" : "muted"} />
-          <Metric label="Bekleyen" value={String(Math.max(0, activeJob.totalCount - activeJob.completedCount - activeJob.failedCount))} />
-        </div>
+      {processingTitle ? (
+        <p className="mt-3 rounded-md bg-primary/10 px-3 py-2 text-sm font-semibold text-primary">
+          Şu an çevriliyor: {processingTitle}
+        </p>
       ) : null}
 
       {lastError ? (
@@ -328,111 +218,49 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
         </p>
       ) : null}
 
-      <div className="mt-4 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-            <Input
-              type="search"
-              value={globalFilter}
-              onChange={(event) => setGlobalFilter(event.target.value)}
-              placeholder="Loglarda ara..."
-              aria-label="AI işlem loglarında ara"
-              className="w-full sm:max-w-sm"
-            />
-            <Select value={statusFilter} onValueChange={(value) => activityTable.getColumn("status")?.setFilterValue(value === "all" ? undefined : value)}>
-              <SelectTrigger className="w-[170px]" aria-label="Log durumunu filtrele">
-                <SelectValue placeholder="Tüm durumlar" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm durumlar</SelectItem>
-                <SelectItem value="pending">Bekliyor</SelectItem>
-                <SelectItem value="processing">İşleniyor</SelectItem>
-                <SelectItem value="completed">Tamamlandı</SelectItem>
-                <SelectItem value="failed">Hatalı</SelectItem>
-                <SelectItem value="skipped">Atlandı</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                Sütunlar
-                <ChevronDownIcon />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              {activityTable.getAllColumns().filter((column) => column.getCanHide()).map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  checked={column.getIsVisible()}
-                  onCheckedChange={(checked) => column.toggleVisibility(Boolean(checked))}
-                >
-                  {activityColumnLabels[column.id] ?? column.id}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        <div className="overflow-hidden rounded-md border border-border">
-          <Table className="min-w-[980px] table-fixed">
-            <TableHeader className="bg-muted/40">
-              {activityTable.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} className={activityColumnWidths[header.column.id]}>
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {activityTable.getRowModel().rows.length ? activityTable.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} className={row.original.isActuallyProcessing ? "ai-processing-row" : ""}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="whitespace-normal">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              )) : (
-                <TableRow>
-                  <TableCell colSpan={activityTable.getVisibleLeafColumns().length} className="h-28 text-center font-semibold text-muted-foreground">
-                    {payload.activity.length === 0 ? "Henüz item logu yok." : "Filtrelerle eşleşen log bulunamadı."}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm font-semibold text-muted-foreground">
-            {filteredCount.toLocaleString("tr-TR")} / {payload.activityTotal.toLocaleString("tr-TR")} kayıt
-          </p>
-          {pageCount > 1 ? (
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">
-                Sayfa {activityTable.getState().pagination.pageIndex + 1} / {pageCount}
-              </span>
-              <Button variant="outline" size="sm" onClick={() => activityTable.previousPage()} disabled={!activityTable.getCanPreviousPage()}>Önceki</Button>
-              <Button variant="outline" size="sm" onClick={() => activityTable.nextPage()} disabled={!activityTable.getCanNextPage()}>Sonraki</Button>
-            </div>
-          ) : null}
-        </div>
+      <div className="mt-4 overflow-hidden rounded-md border border-border">
+        <Table className="min-w-[860px] table-fixed">
+          <TableHeader className="bg-muted/40">
+            <TableRow>
+              <TableHead className="w-36">Zaman</TableHead>
+              <TableHead className="w-32">Durum</TableHead>
+              <TableHead>Oyun</TableHead>
+              <TableHead className="w-24">Deneme</TableHead>
+              <TableHead className="w-[320px]">Not</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {activityRows.length ? activityRows.map((item) => (
+              <TableRow key={item.id} className={item.isActuallyProcessing ? "ai-processing-row" : ""}>
+                <TableCell>
+                  <time className="text-muted-foreground" dateTime={item.updatedAt} title={formatDate(item.updatedAt)}>
+                    {relativeTime(item.updatedAt, now)}
+                  </time>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={item.status === "completed" ? "default" : item.status === "failed" || item.status === "skipped" ? "destructive" : "outline"}>
+                    {itemStatusText(item.status, item.isActuallyProcessing)}
+                  </Badge>
+                </TableCell>
+                <TableCell><GameActivityLink item={item} /></TableCell>
+                <TableCell>{item.attempts}/3</TableCell>
+                <TableCell>
+                  <span className="block truncate text-muted-foreground" title={item.errorMessage ?? undefined}>
+                    {activityNote(item)}
+                  </span>
+                </TableCell>
+              </TableRow>
+            )) : (
+              <TableRow>
+                <TableCell colSpan={5} className="h-28 text-center font-semibold text-muted-foreground">
+                  Henüz çeviri logu yok.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
     </section>
-  );
-}
-
-function Metric({ label, value, tone = "muted" }: { label: string; value: string; tone?: "muted" | "danger" }) {
-  return (
-    <div>
-      <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-      <p className={tone === "danger" ? "mt-1 text-lg font-semibold text-destructive" : "mt-1 text-lg font-semibold"}>{value}</p>
-    </div>
   );
 }
 
@@ -463,7 +291,7 @@ function itemStatusText(status: AiTranslationActivity["status"], isActuallyProce
   if (status === "processing" && !isActuallyProcessing) return "Yarım kaldı";
   const labels: Record<AiTranslationActivity["status"], string> = {
     pending: "Bekliyor",
-    processing: "İşleniyor",
+    processing: "Çevriliyor",
     completed: "Tamamlandı",
     failed: "Hatalı",
     skipped: "Atlandı",
@@ -471,16 +299,13 @@ function itemStatusText(status: AiTranslationActivity["status"], isActuallyProce
   return labels[status];
 }
 
-function jobStatusText(status: AiTranslationJob["status"]) {
-  const labels: Record<AiTranslationJob["status"], string> = {
-    queued: "Sırada",
-    running: "Çalışıyor",
-    paused: "Durakladı",
-    completed: "Tamamlandı",
-    failed: "Başarısız",
-    cancelled: "İptal",
-  };
-  return labels[status];
+function activityNote(item: ActivityTableRow) {
+  if (item.errorMessage) return item.errorMessage;
+  if (item.isActuallyProcessing) return "AI çeviri isteği çalışıyor.";
+  if (item.status === "completed") return "Oyun güncellendi.";
+  if (item.status === "pending") return "Sırada.";
+  if (item.status === "skipped") return "3 denemeden sonra atlandı.";
+  return "-";
 }
 
 function formatDate(value: string) {

@@ -345,7 +345,7 @@ export async function saveTranslationAutomation(input: {
   if (error) throw new Error(`Otomatik çeviri ayarı kaydedilemedi: ${error.message}`);
 }
 
-export async function runTranslationAutomationTick(source = "cron") {
+export async function runTranslationAutomationTick(source = "cron", options: { limit?: number } = {}) {
   const startedAt = new Date().toISOString();
   const supabase = requiredServiceClient();
   const automation = await getTranslationAutomation();
@@ -386,7 +386,8 @@ export async function runTranslationAutomationTick(source = "cron") {
     }
 
     const remainingToday = Math.max(1, automation.dailyTarget - automation.todayCompleted);
-    const limit = Math.min(automation.perRunLimit, remainingToday);
+    const requestedLimit = options.limit ? clampInteger(options.limit, 1, MAX_ITEMS_PER_PROCESS, 1) : automation.perRunLimit;
+    const limit = Math.min(requestedLimit, remainingToday);
     const job = await processTranslationJob(jobId, { limit });
     const todayCompleted = await countCompletedItemsSince(istanbulDayStartIso());
     const message = `Batch tamamlandı: ${job.completedCount}/${job.totalCount}, hata/atlanan ${job.failedCount}. Bugün ${todayCompleted}.`;

@@ -8,12 +8,15 @@ export async function POST(request: Request) {
   const isCron = Boolean(secret && auth === `Bearer ${secret}`);
   if (!isCron) await requireAdmin();
 
-  const body = await request.json().catch(() => null) as { source?: unknown } | null;
+  const body = await request.json().catch(() => null) as { source?: unknown; limit?: unknown } | null;
   const source = isCron ? "cron" : typeof body?.source === "string" ? body.source : "admin";
+  const requestedLimit = typeof body?.limit === "number" && Number.isFinite(body.limit)
+    ? Math.max(1, Math.min(Math.floor(body.limit), 5))
+    : undefined;
 
   try {
-    console.log("[ai-translation] automation.api.start", { source });
-    const result = await runTranslationAutomationTick(source);
+    console.log("[ai-translation] automation.api.start", { source, requestedLimit });
+    const result = await runTranslationAutomationTick(source, { limit: requestedLimit });
     const stats = await getTranslationStats();
     console.log("[ai-translation] automation.api.done", result);
     return NextResponse.json({
