@@ -5,7 +5,6 @@ import { privatePageMetadata } from "@/lib/seo/metadata";
 import { getAiDashboardData } from "@/lib/ai/db-ai";
 import { AutomationProgressPanel } from "./automation-progress-panel";
 import { AiDebugConsole } from "./ai-debug-console";
-import { AiJobsTable } from "./ai-jobs-table";
 import { ProviderConfigForm } from "./provider-config-form";
 import { RealtimeActivityPanel } from "./realtime-activity-panel";
 
@@ -25,19 +24,12 @@ export default async function AiCenterPage() {
       <AiDebugConsole jobs={jobs} activity={activity} />
       <AdminPageHeader
         title="AI Merkezi"
-        description="Otomatik çeviriyi aç, günlük hedefi izle ve gerektiğinde müdahale et."
+        description="Toplu AI çeviriyi aç, batch olarak çalıştır ve loglardan takip et."
       />
 
       <AutomationProgressPanel automation={automation} stats={stats} />
 
       <RealtimeActivityPanel initialStats={stats} initialJobs={jobs} initialActivity={activity} initialActivityTotal={activityTotal} />
-
-      <DetailsSection
-        title="Geçmiş işler"
-        description="Tamamlanan ve yarıda kalan batch kayıtları. Normalde otomasyon açıkken buraya girmen gerekmez."
-      >
-        <AiJobsTable jobs={jobs} />
-      </DetailsSection>
 
       <DetailsSection
         title="DeepSeek ayarı"

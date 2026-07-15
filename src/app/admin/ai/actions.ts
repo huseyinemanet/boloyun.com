@@ -84,9 +84,9 @@ export async function saveTranslationAutomationAction(_state: AiActionState, for
   try {
     await saveTranslationAutomation({
       enabled: formData.get("enabled") === "on",
-      dailyTarget: Number(formData.get("daily_target") ?? 1000),
-      perRunLimit: 2,
-      retryFailed: formData.get("retry_failed") === "on",
+      dailyTarget: 1_000_000,
+      perRunLimit: 20,
+      retryFailed: true,
     });
     revalidatePath("/admin/ai");
     return { status: "success", message: "Otomatik çeviri ayarı güncellendi." };

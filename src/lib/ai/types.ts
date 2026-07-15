@@ -1,7 +1,7 @@
 export const AI_PROVIDERS = ["deepseek"] as const;
 export type AiProvider = (typeof AI_PROVIDERS)[number];
 
-export const AI_BATCH_SIZES = [10, 25, 50, 100] as const;
+export const AI_BATCH_SIZES = [25, 50, 100, 250, 500] as const;
 export type AiBatchSize = (typeof AI_BATCH_SIZES)[number];
 
 export const DEFAULT_AI_MODELS: Record<AiProvider, string> = {
@@ -114,5 +114,5 @@ export function isAiProvider(value: string): value is AiProvider {
 
 export function parseBatchSize(value: string | number | null | undefined): AiBatchSize {
   const size = Number(value);
-  return (AI_BATCH_SIZES as readonly number[]).includes(size) ? size as AiBatchSize : 25;
+  return (AI_BATCH_SIZES as readonly number[]).includes(size) ? size as AiBatchSize : 250;
 }

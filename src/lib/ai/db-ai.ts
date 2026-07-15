@@ -100,11 +100,15 @@ type AutomationRow = {
   updated_at: string | null;
 };
 
-const PROCESS_ITEMS_PER_CLICK = 5;
+const PROCESS_ITEMS_PER_CLICK = 20;
+const MAX_ITEMS_PER_PROCESS = 25;
+const MAX_TRANSLATION_ATTEMPTS = 3;
 const STALE_PROCESSING_MINUTES = 1;
 const DEFAULT_ACTIVITY_LIMIT = 50;
 const MAX_ACTIVITY_LIMIT = 100;
-const AUTOMATION_JOB_BATCH_SIZE: AiBatchSize = 100;
+const AUTOMATION_JOB_BATCH_SIZE: AiBatchSize = 500;
+const AUTOMATION_DAILY_TARGET = 1_000_000;
+const AUTOMATION_PER_RUN_LIMIT = 20;
 const AUTOMATION_LOCK_STALE_MINUTES = 10;
 
 export async function getAiDashboardData() {
@@ -251,7 +255,7 @@ export async function processTranslationJob(jobId: string, options: { limit?: nu
     .eq("job_id", jobId)
     .eq("status", "pending")
     .order("created_at", { ascending: true })
-    .limit(Math.max(1, Math.min(job.batchSize, options.limit ?? PROCESS_ITEMS_PER_CLICK)));
+    .limit(Math.max(1, Math.min(job.batchSize, options.limit ?? PROCESS_ITEMS_PER_CLICK, MAX_ITEMS_PER_PROCESS)));
   if (itemsError) throw new Error(`Çeviri iş kalemleri okunamadı: ${itemsError.message}`);
   const items = (itemsData ?? []) as JobItemRow[];
   logAi("job.process.items", { jobId, selected: items.length, batchSize: job.batchSize, perClickLimit: options.limit ?? PROCESS_ITEMS_PER_CLICK });
@@ -260,9 +264,9 @@ export async function processTranslationJob(jobId: string, options: { limit?: nu
   let failed = 0;
   for (const item of items) {
     const result = await processTranslationItem(jobId, item, config);
-    if (result === "failed") failed += 1;
-    else processed += 1;
-    await sleep(250);
+    if (result === "failed" || result === "skipped") failed += 1;
+    if (result === "completed" || result === "skipped") processed += 1;
+    await sleep(75);
   }
 
   logAi("job.process.done", { jobId, processed: items.length });
@@ -323,8 +327,8 @@ export async function saveTranslationAutomation(input: {
   retryFailed: boolean;
 }) {
   const supabase = requiredServiceClient();
-  const dailyTarget = clampInteger(input.dailyTarget, 1, 5000, 1000);
-  const perRunLimit = clampInteger(input.perRunLimit, 1, 5, 2);
+  const dailyTarget = clampInteger(input.dailyTarget, 1, AUTOMATION_DAILY_TARGET, AUTOMATION_DAILY_TARGET);
+  const perRunLimit = clampInteger(input.perRunLimit, 1, MAX_ITEMS_PER_PROCESS, AUTOMATION_PER_RUN_LIMIT);
   const { error } = await supabase.from("ai_translation_automation").upsert({
     id: "default",
     enabled: input.enabled,
@@ -383,7 +387,7 @@ export async function runTranslationAutomationTick(source = "cron") {
     const limit = Math.min(automation.perRunLimit, remainingToday);
     const job = await processTranslationJob(jobId, { limit });
     const todayCompleted = await countCompletedItemsSince(istanbulDayStartIso());
-    const message = `Tick tamamlandı: ${job.completedCount}/${job.totalCount}, hata ${job.failedCount}. Bugün ${todayCompleted}/${automation.dailyTarget}.`;
+    const message = `Batch tamamlandı: ${job.completedCount}/${job.totalCount}, hata/atlanan ${job.failedCount}. Bugün ${todayCompleted}.`;
     await supabase.from("ai_translation_automation").update({
       status: "idle",
       current_job_id: job.status === "completed" ? null : job.id,
@@ -420,19 +424,20 @@ export async function runTranslationAutomationTick(source = "cron") {
 
 export async function getTranslationStats(): Promise<AiTranslationStats> {
   const supabase = requiredServiceClient();
-  const [published, completed, failed, processing] = await Promise.all([
+  const [published, completed, failed, skipped, processing] = await Promise.all([
     countRows("games", { column: "status", value: "published" }),
     countRows("game_translation_state", { column: "status", value: "completed" }),
     countRows("game_translation_state", { column: "status", value: "failed" }),
+    countRows("game_translation_state", { column: "status", value: "skipped" }),
     countRows("game_translation_state", { column: "status", value: "processing" }),
   ]);
   void supabase;
   return {
     totalPublished: published,
     completed,
-    failed,
+    failed: failed + skipped,
     processing,
-    pending: Math.max(0, published - completed - failed - processing),
+    pending: Math.max(0, published - completed - failed - skipped - processing),
   };
 }
 
@@ -470,7 +475,7 @@ export async function countTranslationActivity(jobId?: string) {
   return count ?? 0;
 }
 
-async function processTranslationItem(jobId: string, item: JobItemRow, config: AiRuntimeConfig): Promise<"completed" | "failed"> {
+async function processTranslationItem(jobId: string, item: JobItemRow, config: AiRuntimeConfig): Promise<"completed" | "failed" | "retrying" | "skipped"> {
   const supabase = requiredServiceClient();
   const attempts = Number(item.attempts ?? 0) + 1;
   logAi("item.process.start", { jobId, itemId: item.id, gameId: item.game_id, attempts, provider: config.provider, model: config.model });
@@ -538,23 +543,28 @@ async function processTranslationItem(jobId: string, item: JobItemRow, config: A
     return "completed";
   } catch (error) {
     const message = error instanceof Error ? error.message : "Bilinmeyen çeviri hatası";
-    logAiError("item.process.failed", error, { jobId, itemId: item.id, gameId: item.game_id, attempts });
+    const reachedRetryLimit = attempts >= MAX_TRANSLATION_ATTEMPTS;
+    const nextStatus = reachedRetryLimit ? "skipped" : "pending";
+    const storedMessage = reachedRetryLimit
+      ? `${message} (${MAX_TRANSLATION_ATTEMPTS} deneme sonunda atlandı.)`
+      : `${message} (${attempts}/${MAX_TRANSLATION_ATTEMPTS}; tekrar denenecek.)`;
+    logAiError("item.process.failed", error, { jobId, itemId: item.id, gameId: item.game_id, attempts, nextStatus });
     await supabase.from("game_translation_state").upsert({
       game_id: item.game_id,
-      status: "failed",
+      status: nextStatus,
       provider: config.provider,
       model: config.model,
-      last_error: message,
+      last_error: storedMessage,
       attempts,
       updated_at: new Date().toISOString(),
     });
     await supabase.from("ai_translation_job_items").update({
-      status: "failed",
-      error_message: message,
-      completed_at: new Date().toISOString(),
+      status: nextStatus,
+      error_message: storedMessage,
+      completed_at: reachedRetryLimit ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
     }).eq("id", item.id);
-    return "failed";
+    return reachedRetryLimit ? "skipped" : "retrying";
   }
 }
 
@@ -606,13 +616,15 @@ async function getJob(jobId: string) {
 
 async function refreshJobCounts(jobId: string) {
   const supabase = requiredServiceClient();
-  const [job, completed, failed, pending, processing] = await Promise.all([
+  const [job, completed, failed, skipped, pending, processing] = await Promise.all([
     getJob(jobId),
     countRows("ai_translation_job_items", { column: "job_id", value: jobId }, { column: "status", value: "completed" }),
     countRows("ai_translation_job_items", { column: "job_id", value: jobId }, { column: "status", value: "failed" }),
+    countRows("ai_translation_job_items", { column: "job_id", value: jobId }, { column: "status", value: "skipped" }),
     countRows("ai_translation_job_items", { column: "job_id", value: jobId }, { column: "status", value: "pending" }),
     countRows("ai_translation_job_items", { column: "job_id", value: jobId }, { column: "status", value: "processing" }),
   ]);
+  const terminalFailures = failed + skipped;
   const status = job.status === "paused" || job.status === "cancelled"
     ? job.status
     : processing > 0
@@ -622,17 +634,17 @@ async function refreshJobCounts(jobId: string) {
         : "completed";
   const { error } = await supabase.from("ai_translation_jobs").update({
     completed_count: completed,
-    failed_count: failed,
+    failed_count: terminalFailures,
     status,
     completed_at: status === "completed" ? new Date().toISOString() : null,
     updated_at: new Date().toISOString(),
   }).eq("id", jobId);
   if (error) throw new Error(`Çeviri işi sayaçları güncellenemedi: ${error.message}`);
-  logAi("job.counts.refreshed", { jobId, completed, failed, pending, processing, status });
+  logAi("job.counts.refreshed", { jobId, completed, failed, skipped, pending, processing, status });
   return {
     ...job,
     completedCount: completed,
-    failedCount: failed,
+    failedCount: terminalFailures,
     status,
     completedAt: status === "completed" ? new Date().toISOString() : null,
     updatedAt: new Date().toISOString(),
@@ -782,8 +794,8 @@ function mapAutomation(row: AutomationRow, todayCompleted: number): AiTranslatio
   return {
     enabled: Boolean(row.enabled),
     provider: "deepseek",
-    dailyTarget: clampInteger(row.daily_target, 1, 5000, 1000),
-    perRunLimit: clampInteger(row.per_run_limit, 1, 5, 2),
+    dailyTarget: clampInteger(row.daily_target, 1, AUTOMATION_DAILY_TARGET, AUTOMATION_DAILY_TARGET),
+    perRunLimit: clampInteger(row.per_run_limit, 1, MAX_ITEMS_PER_PROCESS, AUTOMATION_PER_RUN_LIMIT),
     retryFailed: row.retry_failed ?? true,
     status: row.status ?? (row.enabled ? "idle" : "disabled"),
     currentJobId: row.current_job_id,

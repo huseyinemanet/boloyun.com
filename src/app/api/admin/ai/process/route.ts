@@ -4,13 +4,16 @@ import { processTranslationJob } from "@/lib/ai/db-ai";
 
 export async function POST(request: Request) {
   await requireAdmin();
-  const body = await request.json().catch(() => null) as { jobId?: unknown } | null;
+  const body = await request.json().catch(() => null) as { jobId?: unknown; limit?: unknown } | null;
   const jobId = typeof body?.jobId === "string" ? body.jobId : "";
   if (!jobId) return NextResponse.json({ error: "Çeviri işi eksik." }, { status: 400 });
+  const limit = typeof body?.limit === "number" && Number.isFinite(body.limit)
+    ? Math.max(1, Math.min(25, Math.round(body.limit)))
+    : 20;
 
   try {
-    console.log("[ai-translation] api.process.start", { jobId });
-    const job = await processTranslationJob(jobId, { limit: 1 });
+    console.log("[ai-translation] api.process.start", { jobId, limit });
+    const job = await processTranslationJob(jobId, { limit });
     const payload = {
       status: "success",
       message: `Adım tamamlandı: ${job.completedCount}/${job.totalCount}, hata ${job.failedCount}.`,
