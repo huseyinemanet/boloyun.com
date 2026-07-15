@@ -1,5 +1,8 @@
-export function allowPublicDemoData(nodeEnv = process.env.NODE_ENV) {
-  return nodeEnv !== "production";
+export function allowPublicDemoData(
+  nodeEnv = process.env.NODE_ENV,
+  githubActions = process.env.GITHUB_ACTIONS,
+) {
+  return nodeEnv !== "production" || githubActions === "true";
 }
 
 export function publicDataUnavailable(source: string, detail?: string) {
