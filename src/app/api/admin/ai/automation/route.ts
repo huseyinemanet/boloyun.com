@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
-import { runTranslationAutomationTick } from "@/lib/ai/db-ai";
+import { getTranslationStats, runTranslationAutomationTick } from "@/lib/ai/db-ai";
 
 export async function POST(request: Request) {
   const auth = request.headers.get("authorization") ?? "";
@@ -14,9 +14,11 @@ export async function POST(request: Request) {
   try {
     console.log("[ai-translation] automation.api.start", { source });
     const result = await runTranslationAutomationTick(source);
+    const stats = await getTranslationStats();
     console.log("[ai-translation] automation.api.done", result);
     return NextResponse.json({
       ...result,
+      stats,
       attempted: "job" in result && result.job && "attempted" in result.job && typeof result.job.attempted === "number" ? result.job.attempted : 0,
       processed: "job" in result && result.job && "processed" in result.job && typeof result.job.processed === "number" ? result.job.processed : 0,
       failed: "job" in result && result.job && "failedStep" in result.job && typeof result.job.failedStep === "number" ? result.job.failedStep : 0,
