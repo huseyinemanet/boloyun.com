@@ -110,7 +110,7 @@ export default async function GameDetailPage({ params }: Props) {
                     />
                   </div>
                 </div>
-                <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{game.shortDescription}</p>
+                <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{compactText(game.shortDescription, 320)}</p>
               </div>
             </div>
 
@@ -151,9 +151,9 @@ export default async function GameDetailPage({ params }: Props) {
       <AdSlot slotKey="game_page_below_player" />
 
       <section className="grid gap-3 rounded-md border border-border bg-card p-4 md:grid-cols-2">
-        <InfoBlock title={`${game.title} nasıl oynanır?`} body={compactText(game.howToPlay, 600)} />
-        <ListBlock title="Kontroller" items={game.controls.slice(0, 8).map((item) => compactText(item, 240))} />
-        <ListBlock title="Özellikler" items={game.features.slice(0, 8).map((item) => compactText(item, 240))} />
+        <InfoBlock title={`${game.title} nasıl oynanır?`} body={compactText(game.howToPlay, 480)} />
+        <ListBlock title="Kontroller" items={game.controls.slice(0, 6).map((item) => compactText(item, 180))} />
+        <ListBlock title="Özellikler" items={game.features.slice(0, 6).map((item) => compactText(item, 180))} />
       </section>
 
       <TaxonomyChips categories={categories} tags={tags} />
@@ -161,7 +161,7 @@ export default async function GameDetailPage({ params }: Props) {
       <section className="rounded-md border border-border bg-card p-4">
         <h2 className="mb-3 text-lg font-semibold">Benzer Oyunlar</h2>
         <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">
-          {similarGames.map((similar) => (
+          {similarGames.slice(0, 6).map((similar) => (
             <SoundLink
               key={similar.id}
               href={`/oyun/${similar.slug}`}

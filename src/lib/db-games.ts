@@ -2,6 +2,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 import { games as fallbackGames } from "@/lib/data";
+import { allowPublicDemoData, publicDataUnavailable } from "@/lib/public-data-guard";
 import type { Game, GameSearchSuggestion, GameType, PublishStatus } from "@/types/game";
 import { slugify } from "@/lib/slug/slugify";
 import { getPublicSettings } from "@/lib/db-settings";
@@ -220,7 +221,12 @@ export type AdminPopularGame = {
 
 const getPublishedGamesCached = unstable_cache(async function getPublishedGames(limit = 60): Promise<Game[]> {
   const supabase = createSupabaseServiceClient();
-  if (!supabase) return fallbackGames;
+  if (!supabase) {
+    if (!allowPublicDemoData()) {
+      throw publicDataUnavailable("Yayınlanmış oyunlar", "Supabase yapılandırması eksik");
+    }
+    return fallbackGames;
+  }
 
   const { data, error } = await measuredQuery("games.published.latest", supabase
     .from("games")
@@ -229,9 +235,14 @@ const getPublishedGamesCached = unstable_cache(async function getPublishedGames(
     .order("created_at", { ascending: false })
     .limit(limit));
 
-  if (error || !data || data.length === 0) {
+  if (error) {
+    if (!allowPublicDemoData()) {
+      throw publicDataUnavailable("Yayınlanmış oyunlar", error.message);
+    }
     return fallbackGames;
   }
+
+  if (!data || data.length === 0) return allowPublicDemoData() ? fallbackGames : [];
 
   return (data as unknown as GameRow[]).map(mapGameRow);
 }, ["published-game-cards-v2"], { revalidate: 3600, tags: ["games"] });

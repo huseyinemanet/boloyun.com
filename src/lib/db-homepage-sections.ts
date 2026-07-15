@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 import { getPublishedGames, getPublishedGamesByCategorySlug, getPublishedGamesByIds, mapGameRow, type GameRow } from "@/lib/db-games";
+import { allowPublicDemoData, publicDataUnavailable } from "@/lib/public-data-guard";
 import type { Game } from "@/types/game";
 
 export type HomepageSectionInput = {
@@ -72,6 +73,9 @@ export async function saveHomepageSections(input: HomepageSectionInput[]) {
 
 const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicHomepageSnapshotCached(): Promise<{ sections: Array<{ section: HomepageSectionInput; games: Game[] }>; latestGames: Game[] }> {
   const supabase = createSupabaseServiceClient();
+  if (!supabase && !allowPublicDemoData()) {
+    throw publicDataUnavailable("Ana sayfa", "Supabase yapılandırması eksik");
+  }
   if (supabase) {
     const { data, error } = await supabase.rpc("get_public_homepage", {
       p_section_limit: 12,
