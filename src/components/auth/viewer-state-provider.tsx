@@ -33,11 +33,6 @@ export function ViewerStateProvider({ children }: { children: ReactNode }) {
 
   async function refresh() {
     viewerPromise = null;
-    if (!hasSupabaseAuthCookie()) {
-      setProfile(null);
-      setLoaded(true);
-      return;
-    }
     const nextProfile = await loadViewerProfile();
     setProfile(nextProfile);
     setLoaded(true);
@@ -45,14 +40,6 @@ export function ViewerStateProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    if (!hasSupabaseAuthCookie()) {
-      queueMicrotask(() => {
-        if (mounted) setLoaded(true);
-      });
-      return () => {
-        mounted = false;
-      };
-    }
 
     void loadViewerProfile().then((nextProfile) => {
       if (!mounted) return;
@@ -75,10 +62,6 @@ export function ViewerStateProvider({ children }: { children: ReactNode }) {
 
 export function useViewerState() {
   return useContext(ViewerStateContext);
-}
-
-export function hasSupabaseAuthCookie() {
-  return typeof document !== "undefined" && /(?:^|;\s*)(?:sb-[^=]+-auth-token|supabase-auth-token(?:\.[^=]+)?)=/.test(document.cookie);
 }
 
 async function loadViewerProfile() {
