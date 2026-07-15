@@ -4,7 +4,7 @@ import { ensureProfileForAuthUser } from "@/lib/auth-profiles";
 import { migrateCurrentSessionFavorites } from "@/lib/auth-favorites";
 import { syncBrevoMarketingContact } from "@/lib/brevo-contacts";
 import { getPublicSettings } from "@/lib/db-settings";
-import { getRequestOrigin } from "@/lib/request-origin";
+import { getRequestOrigin, publicUrlFromRequest } from "@/lib/request-origin";
 import { hasTrustedMutationOrigin } from "@/lib/request-security";
 import { createSupabaseRouteClient } from "@/lib/supabase/server";
 import { verifyRiskChallenge } from "@/lib/turnstile";
@@ -87,5 +87,5 @@ export async function POST(request: NextRequest) {
 }
 
 function redirectTo(request: NextRequest, path: string) {
-  return NextResponse.redirect(new URL(path, request.url), 303);
+  return NextResponse.redirect(publicUrlFromRequest(request, path), 303);
 }

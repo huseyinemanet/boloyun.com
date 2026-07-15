@@ -110,7 +110,7 @@ export default async function GameDetailPage({ params }: Props) {
                     />
                   </div>
                 </div>
-                <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{compactText(game.shortDescription, 320)}</p>
+                <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{compactText(game.shortDescription, 260)}</p>
               </div>
             </div>
 
@@ -151,9 +151,9 @@ export default async function GameDetailPage({ params }: Props) {
       <AdSlot slotKey="game_page_below_player" />
 
       <section className="grid gap-3 rounded-md border border-border bg-card p-4 md:grid-cols-2">
-        <InfoBlock title={`${game.title} nasıl oynanır?`} body={compactText(game.howToPlay, 480)} />
-        <ListBlock title="Kontroller" items={game.controls.slice(0, 6).map((item) => compactText(item, 180))} />
-        <ListBlock title="Özellikler" items={game.features.slice(0, 6).map((item) => compactText(item, 180))} />
+        <InfoBlock title={`${game.title} nasıl oynanır?`} body={compactText(game.howToPlay, 360)} />
+        <ListBlock title="Kontroller" items={game.controls.slice(0, 6).map((item) => compactText(item, 140))} />
+        <ListBlock title="Özellikler" items={game.features.slice(0, 6).map((item) => compactText(item, 140))} />
       </section>
 
       <TaxonomyChips categories={categories} tags={tags} />
@@ -223,7 +223,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 function TaxonomyChips({ categories, tags }: { categories: GameTaxonomyLink[]; tags: GameTaxonomyLink[] }) {
   const items = [
     ...categories.slice(0, 4).map((category) => ({ ...category, href: `/kategori/${category.slug}` })),
-    ...tags.slice(0, 8).map((tag) => ({ ...tag, href: `/etiket/${tag.slug}` })),
+    ...tags.slice(0, 5).map((tag) => ({ ...tag, href: `/etiket/${tag.slug}` })),
   ];
 
   if (!items.length) return null;

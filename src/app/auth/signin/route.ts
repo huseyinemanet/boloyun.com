@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { assertHumanForm, consumeRateLimits, getClientIp } from "@/lib/abuse";
 import { ensureProfileForAuthUser } from "@/lib/auth-profiles";
 import { migrateCurrentSessionFavorites } from "@/lib/auth-favorites";
+import { publicUrlFromRequest } from "@/lib/request-origin";
 import { hasTrustedMutationOrigin } from "@/lib/request-security";
 import { safeLocalPath } from "@/lib/security/navigation";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
@@ -54,5 +55,5 @@ export async function POST(request: NextRequest) {
 }
 
 function redirectTo(request: NextRequest, path: string) {
-  return NextResponse.redirect(new URL(path, request.url), 303);
+  return NextResponse.redirect(publicUrlFromRequest(request, path), 303);
 }

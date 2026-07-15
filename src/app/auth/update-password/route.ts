@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { hasTrustedMutationOrigin } from "@/lib/request-security";
+import { publicUrlFromRequest } from "@/lib/request-origin";
 import { createSupabaseRouteClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
@@ -29,5 +30,5 @@ export async function POST(request: NextRequest) {
 }
 
 function redirectTo(request: NextRequest, path: string) {
-  return NextResponse.redirect(new URL(path, request.url), 303);
+  return NextResponse.redirect(publicUrlFromRequest(request, path), 303);
 }

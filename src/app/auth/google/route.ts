@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getRequestOrigin } from "@/lib/request-origin";
+import { getRequestOrigin, publicUrlFromRequest } from "@/lib/request-origin";
 import { safeLocalPath } from "@/lib/security/navigation";
 import { createSupabaseRouteClient } from "@/lib/supabase/server";
 
@@ -20,5 +20,5 @@ export async function GET(request: NextRequest) {
 }
 
 function redirectTo(request: NextRequest, path: string) {
-  return NextResponse.redirect(new URL(path, request.url), 303);
+  return NextResponse.redirect(publicUrlFromRequest(request, path), 303);
 }
