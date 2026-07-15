@@ -127,7 +127,20 @@ export default async function GameDetailPage({ params }: Props) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <h1 className="text-2xl font-semibold">{game.title}</h1>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <h1 className="min-w-0 flex-1 text-2xl font-semibold">{game.title}</h1>
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                    <GameUserActions
+                      gameId={game.id}
+                      slug={game.slug}
+                      likesCount={game.likesCount}
+                      dislikesCount={game.dislikesCount}
+                      showVotes={settings.games.likesEnabled && settings.community.ratingsEnabled}
+                      showFavorite={settings.games.favoritesEnabled && settings.community.favoritesEnabled}
+                    />
+                    {settings.games.sharingEnabled ? <ShareGameButton title={game.title} /> : null}
+                  </div>
+                </div>
                 <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{game.shortDescription}</p>
               </div>
               <AdminEditGameLink gameId={game.id} title={game.title} />
@@ -139,17 +152,6 @@ export default async function GameDetailPage({ params }: Props) {
               <Metric label="Oy" value={`${game.ratingCount.toLocaleString("tr-TR")} değerlendirme`} />
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <GameUserActions
-                gameId={game.id}
-                slug={game.slug}
-                likesCount={game.likesCount}
-                dislikesCount={game.dislikesCount}
-                showVotes={settings.games.likesEnabled && settings.community.ratingsEnabled}
-                showFavorite={settings.games.favoritesEnabled && settings.community.favoritesEnabled}
-              />
-              {settings.games.sharingEnabled ? <ShareGameButton title={game.title} /> : null}
-            </div>
           </div>
         </div>
 
