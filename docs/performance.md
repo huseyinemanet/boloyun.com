@@ -1,6 +1,6 @@
 # BolOyun Performance Release Gate
 
-BolOyun'un Cloudflare Free hedefi static-first, cache-first, Worker-last calismaktir.
+BolOyun'un production hedefi Hetzner VPS uzerinde hafif, cache-first ve uygulama CPU'sunu koruyan bir Next.js standalone servisidir.
 
 ## Her Performans PR'i Icin
 
@@ -8,11 +8,11 @@ BolOyun'un Cloudflare Free hedefi static-first, cache-first, Worker-last calisma
 - `pnpm lint`
 - `pnpm test`
 - `pnpm build`
-- Gerekliyse `pnpm cf:build`
+- Gerekliyse production Docker image build'i
 - Public/private cache kontrolu:
   - `/`, `/oyun/*`, `/kategori/*`, `/etiket/*`, `/sayfa/*` anonim istekte public cache'e uygun olmali.
   - `/admin/*`, `/profil`, `/api/me`, auth route'lari ve cookie'li private response'lar `private, no-store` kalmali.
-  - Private route'larda `CF-Cache-Status: HIT` kabul edilmez.
+  - Private route'larda paylasimli HTML cache kabul edilmez.
 
 ## Baseline Komutu
 
@@ -52,20 +52,20 @@ Rapor JSON satirlari uretir:
 
 Public route'larda yeni ozellik eklenince `jsBytes`, `cssBytes` ve `clientModuleCount` kontrolsuz artmamalidir.
 
-## Cloudflare Kontrol Listesi
+## VPS / Nginx Kontrol Listesi
 
-- Static assets: `/_next/static/*` immutable HIT almali.
+- Static assets: `/_next/static/*` immutable cache header'i almali.
 - Root public assets: `/logo.svg`, `/sounds/*`, `/thumbnails/*` en az 1 gun cache'lenmeli.
-- HTML Cache Rules yalniz public anonim route gruplarina uygulanmali.
-- `/api/*`, `/admin/*`, auth ve hesap route'lari Cache Rules disinda kalmali.
-- Cookie bulunan isteklerde HTML edge cache bypass edilmeli.
-- Global purge yerine path veya tag seviyesinde invalidation tercih edilmeli.
+- Public HTML icin Nginx cache eklenecekse yalniz anonim public route gruplarina uygulanmali.
+- `/api/*`, `/admin/*`, auth ve hesap route'lari paylasimli HTML cache disinda kalmali.
+- Cookie bulunan isteklerde HTML cache bypass edilmeli.
+- Global purge yerine path veya cache key seviyesinde invalidation tercih edilmeli.
 
-## Cloudflare HTML Cache Rule
+## Opsiyonel Nginx HTML Cache
 
-Cloudflare API token'i Cache Rules okuma/yazma yetkisi vermiyorsa bu kural dashboard'dan uygulanir.
+Ilk VPS tasimasinda HTML cache'i zorunlu degildir; once dogru ve izole calisan container, sonra kontrollu cache eklemek daha sagliklidir.
 
-Rule amaci: yalniz anonim public HTML sayfalarini edge cache'e almak.
+Cache amaci: yalniz anonim public HTML sayfalarini kisa sureli cache'e almak.
 
 Include:
 
@@ -88,8 +88,7 @@ Exclude:
 
 Onerilen ayarlar:
 
-- Cache eligibility: cache eligible
-- Edge TTL: override origin, 300 seconds
+- Cache TTL: 300 seconds
 - Browser TTL: respect origin
 - Private/auth route'larda cache bypass
 
@@ -101,6 +100,6 @@ pnpm perf:baseline https://boloyun.com/ https://boloyun.com/oyun/mini-juegos-oli
 
 Beklenen sonuc:
 
-- Ilk anonim istekte `CF-Cache-Status: MISS` veya `BYPASS` olabilir.
-- Tekrar anonim istekte public HTML route'lari `HIT` alabilmeli.
-- `/admin/*`, `/profil`, `/api/me`, `/giris` asla `HIT` almamali.
+- Ilk anonim istekte origin yanit verebilir.
+- Cache aciksa tekrar anonim istekte public HTML route'lari cache'ten gelebilmeli.
+- `/admin/*`, `/profil`, `/api/me`, `/giris` asla paylasimli cache'ten gelmemeli.

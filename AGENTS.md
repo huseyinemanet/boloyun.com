@@ -35,7 +35,9 @@ Use this stack unless explicitly changed by the project owner:
 - shadcn/ui
 - Supabase Postgres
 - Supabase Auth
-- Cloudflare Pages
+- Hetzner VPS
+- Docker Compose
+- Nginx reverse proxy
 - Cloudflare R2
 - Ruffle for SWF games
 - Node.js CLI scripts for import/crawling
@@ -593,8 +595,8 @@ pnpm build
 5. Push the verified commit to GitHub. Production changes must reach `main` through an intentional push or merge.
 6. Verify both deployment tracks separately after the push:
    - Supabase deploys only tracked backend artifacts such as new migrations, configured Edge Functions, and configured Storage buckets.
-   - Cloudflare deploys the Next.js/OpenNext application. A successful Supabase deployment does not mean the website itself was deployed.
-7. Confirm the live route on `https://boloyun.com` after Cloudflare reports success.
+   - GitHub Actions deploys the Next.js standalone Docker image to the Hetzner VPS. A successful Supabase deployment does not mean the website itself was deployed.
+7. Confirm the live route on `https://boloyun.com` after the VPS deployment reports success.
 
 Do not run ad-hoc production SQL for a schema change that should be reproducible. Create a new file under `supabase/migrations`, validate it, and commit it. Never edit an already-applied production migration; add a new migration instead.
 
@@ -609,7 +611,7 @@ Automatic branching: optional; enable only when preview databases are wanted
 Supabase changes only: enabled when automatic branching is enabled
 ```
 
-The Supabase GitHub integration watches the repository but does not deploy the Next.js frontend. Keep Cloudflare's GitHub/Workers deployment connected to `main`, or use the explicit `pnpm cf:deploy` release command when a manual production deployment is requested.
+The Supabase GitHub integration watches the repository but does not deploy the Next.js frontend. Keep the GitHub Actions VPS deployment connected to `main` for the production website.
 
 Before pushing a new database migration, use the Supabase CLI safety flow:
 

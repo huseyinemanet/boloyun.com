@@ -1,4 +1,4 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { getSiteAssetObject } from "@/lib/r2";
 import { getSiteAssetStorageKey } from "@/lib/site-assets";
 
 export const runtime = "nodejs";
@@ -8,15 +8,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ key:
   const storageKey = getSiteAssetStorageKey(key ?? []);
   if (!storageKey) return new Response("Not found", { status: 404 });
 
-  const { env } = await getCloudflareContext({ async: true });
-  if (!env.SITE_ASSETS) return new Response("Asset storage unavailable", { status: 503 });
-
-  const object = await env.SITE_ASSETS.get(storageKey);
-  if (!object?.body) return assetFallback(key[0], request);
+  const object = await getSiteAssetObject(storageKey);
+  if (!object) return assetFallback(key[0], request);
 
   const headers = new Headers();
-  headers.set("content-type", object.httpMetadata?.contentType ?? "application/octet-stream");
-  headers.set("cache-control", object.httpMetadata?.cacheControl ?? "public, max-age=31536000, immutable");
+  headers.set("content-type", object.contentType);
+  headers.set("cache-control", object.cacheControl);
   headers.set("x-content-type-options", "nosniff");
 
   return new Response(object.body, { headers });

@@ -1,17 +1,14 @@
-# Cloudflare R2 kapak geçişi
+# R2 kapak ve site varlığı geçişi
 
-Kod ve veritabanı geçişi hazırdır. Üretim taşıması aşağıdaki dış hesap adımları tamamlanmadan başlatılmamalıdır.
+Kod ve veritabanı geçişi hazırdır. R2 bu projede yalnızca kapak, logo, favicon ve ses gibi site varlıkları için obje deposu/CDN görevi görür; Next.js uygulama runtime'ı Cloudflare Worker'a bağlı değildir.
 
-## Cloudflare kurulumu
+## R2 kurulumu
 
-1. `boloyun.com` alan adını Cloudflare Free hesabına ekleyin.
-2. Namecheap'teki tüm A, AAAA, CNAME, MX ve TXT kayıtlarını karşılaştırın. SPF, DKIM ve DMARC kayıtları eksiksiz görünmeden nameserver değiştirmeyin.
-3. Cloudflare'ın verdiği iki nameserver'ı Namecheap'te kaydedin ve bölgenin `Active` olmasını bekleyin.
-4. R2 Standard içinde `boloyun-assets` bucket'ını oluşturun.
-5. Bucket'a `cdn.boloyun.com` custom domain'ini bağlayın; üretimde `r2.dev` erişimini kapatın.
-6. Yalnızca `boloyun-assets` için Object Read & Write yetkili bir R2 API token üretin.
-7. `cdn.boloyun.com/covers/*` için Cache Everything, Browser TTL ve Edge TTL değerlerini bir yıl yapın. Smart Tiered Cache'i etkinleştirin.
-8. Cloudflare Billing altında 1 USD bütçe uyarısı oluşturun. Uyarının trafiği otomatik kesmediğini unutmayın.
+1. R2 Standard içinde `boloyun-assets` bucket'ını oluşturun veya mevcut bucket'ı kullanın.
+2. Bucket'a `cdn.boloyun.com` custom domain'i bağlıysa koruyun; uygulama domain'i `boloyun.com` VPS'ye taşınabilir.
+3. Yalnızca `boloyun-assets` için Object Read & Write yetkili bir R2 API token üretin.
+4. `cdn.boloyun.com/covers/*` için uzun TTL kullanın.
+5. Cloudflare Billing altında bütçe uyarısı tutun. Uyarının trafiği otomatik kesmediğini unutmayın.
 
 ## Ortam değişkenleri
 
@@ -35,7 +32,7 @@ pnpm covers:retry --limit 500 --concurrency 8
 pnpm covers:audit --limit 100000 --concurrency 8
 ```
 
-Her başarılı kayıt önce R2'ye yüklenir, CDN üzerinden `HEAD 200` ile doğrulanır ve ancak ardından `thumbnail_url` değiştirilir. Hatalı kayıtta kaynak URL korunur.
+Her başarılı kayıt önce R2'ye yüklenir, public URL üzerinden `HEAD 200` ile doğrulanır ve ancak ardından `thumbnail_url` değiştirilir. Hatalı kayıtta kaynak URL korunur.
 
 Seçilmiş bir pilotu geri almak için:
 

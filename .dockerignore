@@ -1,0 +1,14 @@
+.git
+.github
+.next
+.open-next
+.wrangler
+node_modules
+coverage
+.artifacts
+.env
+.env.*
+!.env.example
+*.log
+*.tsbuildinfo
+supabase/.temp
