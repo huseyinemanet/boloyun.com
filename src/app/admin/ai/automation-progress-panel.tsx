@@ -42,7 +42,9 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
   const [bulkCompletedOrSkipped, setBulkCompletedOrSkipped] = useState(0);
   const [bulkFailedOrSkipped, setBulkFailedOrSkipped] = useState(0);
   const [bulkError, setBulkError] = useState<string | null>(null);
+  const [completedPulse, setCompletedPulse] = useState(false);
   const lastToastKey = useRef("");
+  const previousCompleted = useRef(initialStats.completed);
   const stopBulkRequested = useRef(false);
 
   useEffect(() => {
@@ -55,6 +57,45 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
     window.addEventListener("ai-translation:dashboard", handleDashboardSnapshot);
     return () => window.removeEventListener("ai-translation:dashboard", handleDashboardSnapshot);
   }, []);
+
+  useEffect(() => {
+    if (previousCompleted.current === stats.completed) return;
+    previousCompleted.current = stats.completed;
+    setCompletedPulse(true);
+    const timeout = setTimeout(() => setCompletedPulse(false), 900);
+    return () => clearTimeout(timeout);
+  }, [stats.completed]);
+
+  useEffect(() => {
+    if (!bulkRunning) return;
+
+    let disposed = false;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+
+    async function refreshStats() {
+      const controller = new AbortController();
+      const abortTimeout = setTimeout(() => controller.abort(), 6000);
+      try {
+        const response = await fetch("/api/admin/ai/activity?limit=1", { cache: "no-store", signal: controller.signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const snapshot = await response.json() as DashboardSnapshot;
+        if (disposed) return;
+        if (snapshot.stats) setStats(snapshot.stats);
+        if (snapshot.automation) setAutomation(snapshot.automation);
+      } catch {
+        // Canlı sayı yenilemesi yardımcı bir akış; ana çeviri döngüsünü durdurmasın.
+      } finally {
+        clearTimeout(abortTimeout);
+        if (!disposed) timeout = setTimeout(refreshStats, 1250);
+      }
+    }
+
+    timeout = setTimeout(refreshStats, 750);
+    return () => {
+      disposed = true;
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [bulkRunning]);
 
   useEffect(() => {
     if (actionState.status === "idle" || !actionState.message) return;
@@ -136,7 +177,7 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
       </div>
 
       <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
-        <MetricCard label="Tamamlandı" value={totalProgress} />
+        <MetricCard label="Tamamlandı" value={totalProgress} live={completedPulse} />
         <MetricCard label="Bekleyen" value={remainingCount.toLocaleString("tr-TR")} />
         <MetricCard label="Sorunlu / atlanan" value={stats.failed.toLocaleString("tr-TR")} tone={stats.failed ? "danger" : "muted"} />
       </div>
@@ -172,12 +213,13 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
               window.dispatchEvent(new CustomEvent("ai-translation:process-loop", { detail: { active: true } }));
               try {
                 const steps = await runBulkLoop((snapshot) => {
-                  const { step, attempted, completedOrSkipped, failedOrSkipped, automation: nextAutomation } = snapshot;
+                  const { step, attempted, completedOrSkipped, failedOrSkipped, automation: nextAutomation, stats: nextStats } = snapshot;
                   setBulkSteps(step);
                   setBulkAttempted(attempted);
                   setBulkCompletedOrSkipped(completedOrSkipped);
                   setBulkFailedOrSkipped(failedOrSkipped);
                   if (nextAutomation) setAutomation(nextAutomation);
+                  if (nextStats) setStats(nextStats);
                 }, stopBulkRequested);
                 if (stopBulkRequested.current) {
                   toast.info("Toplu çeviri durduruldu.", { description: steps ? `${steps} çalışma turu tamamlandı.` : "Yeni çalışma turu başlatılmadı." });
@@ -225,11 +267,11 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
   );
 }
 
-function MetricCard({ label, value, tone = "muted" }: { label: string; value: string; tone?: "muted" | "danger" }) {
+function MetricCard({ label, value, tone = "muted", live = false }: { label: string; value: string; tone?: "muted" | "danger"; live?: boolean }) {
   return (
-    <div className="rounded-md border border-border bg-background/40 px-3 py-2">
+    <div className={live ? "rounded-md border border-primary/70 bg-primary/10 px-3 py-2 transition-colors" : "rounded-md border border-border bg-background/40 px-3 py-2 transition-colors"}>
       <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-      <p className={tone === "danger" ? "mt-1 text-lg font-bold text-destructive" : "mt-1 text-lg font-bold"}>{value}</p>
+      <p className={tone === "danger" ? "mt-1 text-lg font-bold text-destructive" : "mt-1 text-lg font-bold"} aria-live={live ? "polite" : undefined}>{value}</p>
     </div>
   );
 }
@@ -258,6 +300,7 @@ async function runBulkLoop(
     completedOrSkipped: number;
     failedOrSkipped: number;
     automation?: AiTranslationAutomation;
+    stats?: AiTranslationStats;
   }) => void,
   stopRequested: React.MutableRefObject<boolean>,
 ) {
@@ -316,7 +359,6 @@ async function runBulkLoop(
       }
 
       transientFailures = 0;
-      if (result?.status === "skipped") break;
       steps += 1;
       attemptedTotal += Math.max(0, result?.attempted ?? 0);
       completedOrSkippedTotal += Math.max(0, result?.processed ?? 0);
@@ -327,7 +369,9 @@ async function runBulkLoop(
         completedOrSkipped: completedOrSkippedTotal,
         failedOrSkipped: failedOrSkippedTotal,
         automation: result?.automation,
+        stats: result?.stats,
       });
+      if (result?.status === "skipped") break;
       await sleep(BULK_STEP_DELAY_MS);
     } catch (error) {
       if (transientFailures < BULK_RETRY_LIMIT) {
