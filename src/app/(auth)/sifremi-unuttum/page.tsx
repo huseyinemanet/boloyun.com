@@ -36,7 +36,7 @@ export default async function ForgotPasswordPage({ searchParams }: Props) {
 }
 
 function getRecoveryError(error: string) {
-  if (error === "expired") return "Şifre yenileme bağlantısı geçersiz veya süresi dolmuş. Yeni bir bağlantı iste.";
+  if (error === "expired") return "Şifre yenileme bağlantısı geçersiz, süresi dolmuş veya e-posta güvenlik taraması tarafından önceden açılmış olabilir. Yeni bir bağlantı iste.";
   if (error === "challenge") return "Çok sayıda istek algılandı. Lütfen bot doğrulamasını tamamla.";
   if (error === "form") return "Form gönderilemedi. Lütfen e-posta adresini yeniden yaz.";
   if (error === "config") return "Üyelik sistemi henüz yapılandırılmamış.";

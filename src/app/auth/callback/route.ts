@@ -10,7 +10,12 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const next = safeLocalPath(requestUrl.searchParams.get("next"));
+  const callbackError = requestUrl.searchParams.get("error");
 
+  if (callbackError) {
+    const errorPath = next === "/sifre-yenile" ? "/sifremi-unuttum?error=expired" : "/giris?error=callback";
+    return redirectTo(request, errorPath);
+  }
   if (!code) return redirectTo(request, "/giris?error=callback");
   const routeClient = await createSupabaseRouteClient();
   if (!routeClient.supabase) return redirectTo(request, "/giris?error=config");
