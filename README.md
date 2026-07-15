@@ -1,16 +1,16 @@
 # Bol Oyun
 
-Bol Oyun, Türkçe-first çalışan hızlı ve hafif bir mini oyun portalıdır.
+Bol Oyun, Türkçe odaklı, hızlı ve hafif bir mini oyun portalıdır.
 
-Projenin ana amacı kullanıcıların oyun bulmasını, oyun sayfasına gitmesini ve **Oyunu Başlat** butonuyla tarayıcı içinde oynamasını sağlamaktır. Portal; iframe oyunları, HTML5 oyunları, SWF/Flash oyunları için Ruffle akışını, oyun keşfi/import hattını, admin onay sürecini, SEO içeriklerini, yorumları, favorileri ve reklam alanlarını destekleyecek şekilde tasarlanmıştır.
+Ana hedef basit: kullanıcı oyunu bulur, oyun sayfasını açar, **Oyunu Başlat** butonuna basar ve tarayıcı içinde oynar. Proje bu akışı bozmadan oyun keşfi, kategori/etiket sayfaları, arama, favoriler, yorumlar, admin yönetimi, import kuyruğu, reklam alanları ve SEO içerikleri sunar.
 
 - Canlı site: [https://boloyun.com](https://boloyun.com)
 - Canonical repo: [https://github.com/huseyinemanet/boloyun.com](https://github.com/huseyinemanet/boloyun.com)
-- Üretim branch'i: `main`
+- Production branch: `main`
 
-## Nedir?
+## Ürün Yaklaşımı
 
-Bol Oyun bir SaaS paneli ya da sosyal ağ değil; doğrudan oyun keşfine odaklanan bir web sitesidir. Public tarafta Türkçe arayüz, kompakt oyun gridleri, kategori/etiket sayfaları, arama, rastgele oyun, oyun detay sayfası ve gecikmeli yüklenen oyun oynatıcı bulunur.
+Bol Oyun bir SaaS paneli, sosyal ağ veya ağır oyun platformu değildir. Public taraf Türkçe-first, kompakt ve hızlı kalır.
 
 Temel kullanıcı akışı:
 
@@ -18,42 +18,78 @@ Temel kullanıcı akışı:
 Oyun bul -> oyun sayfasını aç -> Oyunu Başlat -> oyna -> başka oyun keşfet
 ```
 
-Admin tarafında oyun, kategori, etiket, reklam, statik sayfa, yorum ve import kuyruğu yönetilir. Import edilen oyunlar doğrudan yayına alınmaz; önce `game_imports` kuyruğuna girer, incelenir, gerekirse düzenlenir ve onaylandıktan sonra public `games` kaydına dönüşür.
+Public tarafta:
+
+- Türkçe ana sayfa, kategori sayfaları, etiket sayfaları ve arama
+- Kompakt oyun kartları ve sticky kategori navigasyonu
+- iframe, HTML5, SWF/Flash ve external oyun türleri
+- SWF oyunlar için Ruffle desteği
+- Oyuncu tıklamadan yüklenmeyen oyun oynatıcı
+- Favoriler, son oynananlar, yorumlar ve puanlama
+- SEO başlığı, açıklaması, canonical ve Open Graph çıktıları
+
+Admin tarafta:
+
+- Oyun, kategori, etiket ve statik sayfa yönetimi
+- Reklam slotları ve reklam kodu yönetimi
+- Import/crawler kayıtları için inceleme kuyruğu
+- AI destekli Türkçe içerik üretim alanları
+- Onay, ret ve düzeltme akışları
+- Yorum moderasyonu
 
 ## Teknoloji
 
-Proje modern bir Next.js uygulaması olarak geliştirilmiştir.
+- Next.js 16 App Router
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- shadcn/ui ve Radix tabanlı arayüz bileşenleri
+- Supabase Postgres
+- Supabase Auth
+- Supabase RLS ve admin yetki kontrolleri
+- S3 uyumlu obje depolama/CDN üzerinden kapak ve site varlıkları
+- Ruffle ile SWF/Flash oyun desteği
+- Node.js CLI import ve crawler scriptleri
+- Docker, Docker Compose ve Nginx
+- Hetzner VPS üzerinde izole production runtime
+- GitHub Actions ile image build, sunucuya aktarım ve otomatik deploy
 
-- **Next.js 16** ve **React 19**
-- **TypeScript**
-- **Tailwind CSS 4**
-- **shadcn/ui** ve Radix tabanlı arayüz bileşenleri
-- **Supabase Postgres** veritabanı
-- **Supabase Auth** kullanıcı oturumu
-- **Supabase RLS** ve admin korumaları
-- **Next.js standalone** üretim çıktısı
-- **Hetzner VPS + Docker Compose + Nginx** üretim dağıtımı
-- **Cloudflare R2** site varlıkları ve oyun kapakları için; uygulama runtime'ı Cloudflare Worker'a bağlı değildir
-- **Ruffle** destekli SWF/Flash oynatma altyapısı
-- **Node.js CLI import scriptleri**
-- **tsx** ile TypeScript script çalıştırma
-- **GitHub Actions** ile image build, VPS'ye aktarım ve production deploy
+## Production Mimarisi
 
-## Nasıl Çalışır?
-
-Public site `src/app/(public)` altında App Router ile çalışır. Ana sayfa oyun bölümlerini, kategori menüsünü, aramayı ve oyun kartlarını sunar. Oyun detay sayfasında önce kapak görseli ve **Oyunu Başlat** butonu gösterilir; oyun kaynağı kullanıcı tıklayana kadar yüklenmez. Bu davranış performans, güvenlik ve reklam/oyuncu deneyimi için bilinçli olarak korunur.
-
-Admin paneli `src/app/admin` altında yer alır. Buradan oyunlar, kategoriler, etiketler, yorumlar, reklamlar, statik sayfalar, crawler/import kayıtları ve site ayarları yönetilir.
-
-Import hattı `src/import` altında ayrılmıştır:
+Production runtime Hetzner VPS üzerinde Docker container olarak çalışır. Sunucudaki Nginx, dış trafiği sadece local porta bağlı uygulama container'ına proxy'ler.
 
 ```txt
-discover -> scrape -> parse -> generate_ai_content -> pending_review -> approve/reject -> publish
+Kullanıcı
+  -> https://boloyun.com
+  -> Nginx
+  -> 127.0.0.1:3001
+  -> boloyun-app
+  -> Supabase / obje deposu / harici servisler
 ```
 
-Bugünkü kodda sitemap keşfi, Miniplay odaklı scrape/parse akışı, import onayı ve kapak görseli/R2 yardımcıları bulunur. AI içerik komutu mevcut CLI yüzeyinde hazır durum mesajı verir; tam otomasyon bağlandığında scraped kayıtları Türkçe içerikle `pending_review` aşamasına taşıması beklenir.
+Deploy akışı:
 
-Veri tarafında ana tablolar Supabase migration dosyalarıyla yönetilir. Şema değişiklikleri production üzerinde ad-hoc SQL ile yapılmamalı; `supabase/migrations` altına yeni migration eklenip repo ile birlikte pushlanmalıdır.
+```txt
+main branch'e push veya merge
+  -> GitHub Actions
+  -> Next.js standalone Docker image build
+  -> image arşivinin VPS'ye aktarılması
+  -> /usr/local/sbin/boloyun-deploy
+  -> container health check
+  -> başarılıysa yeni sürüm, başarısızsa rollback
+```
+
+Sunucudaki uygulama dosyaları:
+
+```txt
+/opt/boloyun/compose.yml
+/opt/boloyun/.env.production
+/opt/boloyun/.deploy.env
+/opt/boloyun/cache
+/usr/local/sbin/boloyun-deploy
+```
+
+Uygulama SMF forumundan ayrı Docker Compose projesi ve ayrı local port üzerinde çalışır.
 
 ## Proje Yapısı
 
@@ -66,9 +102,9 @@ src/components/player    Oyun oynatıcı bileşenleri
 src/import               Sitemap keşfi, scraper, parser, import ve publish scriptleri
 src/lib                  Veritabanı erişimi, auth, SEO, güvenlik ve yardımcı modüller
 supabase/migrations      Reprodüksiyonlu veritabanı migration dosyaları
-Dockerfile               Next.js standalone production image
-deploy/compose.yml       VPS uzerindeki izole Docker Compose servisi
+deploy/compose.yml       VPS üzerindeki production Docker Compose servisi
 deploy/server            Production deploy scripti ve dar sudoers kuralı
+Dockerfile               Next.js standalone production image
 ```
 
 ## Gereksinimler
@@ -76,14 +112,14 @@ deploy/server            Production deploy scripti ve dar sudoers kuralı
 - Node.js 20 veya üzeri
 - pnpm `11.7.0`
 - Supabase projesi
-- Cloudflare R2 bucket'ı
-- Docker ve Docker Compose kurulu bir VPS
+- S3 uyumlu obje depolama/CDN alanı
+- Docker ve Docker Compose kurulu Linux VPS
 - Nginx reverse proxy
-- Gerekirse AI sağlayıcı API anahtarı
+- İsteğe bağlı AI sağlayıcı API anahtarı
 
-Bu repo `packageManager` alanında pnpm sürümünü sabitler. Yerel makinede pnpm yoksa komutları `npx -y pnpm@11.7.0 ...` şeklinde de çalıştırabilirsiniz.
+Repo `packageManager` alanında pnpm sürümünü sabitler. Yerelde pnpm yoksa komutları `npx -y pnpm@11.7.0 ...` şeklinde çalıştırabilirsiniz.
 
-## Kurulum
+## Yerel Kurulum
 
 Repoyu klonlayın:
 
@@ -104,34 +140,24 @@ Ortam dosyasını hazırlayın:
 cp .env.example .env.local
 ```
 
-`.env.local` içinde en az şu değerleri doldurun:
+Temel değişkenler:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 
-R2_ACCOUNT_ID=
-R2_ACCESS_KEY_ID=
-R2_SECRET_ACCESS_KEY=
-R2_BUCKET_NAME=boloyun-assets
-R2_PUBLIC_BASE_URL=https://cdn.boloyun.com
-
 AI_PROVIDER=
 AI_API_KEY=
 AI_SETTINGS_ENCRYPTION_KEY=
+AI_TRANSLATION_CRON_SECRET=
 
 SITE_URL=http://localhost:3000
 ABUSE_HASH_SECRET=
+SLOW_QUERY_MS=500
 ```
 
-Supabase migration'larını yerel veya bağlı Supabase projesine uygulayın. Production'a dönük değişikliklerde önce dry-run yapılmalıdır:
-
-```bash
-supabase db push --dry-run
-supabase db push
-supabase migration list
-```
+Obje deposu/CDN ve bot koruma ayarları için repodaki `.env.example` dosyasını esas alın. Production secret'ları README yerine sunucudaki `/opt/boloyun/.env.production` dosyasında tutulur.
 
 Geliştirme sunucusunu başlatın:
 
@@ -177,34 +203,79 @@ Production build:
 npx -y pnpm@11.7.0 build
 ```
 
-Production Docker image build:
+Performans kontrolü:
+
+```bash
+npx -y pnpm@11.7.0 perf:check
+```
+
+Docker image build:
 
 ```bash
 docker build \
   --build-arg NEXT_PUBLIC_SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL" \
   --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY" \
+  --build-arg SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY" \
   --build-arg SITE_URL="https://boloyun.com" \
   --tag boloyun:local \
   .
 ```
 
-Production container smoke test:
+Container smoke test:
 
 ```bash
 docker run --rm --env-file .env.local -p 3001:3000 boloyun:local
 ```
 
-GitHub Actions production deploy'u yalnızca `main` branch'ine push/merge sonrası çalışır. İlk VPS kurulumunda `deploy/compose.yml`, `/usr/local/sbin/boloyun-deploy`, `/etc/sudoers.d/boloyun-deploy` ve `/opt/boloyun/.env.production` sunucuda hazırlanmalıdır.
+## Veritabanı
 
-Deploy scripti image'i `127.0.0.1:3001` uzerinde çalışan `boloyun-app` container'ına alır, `/robots.txt` ile health check yapar ve başarısız adayda önceki image'e döner.
+Veritabanı Supabase Postgres üzerinde çalışır ve migration dosyaları `supabase/migrations` altında tutulur.
 
-Canlı site Nginx üzerinden container'a proxy'lenir:
+Production şema değişiklikleri için kural:
 
-```txt
-https://boloyun.com -> Nginx -> 127.0.0.1:3001 -> boloyun-app
+1. Yeni migration dosyası oluştur.
+2. Dry-run ile doğrula.
+3. Migration listesini kontrol et.
+4. Kod, migration ve gerekli konfigürasyonu birlikte commit'le.
+5. Push/merge sonrası remote migration durumunu doğrula.
+
+Komutlar:
+
+```bash
+supabase db push --dry-run
+supabase db push
+supabase migration list
 ```
 
-## Import ve Crawler Komutları
+Ana tablolar:
+
+```txt
+profiles
+games
+categories
+tags
+game_categories
+game_tags
+game_imports
+homepage_sections
+comments
+favorites
+ratings
+game_plays
+ad_slots
+ads
+static_pages
+```
+
+## Import ve Crawler
+
+Import hattı public yayını doğrudan değiştirmez. Kayıtlar önce `game_imports` tablosuna girer, admin incelemesinden geçer ve sadece onay sonrası public oyuna dönüşür.
+
+Akış:
+
+```txt
+discover -> scrape -> parse -> generate_ai_content -> pending_review -> approve/reject -> publish
+```
 
 Sitemap üzerinden oyun URL'lerini keşfetme:
 
@@ -212,19 +283,19 @@ Sitemap üzerinden oyun URL'lerini keşfetme:
 npx -y pnpm@11.7.0 import:discover <sitemap-url> --limit 50
 ```
 
-Miniplay parser ile keşfedilen oyunları scrape etme:
+Miniplay parser ile scrape:
 
 ```bash
 npx -y pnpm@11.7.0 import:scrape --source miniplay --limit 100
 ```
 
-Tekil URL scrape dry-run örneği:
+Tekil URL scrape dry-run:
 
 ```bash
 npx -y pnpm@11.7.0 import:scrape --source miniplay --dry-run https://www.miniplay.com/game/example
 ```
 
-AI içerik komutu:
+AI içerik üretimi:
 
 ```bash
 npx -y pnpm@11.7.0 import:generate-content --limit 50
@@ -242,7 +313,7 @@ Başarısız import kayıtlarını tekrar deneme:
 npx -y pnpm@11.7.0 import:retry-failed
 ```
 
-Kapak görseli/R2 yardımcı komutları:
+Kapak/CDN yardımcı komutları:
 
 ```bash
 npx -y pnpm@11.7.0 covers:audit
@@ -251,46 +322,109 @@ npx -y pnpm@11.7.0 covers:retry
 npx -y pnpm@11.7.0 covers:rollback
 ```
 
-SEO statik sayfa seed komutu:
+## Oyun Oynatıcı Kuralları
 
-```bash
-npx -y pnpm@11.7.0 seo:seed-static-pages
+Her oyun bir `game_type` değerine sahiptir:
+
+```txt
+iframe
+swf
+html5
+external
 ```
 
-## Veritabanı ve İçerik Modeli
+Oynatıcı davranışı:
 
-Ana veri modeli Supabase Postgres üzerindedir. Önemli tablolar:
+- Oyun, kullanıcı **Oyunu Başlat** demeden yüklenmez.
+- Önce kapak görseli ve başlatma aksiyonu gösterilir.
+- `iframe` ve `html5` oyunlar kontrollü iframe ile açılır.
+- `swf` oyunlar Ruffle ile oynatılır.
+- `external` oyunlarda gömme mümkün değilse dış bağlantı aksiyonu sunulur.
+- Admin preview, oyun yayına alınmadan önce test etmeye izin verir.
 
-- `profiles`
-- `games`
-- `categories`
-- `tags`
-- `game_categories`
-- `game_tags`
-- `game_imports`
-- `homepage_sections`
-- `comments`
-- `favorites`
-- `ratings`
-- `game_plays`
-- `ad_slots`
-- `ads`
-- `static_pages`
+## Admin ve Güvenlik
 
-Kategori ve etiket ilişkileri many-to-many tutulur. Oyun tablosunda kategori veya etiketler virgülle ayrılmış string olarak saklanmamalıdır.
+- Admin rotaları oturum ve yetki kontrolüyle korunur.
+- Supabase RLS kuralları ordinary user ile admin işlemlerini ayırır.
+- Yorum yazma için giriş gerekir.
+- Yorum moderasyonu zorunludur.
+- Reklam kodu sadece admin tarafından düzenlenir.
+- Import edilen ham HTML public tarafta render edilmez.
+- iframe URL'leri ve SVG ikon girdileri doğrulanır/sanitize edilir.
+- Secret değerler repo içine commit'lenmez.
 
-## Güvenlik Notları
+## Reklam Alanları
 
-- Secret değerleri `.env.local` içinde kalmalı, repoya commitlenmemelidir.
-- Admin route'ları korunmalıdır.
-- Public tarafta import edilmiş raw HTML render edilmemelidir.
-- AI çıktısı, SVG ikon girişi, reklam kodları ve iframe URL'leri güvenlik kontrollerinden geçmelidir.
-- Yorumlar authentication ve moderasyon akışıyla yönetilmelidir.
-- Sıradan kullanıcılar oyun, import, reklam, kategori veya etiket verisini değiştirememelidir.
+Reklamlar slot bazlıdır:
 
-## Doğrulama
+```tsx
+<AdSlot slotKey="game_page_below_player" />
+```
 
-Uygulama değişiklikleri için varsayılan kontrol seti:
+Başlıca slotlar:
+
+```txt
+homepage_top_banner
+homepage_between_sections
+sidebar_top
+sidebar_middle
+game_page_top
+game_page_below_player
+game_page_before_comments
+category_page_top
+search_results_top
+mobile_sticky_bottom
+```
+
+Mobil sticky reklamlar oyun oynatıcı aktifken kullanıcı deneyimini bozmayacak şekilde yönetilmelidir.
+
+## Production Deploy
+
+Production deploy `main` branch'e push veya merge sonrası GitHub Actions ile tetiklenir.
+
+Gerekli GitHub Actions secret'ları:
+
+```txt
+VPS_HOST
+VPS_USER
+VPS_SSH_PRIVATE_KEY
+VPS_SSH_KNOWN_HOSTS
+
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+```
+
+Bot koruma, obje deposu/CDN, AI sağlayıcısı ve diğer runtime secret'ları sunucuda `/opt/boloyun/.env.production` içinde tutulur. GitHub Actions image'i build eder, VPS'ye yükler ve deploy scriptini çalıştırır.
+
+Deploy sonrası temel doğrulama:
+
+```bash
+curl -sS -I https://boloyun.com/ | grep -Ei 'HTTP/|server:|location:'
+curl -sS -I https://www.boloyun.com/ | grep -Ei 'HTTP/|server:|location:'
+```
+
+Beklenen sonuç:
+
+```txt
+https://boloyun.com/      -> 200
+https://www.boloyun.com/  -> https://boloyun.com yönlendirmesi
+server                    -> nginx
+```
+
+## Geliştirme ve Release Kuralları
+
+Bir değişiklik tamamlandığında:
+
+1. Değişikliği odaklı tut.
+2. Diff'i baştan sona gözden geçir.
+3. Uygun kontrolleri çalıştır.
+4. Secret, `.env.local`, build çıktısı veya geçici dosya commit'leme.
+5. Migration gerekiyorsa yeni migration dosyasını kodla birlikte commit'le.
+6. Production değişikliklerini `main` branch'e bilinçli push/merge ile ulaştır.
+7. Deploy sonrası canlı route'u doğrula.
+
+Uygulama değişikliklerinde varsayılan kontrol seti:
 
 ```bash
 npx -y pnpm@11.7.0 typecheck
@@ -299,23 +433,12 @@ npx -y pnpm@11.7.0 test
 npx -y pnpm@11.7.0 build
 ```
 
-Veritabanı migration değişikliklerinde ayrıca:
+Dokümantasyon-only değişikliklerde en azından diff ve whitespace kontrolü yapılmalıdır:
 
 ```bash
-supabase db push --dry-run
-supabase migration list
+git diff --check
 ```
 
-## Yayına Alma
+## Lisans ve Sahiplik
 
-Production branch `main` branch'idir.
-
-Supabase GitHub entegrasyonu migration gibi backend artifact'lerini izler; Next.js frontend deploy'u ayrı olarak GitHub Actions -> Hetzner VPS hattından yapılır. Bu yüzden başarılı bir Supabase deployment, sitenin production container'ında yayınlandığı anlamına gelmez.
-
-`main` branch'ine merge sonrası GitHub Actions production image'i build eder, VPS'ye `scp` ile aktarır ve `boloyun-deploy` scriptini çalıştırır.
-
-Deploy sonrası canlı rota kontrol edilmelidir:
-
-```txt
-https://boloyun.com
-```
+Bu repo Bol Oyun projesinin kaynak kodudur. Yayın, deploy ve üretim erişimleri proje sahibinin kontrolündedir.
