@@ -4,7 +4,7 @@ import { CategoryView, getCategoryMetadata } from "../../category-view";
 
 type Props = { params: Promise<{ slug: string; page: string }> };
 
-export const revalidate = 300;
+export const revalidate = 3600;
 
 export function generateStaticParams() {
   return [];

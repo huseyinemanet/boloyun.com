@@ -4,8 +4,10 @@ import type { CategoryRow } from "@/lib/db-categories";
 import { sanitizeSvgInput } from "@/lib/sanitize/html";
 import { cn } from "@/lib/utils";
 
+type CategoryIconData = Pick<CategoryRow, "name" | "slug" | "icon_svg" | "icon_url">;
+
 type CategoryIconProps = {
-  category: CategoryRow;
+  category: CategoryIconData;
   size?: "sm" | "md";
   className?: string;
 };

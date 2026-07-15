@@ -99,7 +99,7 @@ const getPublishedGamesByTagSlugPageCached = unstable_cache(async function getPu
     console.error("[tags] published tag games could not be read", { slug, page, perPage, ...toLogError(error) });
     return { items: [], total: 0, tag: null };
   }
-}, ["public-tag-games-page-v1"], { revalidate: 300, tags: ["games", "tags"] });
+}, ["public-tag-games-page-v1"], { revalidate: 3600, tags: ["games", "tags"] });
 
 export const getPublishedGamesByTagSlugPage = cache(async function getPublishedGamesByTagSlugPage({
   slug,

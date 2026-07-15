@@ -1,5 +1,3 @@
-"use client";
-
 import type { ComponentProps } from "react";
 import { SoundLink } from "@/components/audio/sound-link";
 
@@ -10,16 +8,16 @@ type IntentPrefetchLinkProps = Omit<ComponentProps<typeof SoundLink>, "href" | "
 
 export function IntentPrefetchLink({
   href,
-  prefetchDelayMs: _prefetchDelayMs,
+  prefetchDelayMs = 120,
   ...props
 }: IntentPrefetchLinkProps) {
-  void _prefetchDelayMs;
-
   return (
     <SoundLink
       {...props}
       href={href}
-      native
+      prefetch={false}
+      data-intent-prefetch="true"
+      data-prefetch-delay={prefetchDelayMs}
     />
   );
 }

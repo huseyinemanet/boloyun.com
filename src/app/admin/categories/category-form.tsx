@@ -57,6 +57,8 @@ export function CategoryForm({ category }: { category?: CategoryRow }) {
         </Select>
       </label>
       <TextArea label="Açıklama" name="description" defaultValue={category?.description ?? ""} rows={3} />
+      <AdminCheckboxField name="show_in_sidebar" label="Sol menüde göster" defaultChecked={category?.show_in_sidebar ?? false} />
+      <Field label="Sol menü sırası" name="sidebar_sort_order" defaultValue={String(category?.sidebar_sort_order ?? 0)} type="number" />
       <TextArea label="Icon SVG" name="icon_svg" defaultValue={category?.icon_svg ?? ""} rows={3} />
       <Field label="Icon URL" name="icon_url" defaultValue={category?.icon_url ?? ""} />
       <Field label="SEO title" name="seo_title" defaultValue={category?.seo_title ?? ""} />
@@ -95,12 +97,14 @@ function Field({
   defaultValue,
   required = false,
   error,
+  type = "text",
 }: {
   label: string;
   name: string;
   defaultValue: string;
   required?: boolean;
   error?: string;
+  type?: "text" | "number";
 }) {
   const errorId = `${name}-error`;
 
@@ -112,6 +116,8 @@ function Field({
       </span>
       <Input
         name={name}
+        type={type}
+        min={type === "number" ? 0 : undefined}
         autoComplete="off"
         defaultValue={defaultValue}
         required={required}

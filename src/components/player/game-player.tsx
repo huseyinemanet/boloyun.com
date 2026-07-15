@@ -3,13 +3,14 @@
 import Script from "next/script";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { SoundAnchor } from "@/components/audio/sound-anchor";
+import { SoundLink } from "@/components/audio/sound-link";
 import { useClickSound } from "@/components/audio/click-sound-provider";
-import type { Game } from "@/types/game";
+import type { PlayableGameSource } from "@/types/game";
 import { Button } from "@/components/ui/button";
+import { useViewerState } from "@/components/auth/viewer-state-provider";
 
 export function GamePlayer({
   game,
-  onStartAction,
   playEventName,
   isLoggedIn = false,
   allowGuestPlay = true,
@@ -20,8 +21,7 @@ export function GamePlayer({
   preRoll,
   preRollSkipSeconds = 5,
 }: {
-  game: Game;
-  onStartAction?: () => Promise<void>;
+  game: PlayableGameSource;
   playEventName?: string;
   isLoggedIn?: boolean;
   allowGuestPlay?: boolean;
@@ -37,8 +37,7 @@ export function GamePlayer({
   const [remaining, setRemaining] = useState(preRollSkipSeconds);
   const [timedOut, setTimedOut] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(isLoggedIn);
-  const [loginChecked, setLoginChecked] = useState(isLoggedIn || allowGuestPlay);
+  const viewer = useViewerState();
   const containerRef = useRef<HTMLDivElement>(null);
   const { playClickSound } = useClickSound();
   const source = useMemo(() => {
@@ -48,51 +47,21 @@ export function GamePlayer({
     return game.externalUrl;
   }, [game]);
 
-  useEffect(() => {
-    if (allowGuestPlay || isLoggedIn) return;
-    const controller = new AbortController();
-    async function loadProfile() {
-      try {
-        const response = await fetch("/api/me", {
-          cache: "no-store",
-          credentials: "same-origin",
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error("Profil okunamadi.");
-        const data = await response.json() as { profile?: unknown };
-        if (!controller.signal.aborted) setLoggedIn(Boolean(data.profile));
-      } catch {
-        if (!controller.signal.aborted) setLoggedIn(false);
-      } finally {
-        if (!controller.signal.aborted) setLoginChecked(true);
-      }
-    }
-    void loadProfile();
-    return () => controller.abort();
-  }, [allowGuestPlay, isLoggedIn]);
-
-  async function handleStart() {
+  function handleStart() {
     playClickSound();
     if (preRoll) {
       setRemaining(preRollSkipSeconds);
       setPreRollActive(true);
       return;
     }
-    await startGame();
+    startGame();
   }
 
-  async function startGame() {
+  function startGame() {
     setPreRollActive(false);
     setStarted(true);
-
-    try {
-      await onStartAction?.();
-      if (playEventName) {
-        window.dispatchEvent(new Event(playEventName));
-      }
-    } catch {
-      // Play tracking must never block the game from opening.
-    }
+    if (playEventName) window.dispatchEvent(new Event(playEventName));
+    if (isUuid(game.id)) void sendPlayEvent(game.id);
   }
 
   useEffect(() => {
@@ -108,12 +77,15 @@ export function GamePlayer({
     return () => window.clearTimeout(timer);
   }, [game.gameType, loadTimeoutSeconds, loaded, started]);
 
+  const loginChecked = isLoggedIn || allowGuestPlay || viewer.loaded;
+  const loggedIn = isLoggedIn || Boolean(viewer.profile);
+
   if (!allowGuestPlay && !loginChecked) {
     return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center rounded-md border border-border bg-card p-6 text-center`}><p className="font-bold">Oyun hazırlanıyor...</p></div>;
   }
 
   if (!allowGuestPlay && !loggedIn) {
-    return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center rounded-md border border-border bg-card p-6 text-center`}><div><p className="font-bold">Bu oyunu başlatmak için giriş yapmalısın.</p><Button asChild className="mt-3"><SoundAnchor href="/giris">Giriş Yap</SoundAnchor></Button></div></div>;
+    return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center rounded-md border border-border bg-card p-6 text-center`}><div><p className="font-bold">Bu oyunu başlatmak için giriş yapmalısın.</p><Button asChild className="mt-3"><SoundLink href="/giris">Giriş Yap</SoundLink></Button></div></div>;
   }
 
   if (!sourceAllowed) {
@@ -121,7 +93,7 @@ export function GamePlayer({
   }
 
   if (preRollActive) {
-    return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center overflow-hidden rounded-md border border-border bg-black p-4`}><div className="w-full max-w-3xl text-center">{preRoll}<Button className="mt-4" disabled={remaining > 0} onClick={() => { playClickSound(); void startGame(); }}>{remaining > 0 ? `${remaining} saniye sonra geç` : "Oyuna Geç"}</Button></div></div>;
+    return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center overflow-hidden rounded-md border border-border bg-black p-4`}><div className="w-full max-w-3xl text-center">{preRoll}<Button className="mt-4" disabled={remaining > 0} onClick={() => { playClickSound(); startGame(); }}>{remaining > 0 ? `${remaining} saniye sonra geç` : "Oyuna Geç"}</Button></div></div>;
   }
 
   if (!started) {
@@ -188,4 +160,23 @@ export function GamePlayer({
     {allowFullscreen ? <Button type="button" size="sm" variant="secondary" className="absolute right-3 top-3" onClick={() => { playClickSound(); void containerRef.current?.requestFullscreen(); }}>Tam Ekran</Button> : null}
     </div>
   );
+}
+
+async function sendPlayEvent(gameId: string) {
+  try {
+    await fetch("/api/game-play", {
+      method: "POST",
+      cache: "no-store",
+      credentials: "same-origin",
+      keepalive: true,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ gameId, eventId: crypto.randomUUID() }),
+    });
+  } catch {
+    // Oyun takibi oyuncunun oyunu açmasını hiçbir zaman engellemez.
+  }
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }

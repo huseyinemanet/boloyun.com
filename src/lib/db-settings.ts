@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS, getDefaultSettings } from "@/lib/settings/defaults";
 import { SETTINGS_SECTIONS, type PublicSettings, type SettingsDataMap, type SettingsRecord, type SettingsSection } from "@/lib/settings/types";
 import { validateSettingsSection } from "@/lib/settings/validation";
 import type { HomepageSectionInput } from "@/lib/db-homepage-sections";
+import { getPublicShellSnapshot } from "@/lib/db-public-shell";
 
 type SettingsRow = {
   section: string;
@@ -80,9 +81,14 @@ export async function saveAppearanceAndHomepage({ value, changedBy, changedByLab
 const getCachedPublicSettings = unstable_cache(async (): Promise<PublicSettings> => {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return publicDefaults(true);
-  const { data, error } = await supabase.from("site_settings").select("section, value, updated_at, updated_by_label");
-  if (error || !data) return publicDefaults(true);
-  const rows = new Map((data as SettingsRow[]).map((row) => [row.section, row]));
+  const snapshot = await getPublicShellSnapshot();
+  let data: SettingsRow[] | null = snapshot?.settings ?? null;
+  if (!data) {
+    const result = await supabase.from("site_settings").select("section, value, updated_at, updated_by_label");
+    if (result.error || !result.data) return publicDefaults(true);
+    data = result.data as SettingsRow[];
+  }
+  const rows = new Map(data.map((row) => [row.section, row]));
   return {
     general: readValue("general", rows.get("general")),
     appearance: readValue("appearance", rows.get("appearance")),
@@ -94,7 +100,7 @@ const getCachedPublicSettings = unstable_cache(async (): Promise<PublicSettings>
     security: readValue("security", rows.get("security")),
     audio: readValue("audio", rows.get("audio")),
   };
-}, ["public-site-settings-v2"], { tags: ["site-settings"], revalidate: 300 });
+}, ["public-site-settings-v3"], { tags: ["site-settings", "public-shell"], revalidate: 3600 });
 
 export async function getPublicSettings() {
   try {

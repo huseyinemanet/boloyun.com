@@ -8,7 +8,7 @@ import { breadcrumbJsonLd, itemListJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getPublicSettings } from "@/lib/db-settings";
 
-const PER_PAGE = 60;
+const PER_PAGE = 24;
 
 export async function getTagMetadata(slug: string, page: number): Promise<Metadata> {
   const [tag, settings] = await Promise.all([getPublicTagBySlug(slug), getPublicSettings()]);

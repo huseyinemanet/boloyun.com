@@ -62,7 +62,7 @@ const getApprovedCommentsForGameCached = unstable_cache(async function getApprov
     avatarUrl: getProfile(comment.profiles).avatarUrl,
     likesCount: comment.likes_count ?? 0,
   }));
-}, ["approved-comments-for-game-v1"], { revalidate: 300, tags: ["comments"] });
+}, ["approved-comments-for-game-v1"], { revalidate: 3600, tags: ["comments"] });
 export const getApprovedCommentsForGame = cache(async function getApprovedCommentsForGame(gameId: string, limit = 20): Promise<GameComment[]> {
   return getApprovedCommentsForGameCached(gameId, limit);
 });
@@ -91,7 +91,7 @@ const getTopCommentsForGameCached = unstable_cache(async function getTopComments
     avatarUrl: getProfile(comment.profiles).avatarUrl,
     likesCount: comment.likes_count ?? 0,
   }));
-}, ["top-comments-for-game-v1"], { revalidate: 300, tags: ["comments"] });
+}, ["top-comments-for-game-v1"], { revalidate: 3600, tags: ["comments"] });
 export const getTopCommentsForGame = cache(async function getTopCommentsForGame(gameId: string, limit = 5): Promise<GameComment[]> {
   return getTopCommentsForGameCached(gameId, limit);
 });

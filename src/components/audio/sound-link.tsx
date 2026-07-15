@@ -1,60 +1,34 @@
-"use client";
-
 import Link, { type LinkProps } from "next/link";
-import { usePathname } from "next/navigation";
-import { forwardRef, type AnchorHTMLAttributes, type MouseEvent } from "react";
-import { useClickSound } from "@/components/audio/click-sound-provider";
+import { forwardRef, type AnchorHTMLAttributes } from "react";
 
-type SoundLinkProps = LinkProps & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, keyof LinkProps>;
-type NativeSoundLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
+type SoundLinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & Partial<Omit<LinkProps, "href">> & {
   href: string;
   native?: boolean;
 };
 
-export const SoundLink = forwardRef<HTMLAnchorElement, SoundLinkProps | NativeSoundLinkProps>(function SoundLink({ onClick, ...props }, ref) {
-  const pathname = usePathname();
-  const { playClickSound } = useClickSound();
+export const SoundLink = forwardRef<HTMLAnchorElement, SoundLinkProps>(function SoundLink(
+  { href, native, prefetch, replace, scroll, shallow, locale, onNavigate, ...props },
+  ref,
+) {
+  const isInternal = href.startsWith("/") || href.startsWith("#");
 
-  function handleClick(event: MouseEvent<HTMLAnchorElement>) {
-    onClick?.(event);
-    if (shouldPlayLinkSound(event, pathname)) playClickSound();
+  if (!isInternal) {
+    return <a ref={ref} href={href} data-click-sound="true" {...props} />;
   }
 
-  if ("native" in props && props.native) {
-    const anchorProps = { ...(props as NativeSoundLinkProps & Partial<LinkProps>) };
-    delete anchorProps.native;
-    delete anchorProps.prefetch;
-    delete anchorProps.replace;
-    delete anchorProps.scroll;
-    delete anchorProps.shallow;
-    delete anchorProps.locale;
-    return <a ref={ref} {...anchorProps} onClick={handleClick} />;
-  }
-
-  return <Link ref={ref} {...(props as SoundLinkProps)} onClick={handleClick} />;
+  void native;
+  return (
+    <Link
+      ref={ref}
+      href={href}
+      prefetch={prefetch ?? false}
+      replace={replace}
+      scroll={scroll}
+      shallow={shallow}
+      locale={locale}
+      onNavigate={onNavigate}
+      data-click-sound="true"
+      {...props}
+    />
+  );
 });
-
-export function shouldPlayLinkSound(event: MouseEvent<HTMLAnchorElement>, pathname: string) {
-  if (
-    event.defaultPrevented ||
-    event.button !== 0 ||
-    event.metaKey ||
-    event.ctrlKey ||
-    event.altKey ||
-    event.shiftKey
-  ) {
-    return false;
-  }
-
-  const anchor = event.currentTarget;
-  if (anchor.getAttribute("aria-disabled") === "true" || anchor.dataset.disabled === "true") return false;
-
-  try {
-    const target = new URL(anchor.href);
-    if (target.origin !== window.location.origin) return true;
-    const current = new URL(window.location.href);
-    return target.pathname !== pathname || target.search !== current.search || target.hash !== current.hash;
-  } catch {
-    return true;
-  }
-}

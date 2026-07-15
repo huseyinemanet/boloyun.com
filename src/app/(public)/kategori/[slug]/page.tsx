@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import { CategoryView, getCategoryMetadata } from "./category-view";
+import { getAllActiveCategorySlugs } from "@/lib/db-categories";
 
 type Props = {
   params: Promise<{ slug: string }>;
 };
 
-export const revalidate = 300;
+export const revalidate = 3600;
 
-export function generateStaticParams() {
-  return [];
+export async function generateStaticParams() {
+  return getAllActiveCategorySlugs();
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

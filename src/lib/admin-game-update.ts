@@ -1,10 +1,11 @@
 import "server-only";
 
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { mirrorGameCover, isCdnCoverUrl } from "@/import/covers/mirror-cover";
 import { getAdminGameById, updateAdminGame } from "@/lib/db-games";
 import { auditGameSeo } from "@/lib/seo/audit";
 import type { GameType, PublishStatus } from "@/types/game";
+import { invalidatePublicContent } from "@/lib/public-cache-invalidation";
 
 export async function updateAdminGameFromForm(id: string, formData: FormData) {
   if (!id) throw new Error("Oyun kimliği eksik.");
@@ -92,10 +93,11 @@ export async function updateAdminGameFromForm(id: string, formData: FormData) {
   if (input.status !== "published" || input.is_broken) input.is_indexable = false;
   await updateAdminGame(id, input);
 
-  revalidatePath("/");
-  revalidateTag("games", "max");
-  revalidateTag("categories", "max");
-  revalidateTag("tags", "max");
+  invalidatePublicContent(
+    input.status === "published" && currentGame.status !== "published"
+      ? { kind: "published-game", slug: input.slug }
+      : { kind: "game", slug: input.slug, affectsHomepage: input.status === "published" },
+  );
   revalidatePath("/admin/games");
 }
 

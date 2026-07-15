@@ -12,7 +12,7 @@ import { buildMetadata } from "@/lib/seo/metadata";
 import { getPublicSettings } from "@/lib/db-settings";
 import { renderSeoTemplate } from "@/lib/settings/validation";
 
-const PER_PAGE = 60;
+const PER_PAGE = 24;
 
 export async function getCategoryMetadata(slug: string, page: number): Promise<Metadata> {
   const [category, settings] = await Promise.all([getPublicCategoryBySlug(slug), getPublicSettings()]);
@@ -70,7 +70,7 @@ export async function CategoryView({ slug, page }: { slug: string; page: number 
         <h2 className="text-lg font-semibold">Diğer Oyun Kategorileri</h2>
         <div className="mt-3 flex flex-wrap gap-2">
           {categories.filter((item) => item.slug !== slug).slice(0, 12).map((item) => (
-            <SoundLink key={item.id} href={`/kategori/${item.slug}`} native className="rounded-md bg-muted px-3 py-2 text-xs font-bold hover:bg-accent">{item.name}</SoundLink>
+            <SoundLink key={item.id} href={`/kategori/${item.slug}`} className="rounded-md bg-muted px-3 py-2 text-xs font-bold hover:bg-accent">{item.name}</SoundLink>
           ))}
         </div>
       </nav>

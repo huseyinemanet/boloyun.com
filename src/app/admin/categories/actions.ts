@@ -1,8 +1,9 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { upsertAdminCategory } from "@/lib/db-categories";
 import { requireAdmin } from "@/lib/auth";
+import { invalidatePublicContent } from "@/lib/public-cache-invalidation";
 
 export type CategoryFormState = {
   status: "idle" | "error" | "success";
@@ -44,9 +45,7 @@ export async function saveCategoryAction(_previousState: CategoryFormState, form
   }
 
   revalidatePath("/admin/categories");
-  revalidateTag("categories", "max");
-  revalidatePath("/");
-  revalidatePath(`/kategori/${slug}`);
+  invalidatePublicContent({ kind: "categories", categorySlug: slug });
 
   return {
     status: "success",

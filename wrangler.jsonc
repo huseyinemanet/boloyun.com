@@ -2,7 +2,7 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "boloyun",
   "main": "cloudflare-worker.js",
-  "compatibility_date": "2026-07-11",
+  "compatibility_date": "2026-07-15",
   "compatibility_flags": ["nodejs_compat"],
   "routes": [
     { "pattern": "boloyun.com/*", "zone_name": "boloyun.com" },
@@ -10,6 +10,10 @@
   ],
   "cache": {
     "enabled": true
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.05
   },
   "assets": {
     "directory": ".open-next/assets",
@@ -19,6 +23,37 @@
     {
       "binding": "SITE_ASSETS",
       "bucket_name": "boloyun-assets"
+    },
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "boloyun-opennext-cache"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "NEXT_TAG_CACHE_D1",
+      "database_name": "boloyun-opennext-tags",
+      "database_id": "1ccf42e3-048c-4f14-88e1-d31c356d7be4"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "NEXT_CACHE_DO_QUEUE",
+        "class_name": "DOQueueHandler"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1-opennext-cache-queue",
+      "new_sqlite_classes": ["DOQueueHandler"]
+    }
+  ],
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "boloyun"
     }
   ],
   "images": {

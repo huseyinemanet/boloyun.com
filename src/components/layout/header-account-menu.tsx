@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { IconCircleLogoutFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCircleLogoutFillDuo18";
 import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
@@ -16,48 +15,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SoundLink } from "@/components/audio/sound-link";
-
-type HeaderProfile = {
-  username: string;
-  email: string;
-  avatarUrl: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  displayName: string | null;
-  role: "admin" | "member";
-};
-
-type MeResponse = {
-  profile: HeaderProfile | null;
-};
-
-let profilePromise: Promise<HeaderProfile | null> | null = null;
+import { useViewerState, type ViewerProfile } from "@/components/auth/viewer-state-provider";
 
 export function HeaderAccountMenu({ showRegister }: { showRegister: boolean }) {
   const pathname = usePathname();
-  const [profile, setProfile] = useState<HeaderProfile | null>(null);
-  const [loadState, setLoadState] = useState<"loading" | "loaded">("loading");
+  const { loaded, profile } = useViewerState();
   const protectedAccountPath = pathname === "/profil" || pathname.startsWith("/profil/") || pathname.startsWith("/admin");
 
-  useEffect(() => {
-    let mounted = true;
-
-    void getSharedProfile(protectedAccountPath).then((nextProfile) => {
-      if (!mounted) return;
-      setProfile(nextProfile);
-      setLoadState("loaded");
-    }).catch(() => {
-      if (!mounted) return;
-      setProfile(null);
-      setLoadState("loaded");
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, [pathname, protectedAccountPath]);
-
-  if (loadState === "loading") return <AccountLoading />;
+  if (!loaded) return <AccountLoading />;
   if (!profile && protectedAccountPath) return <AccountLoading />;
   if (!profile) return <AccountLinks showRegister={showRegister} />;
 
@@ -139,28 +104,7 @@ function AccountLinks({ showRegister }: { showRegister: boolean }) {
   );
 }
 
-function getDisplayName(profile: Pick<HeaderProfile, "displayName" | "firstName" | "lastName" | "username">) {
+function getDisplayName(profile: Pick<ViewerProfile, "displayName" | "firstName" | "lastName" | "username">) {
   const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(" ").trim();
   return profile.displayName || fullName || profile.username;
-}
-
-async function getSharedProfile(force = false) {
-  if (force) profilePromise = null;
-  profilePromise ??= fetch("/api/me", {
-    cache: "no-store",
-    credentials: "same-origin",
-  })
-    .then(async (response) => {
-      if (!response.ok) throw new Error("Profil okunamadi.");
-      const data = await response.json() as MeResponse;
-      const profile = data.profile ?? null;
-      if (!profile) profilePromise = null;
-      return profile;
-    })
-    .catch((error) => {
-      profilePromise = null;
-      throw error;
-    });
-
-  return profilePromise;
 }

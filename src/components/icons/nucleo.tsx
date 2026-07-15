@@ -30,13 +30,15 @@ import { IconTrophyFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconTrophy
 import { IconTruckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconTruckFillDuo18";
 import type { CategoryRow } from "@/lib/db-categories";
 
+type CategoryIconData = Pick<CategoryRow, "name" | "slug">;
+
 type NucleoIcon = ComponentType<SVGProps<SVGSVGElement> & { size?: number | string; title?: string }>;
 
-export function CategoryNucleoIcon({ category, className }: { category: CategoryRow; className?: string }) {
+export function CategoryNucleoIcon({ category, className }: { category: CategoryIconData; className?: string }) {
   return createElement(getCategoryIcon(category), { className, "aria-hidden": "true" });
 }
 
-function getCategoryIcon(category: CategoryRow): NucleoIcon {
+function getCategoryIcon(category: CategoryIconData): NucleoIcon {
   const text = `${category.name} ${category.slug}`.toLocaleLowerCase("tr");
 
   if (hasAny(text, ["noel-baba"])) return IconGiftFillDuo18;

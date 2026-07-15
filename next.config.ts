@@ -19,7 +19,7 @@ const contentSecurityPolicy = [
   "worker-src 'self' blob:",
   ...(!isDevelopment ? ["upgrade-insecure-requests"] : []),
 ].join("; ");
-const publicHtmlCacheControl = "public, max-age=60, s-maxage=300, stale-while-revalidate=3600";
+const publicHtmlCacheControl = "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,

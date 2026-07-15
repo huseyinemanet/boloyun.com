@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
+import { getPublicShellSnapshot } from "@/lib/db-public-shell";
 
 export type AdSlotRow = {
   id: string;
@@ -51,25 +52,16 @@ export type AdminAdManagerData = {
 export type PublicAd = Pick<AdRow, "id" | "name" | "ad_code" | "show_desktop" | "show_mobile">;
 
 const getPublicAdForSlotCached = unstable_cache(async function getPublicAdForSlotCached(slotKey: string): Promise<PublicAd | null> {
-  const supabase = createSupabaseServiceClient();
-  if (!supabase) return null;
-  const { data: slot, error: slotError } = await supabase.from("ad_slots").select("id, is_active").eq("key", slotKey).maybeSingle();
-  if (slotError || !slot || !(slot as { is_active?: boolean }).is_active) return null;
-  const now = new Date().toISOString();
-  const { data, error } = await supabase
-    .from("ads")
-    .select("id, name, ad_code, show_desktop, show_mobile, start_at, end_at, priority")
-    .eq("slot_id", (slot as { id: string }).id)
-    .eq("is_active", true)
-    .or(`start_at.is.null,start_at.lte.${now}`)
-    .or(`end_at.is.null,end_at.gte.${now}`)
-    .order("priority", { ascending: false })
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error || !data) return null;
-  return data as PublicAd;
-}, ["public-ad-slot-v1"], { revalidate: 300, tags: ["ads"] });
+  const snapshot = await getPublicShellSnapshot();
+  const ad = snapshot?.ads.find((item) => item.slot_key === slotKey);
+  return ad ? {
+    id: ad.id,
+    name: ad.name,
+    ad_code: ad.ad_code,
+    show_desktop: ad.show_desktop,
+    show_mobile: ad.show_mobile,
+  } : null;
+}, ["public-ad-slot-v2"], { revalidate: 3600, tags: ["ads", "public-shell"] });
 
 export async function getPublicAdForSlot(slotKey: string): Promise<PublicAd | null> {
   return getPublicAdForSlotCached(slotKey);

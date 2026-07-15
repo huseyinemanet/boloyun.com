@@ -72,6 +72,7 @@ export default async function AdminCategoriesPage({ searchParams }: AdminCategor
                     <IconLinkFillDuo18 className="size-5" />
                   </span>
                 </TableHead>
+                <TableHead className="w-24 text-center">Menü</TableHead>
                 <TableHead className="w-28 text-right">
                   <span className="inline-flex items-center justify-center" title="Aksiyon" aria-label="Aksiyon">
                     <IconCodeActionFillDuo18 className="size-5" />
@@ -92,6 +93,9 @@ export default async function AdminCategoriesPage({ searchParams }: AdminCategor
                       <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{category.description || "Açıklama yok"}</p>
                     </TableCell>
                     <TableCell className="truncate text-muted-foreground">{category.slug}</TableCell>
+                    <TableCell className="text-center text-xs font-semibold">
+                      {category.show_in_sidebar ? `#${category.sidebar_sort_order ?? 0}` : "—"}
+                    </TableCell>
                     <TableCell>
                       <div className="flex justify-end">
                         <Button asChild size="sm" variant="outline" className="font-semibold">
@@ -103,7 +107,7 @@ export default async function AdminCategoriesPage({ searchParams }: AdminCategor
                 ))}
                 {categories.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-28 text-center font-medium text-muted-foreground">
+                    <TableCell colSpan={5} className="h-28 text-center font-medium text-muted-foreground">
                       Henüz kategori yok.
                     </TableCell>
                   </TableRow>

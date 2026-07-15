@@ -1,10 +1,11 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { approveImportRecord } from "@/import/publish/approve-imports";
 import { getImportById, updateImportStatus } from "@/import/db/game-imports";
 import { requireAdmin } from "@/lib/auth";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { invalidatePublicContent } from "@/lib/public-cache-invalidation";
 
 export async function approveImportAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
@@ -18,13 +19,7 @@ export async function approveImportByIdAction(id: string) {
   const item = await getImportById(id);
   await approveImportRecord(item);
   await recordAdminAudit({ actorProfileId: admin.id, action: "import.approve", targetType: "game_import", targetIds: [id] });
-  revalidateTag("games", "max");
-  revalidateTag("categories", "max");
-  revalidateTag("tags", "max");
-  revalidatePath("/");
-  revalidateTag("games", "max");
-  revalidateTag("categories", "max");
-  revalidateTag("tags", "max");
+  invalidatePublicContent({ kind: "published-game" });
   revalidatePath("/admin/imports");
   revalidatePath("/admin/games");
 }
@@ -54,7 +49,7 @@ export async function approveImportIdsAction(ids: string[]) {
   }
   await recordAdminAudit({ actorProfileId: admin.id, action: "import.bulk_approve", targetType: "game_import", targetIds: ids, details: { succeeded: results.filter((result) => result.ok).length, failed: results.filter((result) => !result.ok).length } });
 
-  revalidatePath("/");
+  invalidatePublicContent({ kind: "published-game" });
   revalidatePath("/admin/imports");
   revalidatePath("/admin/games");
 

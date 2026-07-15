@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
-import { getPublishedGames, getPublishedGamesByCategorySlug, getPublishedGamesByIds } from "@/lib/db-games";
+import { getPublishedGames, getPublishedGamesByCategorySlug, getPublishedGamesByIds, mapGameRow, type GameRow } from "@/lib/db-games";
 import type { Game } from "@/types/game";
 
 export type HomepageSectionInput = {
@@ -27,6 +27,15 @@ type HomepageSectionRow = {
   sort_order: number | null;
   visibility: string | null;
   status: string | null;
+};
+
+type PublicHomepageSectionRpcRow = Omit<HomepageSectionRow, "manual_game_ids" | "status"> & {
+  games?: GameRow[];
+};
+
+type PublicHomepageRpc = {
+  sections?: PublicHomepageSectionRpcRow[];
+  latest_games?: GameRow[];
 };
 
 export async function getHomepageSectionsAdmin(): Promise<HomepageSectionInput[]> {
@@ -61,16 +70,49 @@ export async function saveHomepageSections(input: HomepageSectionInput[]) {
   if (error) throw new Error(`Ana sayfa bölümleri kaydedilemedi: ${error.message}`);
 }
 
-const getHomepageSectionsPublicCached = unstable_cache(async function getHomepageSectionsPublicCached() {
+const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicHomepageSnapshotCached(): Promise<{ sections: Array<{ section: HomepageSectionInput; games: Game[] }>; latestGames: Game[] }> {
+  const supabase = createSupabaseServiceClient();
+  if (supabase) {
+    const { data, error } = await supabase.rpc("get_public_homepage", {
+      p_section_limit: 12,
+      p_all_limit: 60,
+    });
+    if (!error && data && typeof data === "object") {
+      const snapshot = data as PublicHomepageRpc;
+      const sections = (Array.isArray(snapshot.sections) ? snapshot.sections : []).map((row) => ({
+        section: mapSection({
+          ...row,
+          manual_game_ids: [],
+          status: "active",
+        }),
+        games: (Array.isArray(row.games) ? row.games : []).map(mapGameRow),
+      }));
+      return {
+        sections,
+        latestGames: (Array.isArray(snapshot.latest_games) ? snapshot.latest_games : []).map(mapGameRow),
+      };
+    }
+  }
+
   const sections = (await getHomepageSectionsAdmin()).filter((section) => section.status === "active");
   const publicSections = sections.filter((section) => section.visibility !== "members");
   const needsSharedGames = publicSections.some((section) => !["manual_games", "category_based", "tag_based"].includes(section.sectionType));
-  const sharedGames = needsSharedGames ? await getPublishedGames(Math.max(...publicSections.map((section) => section.limitCount * 5), 60)) : [];
-  return Promise.all(publicSections.map(async (section) => ({ section, games: await resolveSectionGames(section, sharedGames) })));
-}, ["homepage-sections-public-v1"], { revalidate: 300, tags: ["homepage-sections", "games", "categories", "tags"] });
+  const sharedGames = needsSharedGames ? await getPublishedGames(60) : [];
+  return {
+    sections: await Promise.all(publicSections.map(async (section) => ({
+      section: { ...section, limitCount: Math.min(section.limitCount, 12) },
+      games: await resolveSectionGames({ ...section, limitCount: Math.min(section.limitCount, 12) }, sharedGames),
+    }))),
+    latestGames: sharedGames.length ? sharedGames : await getPublishedGames(60),
+  };
+}, ["public-homepage-snapshot-v1"], { revalidate: 3600, tags: ["homepage-sections", "games", "categories", "tags"] });
+
+export async function getPublicHomepageSnapshot() {
+  return getPublicHomepageSnapshotCached();
+}
 
 export async function getHomepageSectionsPublic() {
-  return getHomepageSectionsPublicCached();
+  return (await getPublicHomepageSnapshotCached()).sections;
 }
 
 async function resolveSectionGames(section: HomepageSectionInput, sharedGames: Game[]): Promise<Game[]> {

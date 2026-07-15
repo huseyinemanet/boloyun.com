@@ -3,7 +3,8 @@ import { Header } from "@/components/layout/header";
 import { getPublicSettings } from "@/lib/db-settings";
 import { ConsentScripts } from "@/components/integrations/consent-scripts";
 import { ClickSoundProvider } from "@/components/audio/click-sound-provider";
-import { Toaster } from "@/components/ui/sonner";
+import { NavigationRuntime } from "@/components/navigation/navigation-runtime";
+import { ViewerStateProvider } from "@/components/auth/viewer-state-provider";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -33,11 +34,13 @@ export default async function RootLayout({
     <html lang="tr" className="dark font-sans" style={{ colorScheme: "dark" }}>
       <body className="min-h-screen bg-background text-foreground antialiased">
         <ClickSoundProvider settings={audio}>
-          <a href="#main-content" className="skip-link">Ana içeriğe geç</a>
-          <Header />
-          {children}
-          <ConsentScripts settings={integrations} />
-          <Toaster position="top-center" />
+          <ViewerStateProvider>
+            <NavigationRuntime />
+            <a href="#main-content" className="skip-link">Ana içeriğe geç</a>
+            <Header />
+            {children}
+            <ConsentScripts settings={integrations} />
+          </ViewerStateProvider>
         </ClickSoundProvider>
       </body>
     </html>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { Suspense } from "react";
 import { SoundLink } from "@/components/audio/sound-link";
 import { notFound } from "next/navigation";
 import { AdSlot } from "@/components/ads/ad-slot";
@@ -17,33 +18,32 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { getApprovedCommentsForGame, getTopCommentsForGame, type GameComment } from "@/lib/db-comments";
-import { getPublishedGameDetailBySlug, getPublishedGamesByCategorySlug, getRelatedPublishedGames, type GameTaxonomyLink } from "@/lib/db-games";
+import { getPrebuildGameSlugs, getPublicGamePageBySlug, type GameTaxonomyLink } from "@/lib/db-games";
 import { breadcrumbJsonLd, videoGameJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getPublicSettings } from "@/lib/db-settings";
 import { isGameSourceAllowed } from "@/lib/settings/game-security";
 import { renderSeoTemplate } from "@/lib/settings/validation";
-import { getPublishedGames } from "@/lib/db-games";
-import { recordGamePlayAction } from "./actions";
 import { AdminEditGameLink } from "./admin-edit-game-link";
 import { CommentAuthGate } from "./comment-auth-gate";
 import { CommentStatusNotice } from "./comment-status-notice";
 import { CommentsTabs } from "./comments-tabs";
 import { GameUserActions } from "./game-user-actions";
+import type { Game } from "@/types/game";
 
-export const revalidate = 300;
+export const revalidate = 3600;
 
 type Props = {
   params: Promise<{ slug: string }>;
 };
 
-export function generateStaticParams() {
-  return [];
+export async function generateStaticParams() {
+  return getPrebuildGameSlugs();
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const [detail, settings] = await Promise.all([getPublishedGameDetailBySlug(slug), getPublicSettings()]);
+  const [detail, settings] = await Promise.all([getPublicGamePageBySlug(slug), getPublicSettings()]);
 
   if (!detail) {
     return {};
@@ -65,7 +65,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function GameDetailPage({ params }: Props) {
   const { slug } = await params;
-  const [detail, settings] = await Promise.all([getPublishedGameDetailBySlug(slug), getPublicSettings()]);
+  const [detail, settings] = await Promise.all([getPublicGamePageBySlug(slug), getPublicSettings()]);
 
   if (!detail) {
     notFound();
@@ -74,36 +74,14 @@ export default async function GameDetailPage({ params }: Props) {
   const { game, categories, tags } = detail;
   const primaryCategory = categories[0];
   const playEventName = `game-played-${game.id}`;
-  const latestCommentsPromise = settings.community.commentsEnabled
-    ? optionalGameQuery(slug, "latest-comments", getApprovedCommentsForGame(game.id), [] as GameComment[])
-    : Promise.resolve([] as GameComment[]);
-  const topCommentsPromise = settings.community.commentsEnabled
-    ? optionalGameQuery(slug, "top-comments", getTopCommentsForGame(game.id), [] as GameComment[])
-    : Promise.resolve([] as GameComment[]);
-  const taxonomySimilarGamesPromise = settings.games.similarGameStrategy === "taxonomy"
-    ? optionalGameQuery(slug, "related-games", getRelatedPublishedGames(game.id, 4), [])
-    : Promise.resolve([]);
-  const recentGamesPromise = settings.games.similarGameStrategy === "popular"
-    ? optionalGameQuery(slug, "recent-games", getPublishedGames(30), [])
-    : Promise.resolve([]);
-  const [latestComments, topComments, taxonomySimilarGames, categoryGames, recentGames] = await Promise.all([
-    latestCommentsPromise,
-    topCommentsPromise,
-    taxonomySimilarGamesPromise,
-    optionalGameQuery(slug, "category-games", primaryCategory ? getPublishedGamesByCategorySlug(primaryCategory.slug, 16) : Promise.resolve([]), []),
-    recentGamesPromise,
-  ]);
   const similarGames = settings.games.similarGameStrategy === "popular"
-    ? recentGames.filter((item) => item.id !== game.id).toSorted((a, b) => b.playCount - a.playCount).slice(0, 4)
+    ? detail.popularCategoryGames
     : settings.games.similarGameStrategy === "category"
-      ? categoryGames.filter((item) => item.id !== game.id).slice(0, 4)
-      : taxonomySimilarGames;
+      ? detail.latestCategoryGames
+      : detail.relatedGames;
   const source = game.gameType === "iframe" ? game.embedUrl : game.gameType === "html5" ? game.html5Url : game.gameType === "swf" ? game.swfUrl : game.externalUrl;
-  const latestCategoryGames = categoryGames.filter((item) => item.id !== game.id).slice(0, 4);
-  const popularCategoryGames = categoryGames
-    .filter((item) => item.id !== game.id)
-    .toSorted((left, right) => right.playCount - left.playCount)
-    .slice(0, 4);
+  const latestCategoryGames = detail.latestCategoryGames;
+  const popularCategoryGames = detail.popularCategoryGames;
   const breadcrumbEntries = [
     { name: "Ana Sayfa", path: "/" },
     ...(primaryCategory ? [{ name: primaryCategory.name, path: `/kategori/${primaryCategory.slug}` }] : []),
@@ -177,8 +155,16 @@ export default async function GameDetailPage({ params }: Props) {
 
         <div className="mt-4">
           <GamePlayer
-            game={game}
-            onStartAction={recordGamePlayAction.bind(null, game.id, game.slug)}
+            game={{
+              id: game.id,
+              title: game.title,
+              slug: game.slug,
+              gameType: game.gameType,
+              embedUrl: game.embedUrl,
+              swfUrl: game.swfUrl,
+              html5Url: game.html5Url,
+              externalUrl: game.externalUrl,
+            }}
             playEventName={playEventName}
             isLoggedIn={false}
             allowGuestPlay={settings.games.allowGuestPlay}
@@ -221,17 +207,28 @@ export default async function GameDetailPage({ params }: Props) {
 
       {settings.community.commentsEnabled ? <AdSlot slotKey="game_page_before_comments" /> : null}
 
-      {settings.community.commentsEnabled ? <CommentsSection
-        gameId={game.id}
-        slug={game.slug}
-        latestComments={latestComments}
-        topComments={topComments}
-      /> : null}
+      {settings.community.commentsEnabled ? (
+        <Suspense fallback={<CommentsSkeleton />}>
+          <DeferredCommentsSection gameId={game.id} slug={game.slug} />
+        </Suspense>
+      ) : null}
     </article>
   );
 }
 
-function GameGrid({ title, games }: { title: string; games: Awaited<ReturnType<typeof getPublishedGamesByCategorySlug>> }) {
+async function DeferredCommentsSection({ gameId, slug }: { gameId: string; slug: string }) {
+  const [latestComments, topComments] = await Promise.all([
+    optionalGameQuery(slug, "latest-comments", getApprovedCommentsForGame(gameId), [] as GameComment[]),
+    optionalGameQuery(slug, "top-comments", getTopCommentsForGame(gameId), [] as GameComment[]),
+  ]);
+  return <CommentsSection gameId={gameId} slug={slug} latestComments={latestComments} topComments={topComments} />;
+}
+
+function CommentsSkeleton() {
+  return <section className="min-h-48 animate-pulse rounded-md border border-border bg-card p-4" aria-label="Yorumlar yükleniyor" />;
+}
+
+function GameGrid({ title, games }: { title: string; games: Game[] }) {
   return (
     <section className="rounded-md border border-border bg-card p-4">
       <h2 className="mb-3 text-lg font-semibold">{title}</h2>

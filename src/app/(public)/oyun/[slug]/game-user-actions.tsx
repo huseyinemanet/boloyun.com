@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { LoaderCircleIcon } from "lucide-react";
-import { toast } from "sonner";
 import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
 import { IconThumbsDownFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsDownFillDuo18";
 import { IconThumbsUpFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsUpFillDuo18";
@@ -34,6 +33,7 @@ export function GameUserActions({
 }) {
   const [state, setState] = useState<GameState>({ isFavorite: false, userVote: null, isLoggedIn: false });
   const [counts, setCounts] = useState({ likes: likesCount, dislikes: dislikesCount });
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     if (!isUuid(gameId) || (!showVotes && !showFavorite)) return;
@@ -93,25 +93,27 @@ export function GameUserActions({
   }
 
   return (
-    <>
+    <div className="flex flex-wrap items-center gap-2">
       {showVotes ? (
         <VoteButtons
           likesCount={counts.likes}
           dislikesCount={counts.dislikes}
           userVote={state.userVote}
           onVote={(vote) => runAction({ action: "vote", vote })}
+          onNotice={setNotice}
         />
       ) : null}
-      {showFavorite ? <FavoriteButton gameId={gameId} slug={slug} isFavorite={state.isFavorite} onToggle={() => runAction({ action: "favorite", desired: !state.isFavorite })} /> : null}
-    </>
+      {showFavorite ? <FavoriteButton gameId={gameId} slug={slug} isFavorite={state.isFavorite} onToggle={() => runAction({ action: "favorite", desired: !state.isFavorite })} onNotice={setNotice} /> : null}
+      <span className="sr-only" aria-live="polite">{notice}</span>
+    </div>
   );
 }
 
 function hasPersonalStateCookie() {
-  return /\b(?:mini_game_session|sb-|supabase-auth-token)/.test(document.cookie);
+  return /(?:^|;\s*)(?:sb-[^=]+-auth-token|supabase-auth-token(?:\.[^=]+)?)=/.test(document.cookie);
 }
 
-function FavoriteButton({ gameId, isFavorite, onToggle }: { gameId: string; slug: string; isFavorite: boolean; onToggle: () => Promise<void> }) {
+function FavoriteButton({ gameId, isFavorite, onToggle, onNotice }: { gameId: string; slug: string; isFavorite: boolean; onToggle: () => Promise<void>; onNotice: (message: string) => void }) {
   const canFavorite = isUuid(gameId);
   const [pending, setPending] = useState(false);
   const { playClickSound } = useClickSound();
@@ -149,9 +151,9 @@ function FavoriteButton({ gameId, isFavorite, onToggle }: { gameId: string; slug
         setPending(true);
         try {
           await onToggle();
-          toast.success(isFavorite ? "Favorilerden çıkarıldı." : "Favorilere eklendi.");
+          onNotice(isFavorite ? "Favorilerden çıkarıldı." : "Favorilere eklendi.");
         } catch (error) {
-          toast.error(error instanceof Error ? error.message : "Favori işlemi tamamlanamadı.");
+          onNotice(error instanceof Error ? error.message : "Favori işlemi tamamlanamadı.");
         } finally {
           setPending(false);
         }
@@ -169,18 +171,20 @@ function VoteButtons({
   dislikesCount,
   userVote,
   onVote,
+  onNotice,
 }: {
   likesCount: number;
   dislikesCount: number;
   userVote: GameVote | null;
   onVote: (vote: GameVote) => Promise<void>;
+  onNotice: (message: string) => void;
 }) {
   return (
     <div className="flex items-center gap-2">
-      <VoteButton active={userVote === "like"} ariaLabel="Beğendim" count={likesCount.toLocaleString("tr-TR")} title="Beğendim" onClick={() => onVote("like")}>
+      <VoteButton active={userVote === "like"} ariaLabel="Beğendim" count={likesCount.toLocaleString("tr-TR")} title="Beğendim" onClick={() => onVote("like")} onNotice={onNotice}>
         <IconThumbsUpFillDuo18 className="size-[18px]" aria-hidden="true" />
       </VoteButton>
-      <VoteButton active={userVote === "dislike"} ariaLabel="Beğenmedim" count={dislikesCount.toLocaleString("tr-TR")} title="Beğenmedim" onClick={() => onVote("dislike")}>
+      <VoteButton active={userVote === "dislike"} ariaLabel="Beğenmedim" count={dislikesCount.toLocaleString("tr-TR")} title="Beğenmedim" onClick={() => onVote("dislike")} onNotice={onNotice}>
         <IconThumbsDownFillDuo18 className="size-[18px]" aria-hidden="true" />
       </VoteButton>
     </div>
@@ -194,6 +198,7 @@ function VoteButton({
   count,
   onClick,
   title,
+  onNotice,
 }: {
   active: boolean;
   ariaLabel: string;
@@ -201,6 +206,7 @@ function VoteButton({
   count: string;
   onClick: () => Promise<void>;
   title: string;
+  onNotice: (message: string) => void;
 }) {
   const [pending, setPending] = useState(false);
   const { playClickSound } = useClickSound();
@@ -221,9 +227,9 @@ function VoteButton({
         setPending(true);
         try {
           await onClick();
-          toast.success(active ? `${title} tercihin güncellendi.` : `${title} olarak işaretlendi.`);
+          onNotice(active ? `${title} tercihin güncellendi.` : `${title} olarak işaretlendi.`);
         } catch (error) {
-          toast.error(error instanceof Error ? error.message : "Oy işlemi tamamlanamadı.");
+          onNotice(error instanceof Error ? error.message : "Oy işlemi tamamlanamadı.");
         } finally {
           setPending(false);
         }

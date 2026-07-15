@@ -22,7 +22,8 @@ export async function POST(request: Request) {
   const gameId = typeof input.gameId === "string" ? input.gameId : "";
   if (!isUuid(gameId)) return actionResponse({ error: "Oyun bilgisi eksik." }, 400);
 
-  const [sessionId, profile] = await Promise.all([getOrCreateGameSessionId(), getCurrentProfile()]);
+  const { sessionId, hasAuthCookie } = await getOrCreateGameSession();
+  const profile = hasAuthCookie ? await getCurrentProfile() : null;
 
   if (input.action === "favorite") {
     const desired = Boolean(input.desired);
@@ -51,10 +52,11 @@ function actionResponse(value: unknown, status = 200) {
   return NextResponse.json(value, { status, headers: cacheHeaders("privateNoStore") });
 }
 
-async function getOrCreateGameSessionId() {
+async function getOrCreateGameSession() {
   const cookieStore = await cookies();
   const existing = cookieStore.get(gameSessionCookie)?.value;
-  if (existing) return existing;
+  const hasAuthCookie = cookieStore.getAll().some(({ name }) => isSupabaseAuthCookie(name));
+  if (existing) return { sessionId: existing, hasAuthCookie };
 
   const sessionId = randomUUID();
   cookieStore.set(gameSessionCookie, sessionId, {
@@ -65,7 +67,11 @@ async function getOrCreateGameSessionId() {
     secure: true,
   });
 
-  return sessionId;
+  return { sessionId, hasAuthCookie };
+}
+
+function isSupabaseAuthCookie(name: string) {
+  return /^sb-.+-auth-token(?:\.\d+)?$/.test(name) || name.startsWith("supabase-auth-token");
 }
 
 function isGameVote(value: unknown): value is GameVote {

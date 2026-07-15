@@ -48,6 +48,8 @@ export type Game = {
   isBroken: boolean;
 };
 
+export type PlayableGameSource = Pick<Game, "id" | "title" | "slug" | "gameType" | "embedUrl" | "swfUrl" | "html5Url" | "externalUrl">;
+
 export type GameSearchSuggestion = {
   id: string;
   title: string;
