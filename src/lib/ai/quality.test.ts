@@ -45,6 +45,13 @@ test("kısa SEO alanları güvenli fallback ile tamamlanır", () => {
   assert.doesNotThrow(() => validateTranslatedContent(input, normalized));
 });
 
+test("kısa oyun adlarında SEO başlığı çeviriyi engellemez", () => {
+  const shortTitleInput = { ...input, title: "Red", seo_title: "Red Oyna" };
+  const normalized = normalizeTranslatedContent(shortTitleInput, { ...output, seo_title: "Oyna" });
+  assert.equal(normalized.seo_title, "Red Oyna");
+  assert.doesNotThrow(() => validateTranslatedContent(shortTitleInput, normalized));
+});
+
 test("İngilizce ağırlıklı çıktı reddedilir", () => {
   assert.equal(looksMostlyEnglish("The game lets you play with your keyboard and collect score across levels with enemies."), true);
   assert.equal(looksMostlyEnglish("Oyunu başlat, klavye ile ilerle ve puanları topla."), false);

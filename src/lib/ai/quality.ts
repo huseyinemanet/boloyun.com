@@ -12,6 +12,9 @@ const REQUIRED_FIELDS: Array<keyof TranslatedGameContent> = [
 
 const COMMON_ENGLISH_WORDS = /\b(the|and|with|your|you|game|play|collect|level|levels|score|enemy|enemies|use|move|jump|click|mouse|keyboard|this|that|from|into|will|must|can|try|complete)\b/gi;
 const TURKISH_CHARS_OR_WORDS = /[çğıöşüÇĞİÖŞÜ]|\b(oyun|oyunu|başlat|hemen|nasıl|için|ile|ve|bu|şu|kontrol|puan|seviye|türkçe)\b/i;
+const MIN_TEXT_LENGTHS: Partial<Record<keyof TranslatedGameContent, number>> = {
+  seo_title: 5,
+};
 
 export function parseTranslatedContent(raw: string): TranslatedGameContent {
   const parsed = JSON.parse(stripJsonFence(raw)) as unknown;
@@ -47,7 +50,7 @@ export function validateTranslatedContent(input: GameTranslationInput, output: T
     const value = output[field];
     if (Array.isArray(value)) {
       if (value.length === 0 || value.some((item) => item.trim().length < 2)) throw new Error(`${field} boş olamaz.`);
-    } else if (value.trim().length < 10) {
+    } else if (value.trim().length < (MIN_TEXT_LENGTHS[field] ?? 10)) {
       throw new Error(`${field} çok kısa.`);
     }
   }
