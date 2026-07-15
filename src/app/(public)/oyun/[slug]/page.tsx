@@ -161,7 +161,7 @@ export default async function GameDetailPage({ params }: Props) {
       <section className="rounded-md border border-border bg-card p-4">
         <h2 className="mb-3 text-lg font-semibold">Benzer Oyunlar</h2>
         <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">
-          {similarGames.slice(0, 6).map((similar) => (
+          {similarGames.slice(0, 4).map((similar) => (
             <SoundLink
               key={similar.id}
               href={`/oyun/${similar.slug}`}
