@@ -2,7 +2,6 @@ import { SoundLink } from "@/components/audio/sound-link";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
 import { AuthCard, AuthMessage } from "../auth-card";
 import { ValidatedAuthForm, ValidatedInput } from "../validated-auth-form";
 
@@ -14,12 +13,11 @@ export default async function UpdatePasswordPage({ searchParams }: Props) {
   const { error } = await searchParams;
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase?.auth.getUser() ?? { data: { user: null } };
-  const recoveryPending = (await cookies()).get("password_recovery_pending")?.value === "1";
 
   return (
     <AuthCard title="Yeni Şifre Belirle" description="Hesabın için en az 8 karakterli yeni bir şifre seç.">
       {error ? <AuthMessage id="password-form-error" type="error">{getPasswordError(error)}</AuthMessage> : null}
-      {data.user && recoveryPending ? (
+      {data.user ? (
           <ValidatedAuthForm action="/auth/update-password" className="mt-4">
             <input type="email" name="username" autoComplete="username" value={data.user.email ?? ""} readOnly className="sr-only" tabIndex={-1} aria-hidden="true" />
             <FieldGroup>

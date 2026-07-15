@@ -5,9 +5,6 @@ import { createSupabaseRouteClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
   if (!hasTrustedMutationOrigin(request)) return redirectTo(request, "/sifre-yenile?error=form");
-  if (request.cookies.get("password_recovery_pending")?.value !== "1") {
-    return redirectTo(request, "/sifremi-unuttum?error=expired");
-  }
 
   const formData = await request.formData();
   const password = String(formData.get("password") ?? "");
