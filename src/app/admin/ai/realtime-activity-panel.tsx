@@ -60,7 +60,6 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
     ...item,
     isActuallyProcessing: item.status === "processing" && runningJobIds.has(item.jobId),
   }));
-  const processingTitle = activityRows.find((item) => item.isActuallyProcessing)?.title;
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 15000);
@@ -205,12 +204,6 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
           <p className="mt-1">{isRefreshing ? "Yenileniyor..." : formatDate(payload.serverTime)}</p>
         </div>
       </div>
-
-      {processingTitle ? (
-        <p className="mt-3 rounded-md bg-primary/10 px-3 py-2 text-sm font-semibold text-primary">
-          Şu an çevriliyor: {processingTitle}
-        </p>
-      ) : null}
 
       {lastError ? (
         <p className="mt-3 rounded-md bg-destructive/10 px-3 py-2 text-sm font-semibold text-destructive">
