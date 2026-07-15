@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { IconSquareDashedTextPlusFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconSquareDashedTextPlusFillDuo18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Button } from "@/components/ui/button";
@@ -18,10 +19,10 @@ export default async function AdminStaticPagesPage() {
         description="Bilgi ve politika sayfalarını oluştur, düzenle, yayınla veya kaldır."
         actions={(
           <Button asChild variant="outline" className="h-10 font-bold">
-            <a href="/admin/static-pages/new">
+            <Link href="/admin/static-pages/new">
               <IconSquareDashedTextPlusFillDuo18 className="size-4" />
               Yeni Sayfa Ekle
-            </a>
+            </Link>
           </Button>
         )}
       />

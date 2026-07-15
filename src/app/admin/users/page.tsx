@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { IconUserPlusFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconUserPlusFillDuo18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminPagination, parseAdminPage } from "@/components/admin/admin-pagination";
@@ -32,10 +33,10 @@ export default async function AdminUsersPage({ searchParams }: Props) {
         description="Üyeleri, yöneticileri, rolleri ve hesap durumlarını yönet."
         actions={(
           <Button asChild variant="outline" className="h-10 px-3 text-sm font-bold">
-            <a href="/admin/users/new">
+            <Link href="/admin/users/new">
               <IconUserPlusFillDuo18 className="size-4" />
               Yeni Kullanıcı Ekle
-            </a>
+            </Link>
           </Button>
         )}
       />

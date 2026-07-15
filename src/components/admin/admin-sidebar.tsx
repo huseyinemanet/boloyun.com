@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LoaderCircleIcon } from "lucide-react";
 import { IconGamepadFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGamepadFillDuo18";
@@ -76,7 +77,7 @@ export function AdminSidebar() {
           const pending = visiblePendingHref === href;
 
           return (
-            <a
+            <Link
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
@@ -99,7 +100,7 @@ export function AdminSidebar() {
                 {pending ? <LoaderCircleIcon className="size-4 animate-spin" /> : <Icon className="size-4" />}
               </span>
               <span>{label}</span>
-            </a>
+            </Link>
           );
         })}
       </nav>
