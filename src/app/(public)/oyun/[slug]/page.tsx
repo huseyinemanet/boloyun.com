@@ -3,11 +3,7 @@ import Image from "next/image";
 import { SoundLink } from "@/components/audio/sound-link";
 import { notFound } from "next/navigation";
 import { AdSlot } from "@/components/ads/ad-slot";
-import { GameCard } from "@/components/game/game-card";
 import { PlayCountMetric } from "@/components/game/play-count-metric";
-import { GamePlayer } from "@/components/player/game-player";
-import { ShareGameButton } from "@/components/game/share-game-button";
-import { JsonLd } from "@/components/seo/json-ld";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -17,14 +13,13 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { getPrebuildGameSlugs, getPublicGamePageBySlug, type GameTaxonomyLink } from "@/lib/db-games";
-import { breadcrumbJsonLd, videoGameJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getPublicSettings } from "@/lib/db-settings";
 import { isGameSourceAllowed } from "@/lib/settings/game-security";
 import { renderSeoTemplate } from "@/lib/settings/validation";
-import { AdminEditGameLink } from "./admin-edit-game-link";
-import { GameUserActions } from "./game-user-actions";
+import { LazyGameActions } from "./lazy-game-actions";
 import { LazyComments } from "./lazy-comments";
+import { LazyGamePlayer } from "./lazy-game-player";
 
 export const revalidate = 3600;
 
@@ -67,7 +62,6 @@ export default async function GameDetailPage({ params }: Props) {
   }
 
   const { game, categories, tags } = detail;
-  const primaryCategory = categories[0];
   const playEventName = `game-played-${game.id}`;
   const similarGames = settings.games.similarGameStrategy === "popular"
     ? detail.popularCategoryGames
@@ -75,27 +69,8 @@ export default async function GameDetailPage({ params }: Props) {
       ? detail.latestCategoryGames
       : detail.relatedGames;
   const source = game.gameType === "iframe" ? game.embedUrl : game.gameType === "html5" ? game.html5Url : game.gameType === "swf" ? game.swfUrl : game.externalUrl;
-  const breadcrumbEntries = [
-    { name: "Ana Sayfa", path: "/" },
-    ...(primaryCategory ? [{ name: primaryCategory.name, path: `/kategori/${primaryCategory.slug}` }] : []),
-    { name: game.title, path: `/oyun/${game.slug}` },
-  ];
-
   return (
     <article className="space-y-4">
-      <JsonLd data={[
-        breadcrumbJsonLd(breadcrumbEntries),
-        videoGameJsonLd({
-          name: game.title,
-          description: game.longDescription || game.shortDescription,
-          image: game.thumbnailUrl,
-          path: `/oyun/${game.slug}`,
-          genres: [...categories.map((category) => category.name), ...tags.map((tag) => tag.name)].slice(0, 8),
-          developer: game.developer,
-          ratingAvg: game.ratingAvg,
-          ratingCount: game.ratingCount,
-        }),
-      ]} />
       <AdSlot slotKey="game_page_top" />
 
       <section className="rounded-md border border-border bg-card p-4">
@@ -123,20 +98,20 @@ export default async function GameDetailPage({ params }: Props) {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <h1 className="min-w-0 flex-1 text-2xl font-semibold">{game.title}</h1>
                   <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                    <GameUserActions
+                    <LazyGameActions
                       gameId={game.id}
                       slug={game.slug}
                       likesCount={game.likesCount}
                       dislikesCount={game.dislikesCount}
                       showVotes={settings.games.likesEnabled && settings.community.ratingsEnabled}
                       showFavorite={settings.games.favoritesEnabled && settings.community.favoritesEnabled}
+                      showShare={settings.games.sharingEnabled}
+                      title={game.title}
                     />
-                    {settings.games.sharingEnabled ? <ShareGameButton title={game.title} /> : null}
                   </div>
                 </div>
                 <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{game.shortDescription}</p>
               </div>
-              <AdminEditGameLink gameId={game.id} title={game.title} />
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-border py-3">
@@ -149,7 +124,7 @@ export default async function GameDetailPage({ params }: Props) {
         </div>
 
         <div className="mt-4">
-          <GamePlayer
+          <LazyGamePlayer
             game={{
               id: game.id,
               title: game.title,
@@ -176,18 +151,25 @@ export default async function GameDetailPage({ params }: Props) {
       <AdSlot slotKey="game_page_below_player" />
 
       <section className="grid gap-3 rounded-md border border-border bg-card p-4 md:grid-cols-2">
-        <InfoBlock title={`${game.title} nasıl oynanır?`} body={game.howToPlay} />
-        <ListBlock title="Kontroller" items={game.controls} />
-        <ListBlock title="Özellikler" items={game.features} />
+        <InfoBlock title={`${game.title} nasıl oynanır?`} body={compactText(game.howToPlay, 600)} />
+        <ListBlock title="Kontroller" items={game.controls.slice(0, 8).map((item) => compactText(item, 240))} />
+        <ListBlock title="Özellikler" items={game.features.slice(0, 8).map((item) => compactText(item, 240))} />
       </section>
 
       <TaxonomyChips categories={categories} tags={tags} />
 
       <section className="rounded-md border border-border bg-card p-4">
         <h2 className="mb-3 text-lg font-semibold">Benzer Oyunlar</h2>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">
           {similarGames.map((similar) => (
-            <GameCard key={similar.id} game={similar} />
+            <SoundLink
+              key={similar.id}
+              href={`/oyun/${similar.slug}`}
+              className="truncate rounded-md border border-border bg-muted/40 px-3 py-2 text-sm font-semibold hover:bg-accent"
+              title={similar.title}
+            >
+              {similar.title}
+            </SoundLink>
           ))}
         </div>
       </section>
@@ -240,7 +222,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 
 function TaxonomyChips({ categories, tags }: { categories: GameTaxonomyLink[]; tags: GameTaxonomyLink[] }) {
   const items = [
-    ...categories.map((category) => ({ ...category, href: `/kategori/${category.slug}` })),
+    ...categories.slice(0, 4).map((category) => ({ ...category, href: `/kategori/${category.slug}` })),
     ...tags.slice(0, 8).map((tag) => ({ ...tag, href: `/etiket/${tag.slug}` })),
   ];
 
@@ -278,4 +260,10 @@ function ListBlock({ title, items }: { title: string; items: string[] }) {
       </ul>
     </div>
   );
+}
+
+function compactText(value: string, limit: number) {
+  const normalized = value.trim();
+  if (normalized.length <= limit) return normalized;
+  return `${normalized.slice(0, limit).trimEnd()}…`;
 }
