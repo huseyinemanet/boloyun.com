@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+readonly project_dir="/opt/boloyun"
+readonly compose_file="$project_dir/compose.yml"
+readonly runtime_env="$project_dir/.env.production"
+readonly state_file="$project_dir/.deploy.env"
+readonly deploy_user="boloyun-deploy"
+readonly container_name="boloyun-app"
+
+revision="${1:-}"
+if [[ ! "$revision" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "Invalid deployment revision." >&2
+  exit 2
+fi
+
+archive="/home/$deploy_user/boloyun-$revision.tar.gz"
+if [[ ! -f "$archive" ]]; then
+  echo "Deployment image archive not found." >&2
+  exit 3
+fi
+if [[ ! -f "$compose_file" || ! -f "$runtime_env" ]]; then
+  echo "Production Compose or environment file is missing." >&2
+  exit 4
+fi
+install -d -o 1001 -g 1001 -m 750 "$project_dir/cache"
+
+read_state() {
+  local key="$1"
+  [[ -f "$state_file" ]] || return 0
+  sed -n "s/^${key}=//p" "$state_file" | tail -n 1
+}
+
+write_state() {
+  local current="$1"
+  local previous="${2:-}"
+  local temporary
+  temporary="$(mktemp "$project_dir/.deploy.env.XXXXXX")"
+  printf 'IMAGE_TAG=%s\n' "$current" > "$temporary"
+  if [[ -n "$previous" ]]; then printf 'PREVIOUS_IMAGE_TAG=%s\n' "$previous" >> "$temporary"; fi
+  chmod 600 "$temporary"
+  mv "$temporary" "$state_file"
+}
+
+wait_until_healthy() {
+  local status
+  for _ in $(seq 1 18); do
+    status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container_name" 2>/dev/null || true)"
+    if [[ "$status" == "healthy" ]]; then
+      if curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3001/robots.txt >/dev/null; then return 0; fi
+    fi
+    if [[ "$status" == "unhealthy" || "$status" == "exited" || "$status" == "dead" ]]; then return 1; fi
+    sleep 5
+  done
+  return 1
+}
+
+current_revision="$(read_state IMAGE_TAG)"
+older_revision="$(read_state PREVIOUS_IMAGE_TAG)"
+if [[ -n "$current_revision" && ! "$current_revision" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "Current deployment state is invalid." >&2
+  exit 5
+fi
+
+echo "Loading image for $revision"
+gzip -dc "$archive" | docker load
+docker image inspect "boloyun:$revision" >/dev/null
+
+candidate_state="$(mktemp "$project_dir/.deploy.candidate.XXXXXX")"
+printf 'IMAGE_TAG=%s\n' "$revision" > "$candidate_state"
+chmod 600 "$candidate_state"
+
+echo "Starting candidate $revision"
+if docker compose --project-directory "$project_dir" --env-file "$candidate_state" -f "$compose_file" up -d --no-deps app \
+  && wait_until_healthy; then
+  write_state "$revision" "$current_revision"
+  rm -f "$candidate_state" "$archive"
+  if [[ -n "$older_revision" && "$older_revision" != "$current_revision" && "$older_revision" != "$revision" ]]; then
+    docker image rm "boloyun:$older_revision" >/dev/null 2>&1 || true
+  fi
+  echo "Deployment $revision is healthy."
+  exit 0
+fi
+
+echo "Candidate failed health checks; rolling back." >&2
+if [[ -n "$current_revision" ]]; then
+  rollback_state="$(mktemp "$project_dir/.deploy.rollback.XXXXXX")"
+  printf 'IMAGE_TAG=%s\n' "$current_revision" > "$rollback_state"
+  chmod 600 "$rollback_state"
+  docker compose --project-directory "$project_dir" --env-file "$rollback_state" -f "$compose_file" up -d --no-deps app
+  rm -f "$rollback_state"
+  wait_until_healthy || echo "Rollback container did not become healthy." >&2
+else
+  docker compose --project-directory "$project_dir" --env-file "$candidate_state" -f "$compose_file" down || true
+fi
+rm -f "$candidate_state" "$archive"
+docker image rm "boloyun:$revision" >/dev/null 2>&1 || true
+exit 1

@@ -1,6 +1,7 @@
 import "server-only";
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { createHash, randomUUID } from "crypto";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import sharp from "sharp";
 import { isR2Configured } from "@/lib/system-status";
 import { matchesAudioSignature, matchesImageSignature, SUPPORTED_AUDIO_MIME_TYPES } from "@/lib/settings/media-validation";
 import { getSiteAssetPublicUrl } from "@/lib/site-assets";
@@ -31,6 +32,12 @@ export type UploadedSiteAudioAsset = {
   mimeType: (typeof SUPPORTED_AUDIO_MIME_TYPES)[number];
 };
 
+export type StoredSiteAsset = {
+  body: ReadableStream<Uint8Array>;
+  contentType: string;
+  cacheControl: string;
+};
+
 export async function uploadSiteAsset(file: File, kind: "logo" | "favicon" | "cover" | "avatar", allowedMimeTypes: string[], maxMb: number) {
   if (!isR2Configured()) throw new Error("Cloudflare R2 yapılandırılmamış.");
   if (!allowedMimeTypes.includes(file.type) || !acceptedInputMimeTypes.has(file.type)) throw new Error("Yalnızca PNG, JPEG veya WebP görseller yüklenebilir.");
@@ -43,27 +50,23 @@ export async function uploadSiteAsset(file: File, kind: "logo" | "favicon" | "co
   if (!dimensions || dimensions.width * dimensions.height > limit.pixels) throw new Error("Görsel çözümlenemedi veya piksel sınırını aşıyor.");
   if (dimensions.width > limit.width || dimensions.height > limit.height) throw new Error(`Görsel en fazla ${limit.width}×${limit.height} piksel olabilir.`);
   if (isAnimatedImage(bytes, file.type)) throw new Error("Animasyonlu görseller desteklenmiyor.");
-  const { env } = await getCloudflareContext({ async: true });
-  if (!env.SITE_ASSETS) throw new Error("Cloudflare R2 binding yapılandırılmamış.");
   let outputBytes: Uint8Array;
-  if (file.type === "image/webp") {
-    outputBytes = bytes;
-  } else {
-    if (!env.IMAGES) throw new Error("Cloudflare görsel binding yapılandırılmamış.");
-    try {
-      const info = await env.IMAGES.info(new Blob([bytes]).stream());
-      if (!("width" in info) || info.width !== dimensions.width || info.height !== dimensions.height) throw new Error("Görsel boyut bilgisi tutarsız.");
-      const transformed = await env.IMAGES.input(new Blob([bytes]).stream()).output({ format: "image/webp", quality: kind === "favicon" ? 90 : 82, anim: false });
-      outputBytes = new Uint8Array(await new Response(transformed.image()).arrayBuffer());
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("boyut")) throw error;
-      throw new Error("Görsel güvenli biçimde yeniden kodlanamadı.");
+  try {
+    const image = sharp(bytes, { animated: false, failOn: "error", limitInputPixels: limit.pixels });
+    const metadata = await image.metadata();
+    if (!metadata.width || !metadata.height || metadata.width !== dimensions.width || metadata.height !== dimensions.height) {
+      throw new Error("Görsel boyut bilgisi tutarsız.");
     }
+    if ((metadata.pages ?? 1) > 1) throw new Error("Animasyonlu görseller desteklenmiyor.");
+    outputBytes = new Uint8Array(await image.rotate().webp({ quality: kind === "favicon" ? 90 : 82 }).toBuffer());
+  } catch (error) {
+    if (error instanceof Error && (error.message.includes("boyut") || error.message.includes("Animasyonlu"))) throw error;
+    throw new Error("Görsel güvenli biçimde yeniden kodlanamadı.");
   }
 
   const sha256 = createHash("sha256").update(outputBytes).digest("hex");
   const key = `site-assets/${kind}/${sha256.slice(0, 16)}-${randomUUID()}.webp`;
-  await env.SITE_ASSETS.put(key, outputBytes, { httpMetadata: { contentType: "image/webp", cacheControl: "public, max-age=31536000, immutable" } });
+  await putObject(key, outputBytes, "image/webp");
   return {
     url: getSiteAssetPublicUrl(key),
     key,
@@ -86,9 +89,7 @@ export async function uploadSiteAudioAsset(file: File, maxMb: number): Promise<U
   const sha256 = createHash("sha256").update(bytes).digest("hex");
   const extension = audioExtension(file.type);
   const key = `site-assets/audio/${sha256.slice(0, 16)}-${randomUUID()}.${extension}`;
-  const { env } = await getCloudflareContext({ async: true });
-  if (!env.SITE_ASSETS) throw new Error("Cloudflare R2 binding yapılandırılmamış.");
-  await env.SITE_ASSETS.put(key, bytes, { httpMetadata: { contentType: file.type, cacheControl: "public, max-age=31536000, immutable" } });
+  await putObject(key, bytes, file.type);
 
   return {
     url: getSiteAssetPublicUrl(key),
@@ -134,9 +135,71 @@ function readU32Be(bytes: Uint8Array, offset: number) { return new DataView(byte
 
 export async function deleteSiteAsset(key: string) {
   if (!key.startsWith("site-assets/")) throw new Error("Geçersiz dosya anahtarı.");
-  const { env } = await getCloudflareContext({ async: true });
-  if (!env.SITE_ASSETS) throw new Error("Cloudflare R2 binding yapılandırılmamış.");
-  await env.SITE_ASSETS.delete(key);
+  const { bucket, client } = getStorage();
+  await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }), { abortSignal: AbortSignal.timeout(15_000) });
+}
+
+export async function getSiteAssetObject(key: string): Promise<StoredSiteAsset | null> {
+  const { bucket, client } = getStorage();
+  try {
+    const object = await client.send(
+      new GetObjectCommand({ Bucket: bucket, Key: key }),
+      { abortSignal: AbortSignal.timeout(15_000) },
+    );
+    if (!object.Body) return null;
+    return {
+      body: object.Body.transformToWebStream() as ReadableStream<Uint8Array>,
+      contentType: object.ContentType ?? "application/octet-stream",
+      cacheControl: object.CacheControl ?? "public, max-age=31536000, immutable",
+    };
+  } catch (error) {
+    if (isMissingObject(error)) return null;
+    throw error;
+  }
+}
+
+async function putObject(key: string, body: Uint8Array, contentType: string) {
+  const { bucket, client } = getStorage();
+  await client.send(new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    Body: body,
+    ContentType: contentType,
+    CacheControl: "public, max-age=31536000, immutable",
+  }), { abortSignal: AbortSignal.timeout(15_000) });
+}
+
+let cachedStorage: { signature: string; bucket: string; client: S3Client } | null = null;
+
+function getStorage() {
+  const accountId = required("R2_ACCOUNT_ID");
+  const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
+  const region = "auto";
+  const accessKeyId = required("R2_ACCESS_KEY_ID");
+  const secretAccessKey = required("R2_SECRET_ACCESS_KEY");
+  const bucket = required("R2_BUCKET_NAME");
+
+  const signature = `${endpoint}\n${region}\n${accessKeyId}\n${bucket}`;
+  if (cachedStorage?.signature === signature) return cachedStorage;
+  cachedStorage?.client.destroy();
+  cachedStorage = {
+    signature,
+    bucket,
+    client: new S3Client({ endpoint, region, credentials: { accessKeyId, secretAccessKey } }),
+  };
+  return cachedStorage;
+}
+
+function required(name: string) {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`${name} eksik.`);
+  return value;
+}
+
+function isMissingObject(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const value = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+  return value.name === "NoSuchKey" || value.$metadata?.httpStatusCode === 404;
 }
 
 function isSupportedAudioMimeType(value: string): value is (typeof SUPPORTED_AUDIO_MIME_TYPES)[number] {

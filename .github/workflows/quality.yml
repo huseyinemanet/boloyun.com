@@ -1,5 +1,8 @@
 name: Quality and performance budgets
 
+permissions:
+  contents: read
+
 on:
   pull_request:
   push:
@@ -19,9 +22,67 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm cf:typegen
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build
       - run: pnpm perf:check
+
+  verify-production-image:
+    if: github.event_name == 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production image
+        run: |
+          docker build \
+            --build-arg DEPLOYMENT_VERSION="${GITHUB_SHA}" \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL="${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            --build-arg SUPABASE_SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            --build-arg NEXT_PUBLIC_TURNSTILE_SITE_KEY="${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}" \
+            --build-arg SITE_URL="https://boloyun.com" \
+            --tag "boloyun:${GITHUB_SHA}" \
+            .
+
+  deploy-production:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: boloyun-production
+      cancel-in-progress: false
+    env:
+      IMAGE_NAME: boloyun:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production image
+        run: |
+          docker build \
+            --build-arg DEPLOYMENT_VERSION="${GITHUB_SHA}" \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL="${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            --build-arg SUPABASE_SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            --build-arg NEXT_PUBLIC_TURNSTILE_SITE_KEY="${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}" \
+            --build-arg SITE_URL="https://boloyun.com" \
+            --tag "${IMAGE_NAME}" \
+            .
+      - name: Package production image
+        run: docker save "${IMAGE_NAME}" | gzip -1 > "/tmp/boloyun-${GITHUB_SHA}.tar.gz"
+      - name: Configure production SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 "$HOME/.ssh"
+          install -m 600 /dev/null "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/id_ed25519"
+          install -m 600 /dev/null "$HOME/.ssh/known_hosts"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+      - name: Upload production image
+        run: scp -o BatchMode=yes "/tmp/boloyun-${GITHUB_SHA}.tar.gz" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/${{ secrets.VPS_USER }}/"
+      - name: Deploy and verify production
+        run: ssh -o BatchMode=yes "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "sudo -n /usr/local/sbin/boloyun-deploy '${GITHUB_SHA}'"

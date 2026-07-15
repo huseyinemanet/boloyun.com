@@ -34,15 +34,16 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # local Supabase CLI state
 /supabase/.temp/
 
+# legacy Cloudflare build artifacts
+/.wrangler/
+
 # vercel
 .vercel
-
-# cloudflare local state
-/.wrangler/
 
 # typescript
 *.tsbuildinfo

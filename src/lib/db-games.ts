@@ -41,8 +41,8 @@ const publicGameSelect = [
 ].join(",");
 
 // Collection pages only render card metadata. Fetching full descriptions,
-// player URLs and SEO content for every card makes the OpenNext RSC payload
-// unnecessarily large and burns Worker CPU while mapping and serializing it.
+// player URLs and SEO content for every card makes the RSC payload
+// unnecessarily large and burns application CPU while mapping and serializing it.
 const publicGameCardSelect = [
   "id",
   "title",

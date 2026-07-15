@@ -1,7 +1,4 @@
 import type { NextConfig } from "next";
-import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
-
-initOpenNextCloudflareForDev();
 
 const isDevelopment = process.env.NODE_ENV === "development";
 const contentSecurityPolicy = [
@@ -22,6 +19,8 @@ const contentSecurityPolicy = [
 const publicHtmlCacheControl = "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
+  deploymentId: process.env.DEPLOYMENT_VERSION,
   poweredByHeader: false,
   async redirects() {
     return [

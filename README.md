@@ -31,12 +31,13 @@ Proje modern bir Next.js uygulaması olarak geliştirilmiştir.
 - **Supabase Postgres** veritabanı
 - **Supabase Auth** kullanıcı oturumu
 - **Supabase RLS** ve admin korumaları
-- **Cloudflare Workers/Pages uyumlu OpenNext** dağıtımı
-- **Cloudflare R2** site varlıkları ve oyun kapakları için
+- **Next.js standalone** üretim çıktısı
+- **Hetzner VPS + Docker Compose + Nginx** üretim dağıtımı
+- **Cloudflare R2** site varlıkları ve oyun kapakları için; uygulama runtime'ı Cloudflare Worker'a bağlı değildir
 - **Ruffle** destekli SWF/Flash oynatma altyapısı
 - **Node.js CLI import scriptleri**
 - **tsx** ile TypeScript script çalıştırma
-- **Wrangler** ile Cloudflare build, preview ve deploy
+- **GitHub Actions** ile image build, VPS'ye aktarım ve production deploy
 
 ## Nasıl Çalışır?
 
@@ -65,8 +66,9 @@ src/components/player    Oyun oynatıcı bileşenleri
 src/import               Sitemap keşfi, scraper, parser, import ve publish scriptleri
 src/lib                  Veritabanı erişimi, auth, SEO, güvenlik ve yardımcı modüller
 supabase/migrations      Reprodüksiyonlu veritabanı migration dosyaları
-wrangler.jsonc           Cloudflare Worker, route, R2 ve cron yapılandırması
-open-next.config.ts      OpenNext Cloudflare yapılandırması
+Dockerfile               Next.js standalone production image
+deploy/compose.yml       VPS uzerindeki izole Docker Compose servisi
+deploy/server            Production deploy scripti ve dar sudoers kuralı
 ```
 
 ## Gereksinimler
@@ -74,8 +76,9 @@ open-next.config.ts      OpenNext Cloudflare yapılandırması
 - Node.js 20 veya üzeri
 - pnpm `11.7.0`
 - Supabase projesi
-- Cloudflare hesabı
 - Cloudflare R2 bucket'ı
+- Docker ve Docker Compose kurulu bir VPS
+- Nginx reverse proxy
 - Gerekirse AI sağlayıcı API anahtarı
 
 Bu repo `packageManager` alanında pnpm sürümünü sabitler. Yerel makinede pnpm yoksa komutları `npx -y pnpm@11.7.0 ...` şeklinde de çalıştırabilirsiniz.
@@ -174,22 +177,31 @@ Production build:
 npx -y pnpm@11.7.0 build
 ```
 
-Cloudflare build:
+Production Docker image build:
 
 ```bash
-npx -y pnpm@11.7.0 cf:build
+docker build \
+  --build-arg NEXT_PUBLIC_SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL" \
+  --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY" \
+  --build-arg SITE_URL="https://boloyun.com" \
+  --tag boloyun:local \
+  .
 ```
 
-Cloudflare preview:
+Production container smoke test:
 
 ```bash
-npx -y pnpm@11.7.0 cf:preview
+docker run --rm --env-file .env.local -p 3001:3000 boloyun:local
 ```
 
-Cloudflare deploy:
+GitHub Actions production deploy'u yalnızca `main` branch'ine push/merge sonrası çalışır. İlk VPS kurulumunda `deploy/compose.yml`, `/usr/local/sbin/boloyun-deploy`, `/etc/sudoers.d/boloyun-deploy` ve `/opt/boloyun/.env.production` sunucuda hazırlanmalıdır.
 
-```bash
-npx -y pnpm@11.7.0 cf:deploy
+Deploy scripti image'i `127.0.0.1:3001` uzerinde çalışan `boloyun-app` container'ına alır, `/robots.txt` ile health check yapar ve başarısız adayda önceki image'e döner.
+
+Canlı site Nginx üzerinden container'a proxy'lenir:
+
+```txt
+https://boloyun.com -> Nginx -> 127.0.0.1:3001 -> boloyun-app
 ```
 
 ## Import ve Crawler Komutları
@@ -298,13 +310,9 @@ supabase migration list
 
 Production branch `main` branch'idir.
 
-Supabase GitHub entegrasyonu migration gibi backend artifact'lerini izler; Next.js frontend deploy'u ayrıca Cloudflare/OpenNext hattından yapılır. Bu yüzden başarılı bir Supabase deployment, sitenin Cloudflare üzerinde yayınlandığı anlamına gelmez.
+Supabase GitHub entegrasyonu migration gibi backend artifact'lerini izler; Next.js frontend deploy'u ayrı olarak GitHub Actions -> Hetzner VPS hattından yapılır. Bu yüzden başarılı bir Supabase deployment, sitenin production container'ında yayınlandığı anlamına gelmez.
 
-Manuel Cloudflare deploy için:
-
-```bash
-npx -y pnpm@11.7.0 cf:deploy
-```
+`main` branch'ine merge sonrası GitHub Actions production image'i build eder, VPS'ye `scp` ile aktarır ve `boloyun-deploy` scriptini çalıştırır.
 
 Deploy sonrası canlı rota kontrol edilmelidir:
 
