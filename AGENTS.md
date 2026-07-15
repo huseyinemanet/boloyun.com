@@ -1,54 +1,108 @@
 # AGENTS.md
 
-## Project Mission
+## Project North Star
 
-This project is a Turkish-first mini game portal.
+Bol Oyun is a Turkish-first mini game portal.
 
-The goal is to build a fast, lightweight, SEO-friendly game website where users can discover, search and play browser games. The system must support iframe games, SWF/Flash games through Ruffle, HTML5 games, imported game metadata, AI-generated Turkish content, admin review workflows and configurable ads.
+The product exists for one primary loop:
 
-Do not turn this project into a generic social network, heavy SaaS dashboard, or over-engineered platform.
+```txt
+Find game -> open game page -> click "Oyunu Başlat" -> play -> discover another game
+```
 
----
+Everything agents build, remove, optimize or document must protect that loop. Do not turn this project into a generic SaaS dashboard, social network, gamified community platform or infrastructure experiment.
 
-## Core Product Rules
+## Current Production Reality
+
+The production website runs on a Hetzner VPS.
+
+Runtime shape:
+
+```txt
+User
+  -> https://boloyun.com
+  -> Nginx
+  -> 127.0.0.1:3001
+  -> Docker Compose service: boloyun-app
+  -> Supabase / object storage / external APIs
+```
+
+Deployment shape:
+
+```txt
+main push or merge
+  -> GitHub Actions quality workflow
+  -> pnpm typecheck/lint/test/build/perf:check
+  -> Docker image build
+  -> image upload to VPS over SSH
+  -> sudo /usr/local/sbin/boloyun-deploy <sha>
+  -> health check against /robots.txt
+  -> keep new container or roll back
+```
+
+Key production files:
+
+```txt
+.github/workflows/quality.yml
+deploy/compose.yml
+deploy/server/boloyun-deploy
+deploy/server/boloyun-deploy.sudoers
+Dockerfile
+```
+
+Server-side production state lives outside the repo:
+
+```txt
+/opt/boloyun/compose.yml
+/opt/boloyun/.env.production
+/opt/boloyun/.deploy.env
+/opt/boloyun/cache
+/usr/local/sbin/boloyun-deploy
+```
+
+Do not reintroduce a serverless edge runtime, vendor-specific deploy path, or alternate hosting architecture for the main app unless the project owner explicitly asks for it.
+
+## Product Rules
 
 1. The public site must be fast, compact and easy to use.
-2. The main user action is always: find a game → open game page → click **“Oyunu Başlat”** → play.
-3. Public pages must be Turkish-first.
-4. English UI labels must not be used on the public website unless they are actual game titles or proper nouns.
-5. Do not add social network features unless explicitly requested.
-6. Do not add messaging, followers, feeds, trophies or complex achievements unless explicitly requested.
-7. User accounts exist only for Google login, favorites, recently played games, comments, ratings and a simple profile.
-8. Admin features must be functional and clear, not visually overdesigned.
-9. Imported games must never be auto-published without review unless explicitly requested.
-10. The review queue is mandatory for imported content.
-
----
+2. The public site is Turkish-first.
+3. The main action is always **Oyunu Başlat**.
+4. English UI labels must not appear on public pages unless they are actual game titles, proper nouns, source names or developer-facing diagnostics.
+5. Do not add messaging, followers, feeds, trophies, social graphs or complex achievements unless explicitly requested.
+6. User accounts exist only for Google login, favorites, recently played games, comments, ratings and a simple profile.
+7. Admin features must be functional, clear and reliable. They should not become visually overdesigned.
+8. Imported games must never be auto-published without review unless explicitly requested.
+9. The review queue is mandatory for imported content.
+10. Performance and playability beat decorative complexity.
 
 ## Tech Stack Rules
 
-Use this stack unless explicitly changed by the project owner:
+Use this stack unless the project owner explicitly changes it:
 
-- Next.js
+- Next.js App Router
+- React
 - TypeScript
 - Tailwind CSS
-- shadcn/ui
+- shadcn/ui and Radix-based primitives
 - Supabase Postgres
 - Supabase Auth
-- Hetzner VPS
+- Supabase RLS
+- S3-compatible object storage/CDN for covers and site assets
+- Ruffle for SWF/Flash games
+- Node.js CLI scripts for import/crawling
+- Docker
 - Docker Compose
 - Nginx reverse proxy
-- Cloudflare R2
-- Ruffle for SWF games
-- Node.js CLI scripts for import/crawling
+- Hetzner VPS production runtime
+- GitHub Actions for quality checks and production deploy
 
-Do not introduce a new framework, database, ORM, CMS, search engine or backend service without a clear reason and prior approval.
+Do not introduce a new framework, database, ORM, CMS, search service, queue system, hosting platform or backend service without a clear reason and prior approval.
 
----
+Do not rename existing environment variables just for branding. Runtime compatibility is more important than cosmetic naming. If a variable name is historical but the code depends on it, document the meaning rather than silently changing the key.
 
 ## Language Rules
 
-The public site is Turkish.
+Public UI is Turkish.
 
 Use these labels:
 
@@ -73,13 +127,11 @@ Use these labels:
 | Features | Özellikler |
 | Similar Games | Benzer Oyunlar |
 
-Admin panel can use technical English internally only when it improves developer clarity, but user-facing admin labels should preferably be Turkish.
+Admin panel text may use technical English internally when it improves developer clarity, but user-facing admin labels should preferably be Turkish.
 
----
+## Public UI Rules
 
-## UI Rules
-
-Public layout:
+Target layout:
 
 ```txt
 Header:
@@ -96,20 +148,18 @@ Design principles:
 
 1. Compact but not cramped.
 2. Game thumbnails should be prominent.
-3. Do not make the site look like a generic SaaS dashboard.
-4. Do not make the site look like an outdated chaotic Flash portal.
+3. Do not make the public site look like a generic SaaS dashboard.
+4. Do not make the public site look like an outdated chaotic Flash portal.
 5. Use modern spacing, clean cards, colorful category icons and fast interactions.
-6. Public site should use shadcn/ui only as a component foundation, not as an obvious default theme.
-7. Admin panel can use shadcn/ui more heavily.
+6. Use shadcn/ui as a foundation, not as an obvious default theme.
+7. Admin can use shadcn/ui more heavily than public pages.
 
 Sidebar rules:
 
 1. Desktop sidebar should be sticky or fixed.
 2. Sidebar should support custom category icons.
 3. Category icons can be SVG upload, SVG code or fallback icon.
-4. Mobile should not use fixed desktop sidebar. Use drawer, bottom nav or horizontal category chips.
-
----
+4. Mobile must not use the fixed desktop sidebar. Use drawer, bottom nav or horizontal category chips.
 
 ## Game Player Rules
 
@@ -126,22 +176,20 @@ external
 
 Rules:
 
-1. Do not load the actual game before the user clicks **“Oyunu Başlat”**.
+1. Do not load the actual game before the user clicks **Oyunu Başlat**.
 2. Show thumbnail and play button first.
 3. For `iframe`, render a sandboxed iframe when possible.
 4. For `swf`, use Ruffle.
-5. For `html5`, load the HTML5 URL through iframe or approved loader.
+5. For `html5`, load the HTML5 URL through iframe or an approved loader.
 6. For `external`, show an external play action only if embedding is not possible.
 7. Always preserve the game source URL.
 8. Do not assume all games are Flash.
 9. Do not assume all games are iframe-compatible.
 10. Admin preview must allow testing whether the game works before approval.
 
----
-
 ## Import Pipeline Rules
 
-The import pipeline is mandatory and must follow this sequence:
+The import pipeline is mandatory:
 
 ```txt
 discover
@@ -173,8 +221,6 @@ needs_fix
 
 Do not skip statuses unless there is a clear implementation reason.
 
----
-
 ## Crawler Rules
 
 1. Use Node.js importer scripts.
@@ -205,8 +251,6 @@ pnpm import:scrape --source miniplay --limit 100
 pnpm import:generate-content --limit 50
 pnpm import:retry-failed
 ```
-
----
 
 ## AI Content Rules
 
@@ -254,8 +298,6 @@ AI output must be editable in admin before publishing.
 
 AI output must not be published automatically.
 
----
-
 ## Admin Review Rules
 
 The review queue must allow the admin to:
@@ -273,22 +315,20 @@ The review queue must allow the admin to:
 Approval flow:
 
 ```txt
-pending_review → approved → create published game
+pending_review -> approved -> create published game
 ```
 
 Reject flow:
 
 ```txt
-pending_review → rejected
+pending_review -> rejected
 ```
 
-Needs fix flow:
+Needs-fix flow:
 
 ```txt
-pending_review → needs_fix
+pending_review -> needs_fix
 ```
-
----
 
 ## Database Rules
 
@@ -314,24 +354,27 @@ ads
 static_pages
 ```
 
-Do not remove core tables without explicit approval.
+Rules:
 
-Use UUID primary keys.
+1. Do not remove core tables without explicit approval.
+2. Use UUID primary keys.
+3. Use `created_at` and `updated_at` timestamps.
+4. Use many-to-many relations for games/categories and games/tags.
+5. Do not store category/tag as comma-separated strings in `games`.
+6. Do not run ad-hoc production SQL for a schema change that should be reproducible.
+7. Create a new file under `supabase/migrations` for schema changes.
+8. Never edit an already-applied production migration; add a new migration instead.
 
-Use timestamps:
+Before pushing a database migration:
 
-```txt
-created_at
-updated_at
+```bash
+supabase db push --dry-run
+supabase migration list
 ```
 
-Use many-to-many relations for games/categories and games/tags.
+After deployment, verify the migration appears remotely and run the relevant database smoke query.
 
-Do not store category/tag as comma-separated strings in the `games` table.
-
----
-
-## Auth Rules
+## Auth and Profile Rules
 
 Use Supabase Auth.
 
@@ -346,10 +389,6 @@ Authentication features:
 Do not ask for gender.
 
 Prefer birth year or age confirmation over full birth date unless explicitly required.
-
----
-
-## Profile Rules
 
 Profiles must be simple.
 
@@ -375,8 +414,6 @@ Trophies
 Complex achievements
 Social graph
 ```
-
----
 
 ## Homepage Builder Rules
 
@@ -412,8 +449,6 @@ status
 
 The homepage must not be hardcoded beyond the initial fallback state.
 
----
-
 ## Ad Manager Rules
 
 Ads are slot-based.
@@ -448,8 +483,6 @@ Ad rules:
 5. Player experience must not be broken by ads.
 6. Mobile sticky ads should hide while game player is active.
 
----
-
 ## Static Page Rules
 
 Footer must include:
@@ -465,8 +498,6 @@ Advertising
 ```
 
 Static pages can be database-driven or markdown-driven in the first version.
-
----
 
 ## SEO Rules
 
@@ -492,8 +523,6 @@ SEO rules:
 7. Add canonical URLs.
 8. Add Open Graph metadata.
 
----
-
 ## Performance Rules
 
 1. Public site must be lightweight.
@@ -506,8 +535,7 @@ SEO rules:
 8. Do not load ads before necessary if they hurt performance.
 9. Optimize images.
 10. Admin panel can be heavier than public pages.
-
----
+11. Keep `pnpm perf:check` passing unless the owner explicitly accepts the budget change.
 
 ## Security Rules
 
@@ -522,8 +550,8 @@ SEO rules:
 9. Comments require authentication.
 10. Comment moderation is required.
 11. Ad code must only be editable by admin.
-
----
+12. Keep secrets in environment variables only.
+13. Never hardcode API keys, service-role keys, SSH keys or provider tokens.
 
 ## Code Quality Rules
 
@@ -533,100 +561,113 @@ SEO rules:
 4. Keep public and admin components separated.
 5. Keep import/crawler logic separated from UI.
 6. Keep AI provider logic abstracted.
-7. Use environment variables for secrets.
-8. Never hardcode API keys.
-9. Write clear function names.
-10. Prefer explicit data types.
-11. Add error handling to importer scripts.
-12. Add retry logic for failed imports.
-13. Do not silently swallow errors.
+7. Use explicit data types.
+8. Use clear function names.
+9. Add error handling to importer scripts.
+10. Add retry logic for failed imports.
+11. Do not silently swallow errors.
+12. Prefer durable route handlers for deploy-sensitive admin mutations that can be submitted from stale browser tabs.
+13. Do not couple public UI behavior to admin-only helpers.
 
----
+## Environment Rules
 
-## Environment Variables
+Use `.env.example` as the source of required keys.
 
-Use environment variables for:
+Core env groups:
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-
-R2_ACCOUNT_ID=
-R2_ACCESS_KEY_ID=
-R2_SECRET_ACCESS_KEY=
-R2_BUCKET_NAME=
-R2_PUBLIC_BASE_URL=
-
-AI_PROVIDER=
-AI_API_KEY=
-
-SITE_URL=
+```txt
+Supabase public/client keys
+Supabase service-role key
+Object storage/CDN credentials
+AI provider credentials
+Bot protection credentials
+Site URL and deployment version
+Abuse-rate-limit hashing secret
+Slow-query logging threshold
 ```
 
-Never commit secrets.
+Rules:
 
----
+1. Never commit `.env.local`, `.env.production`, credentials or uploaded secret files.
+2. Production runtime secrets live on the VPS, not in the repository.
+3. Build-time public variables are passed through GitHub Actions secrets.
+4. Runtime-only secrets are read from `/opt/boloyun/.env.production`.
+5. If you add a required variable, update `.env.example`, deployment notes and any relevant workflow/server config together.
 
-## Source Control And Deployment Workflow
+## Source Control Rules
 
-The canonical repository is:
+Canonical repository:
 
 ```txt
 https://github.com/huseyinemanet/boloyun.com.git
 ```
 
-The production branch is `main`.
+Production branch:
+
+```txt
+main
+```
 
 For every completed development:
 
-1. Keep the change focused and review the complete diff.
-2. Run the checks appropriate to the change. For application changes, the default gate is:
+1. Keep the change focused.
+2. Review the complete diff before staging.
+3. Stage only files related to the task.
+4. Run checks appropriate to the change.
+5. Never commit credentials, generated build output, `.next`, `node_modules`, provider temp folders or `supabase/.temp`.
+6. Commit source code, lockfile changes, config changes and required Supabase migrations together.
+7. Push verified work to GitHub when the user asks to update GitHub or the task clearly includes publication.
+8. Production changes must reach `main` through an intentional push or merge.
+
+If the user asks for repository presentation work such as README or GitHub About, inspect current metadata first and update GitHub-side description/homepage/topics when requested.
+
+Documentation-only commits may use `[skip ci]` when a production redeploy would add no value.
+
+## Validation Rules
+
+Application changes default gate:
 
 ```bash
 pnpm typecheck
 pnpm lint
 pnpm test
 pnpm build
+pnpm perf:check
 ```
 
-3. Never commit `.env.local`, credentials, generated build output, `.wrangler`, or `supabase/.temp`.
-4. Commit source code, the lockfile, configuration, and every required Supabase migration together.
-5. Push the verified commit to GitHub. Production changes must reach `main` through an intentional push or merge.
-6. Verify both deployment tracks separately after the push:
-   - Supabase deploys only tracked backend artifacts such as new migrations, configured Edge Functions, and configured Storage buckets.
-   - GitHub Actions deploys the Next.js standalone Docker image to the Hetzner VPS. A successful Supabase deployment does not mean the website itself was deployed.
-7. Confirm the live route on `https://boloyun.com` after the VPS deployment reports success.
+Documentation-only changes:
 
-Do not run ad-hoc production SQL for a schema change that should be reproducible. Create a new file under `supabase/migrations`, validate it, and commit it. Never edit an already-applied production migration; add a new migration instead.
-
-Supabase GitHub integration settings for this repository:
-
-```txt
-Repository: huseyinemanet/boloyun.com
-Production branch: main
-Working directory: .
-Deploy to production: enabled
-Automatic branching: optional; enable only when preview databases are wanted
-Supabase changes only: enabled when automatic branching is enabled
+```bash
+git diff --check
 ```
 
-The Supabase GitHub integration watches the repository but does not deploy the Next.js frontend. Keep the GitHub Actions VPS deployment connected to `main` for the production website.
-
-Before pushing a new database migration, use the Supabase CLI safety flow:
+Database migration changes:
 
 ```bash
 supabase db push --dry-run
 supabase migration list
 ```
 
-After GitHub/Supabase deployment, verify that the migration appears remotely and run the relevant database smoke query. If the Supabase status check fails, do not treat the release as complete and do not bypass the failed migration check.
+Production deploy verification:
 
----
+```bash
+curl -sS -I https://boloyun.com/ | grep -Ei 'HTTP/|server:|location:'
+curl -sS -I https://www.boloyun.com/ | grep -Ei 'HTTP/|server:|location:'
+```
+
+Expected live shape:
+
+```txt
+https://boloyun.com/      -> 200
+https://www.boloyun.com/  -> redirect to https://boloyun.com
+server                    -> nginx
+```
+
+For risky changes, verify the concrete route or workflow the user cares about. Do not declare success from a build alone when live behavior is the point of the task.
 
 ## Initial Build Order
 
-Follow this order:
+Follow this product order when implementing unfinished core pieces:
 
 1. Project setup.
 2. Supabase schema/migrations.
@@ -653,8 +694,6 @@ Do not start with complex gamification.
 
 Do not start by importing thousands of games.
 
----
-
 ## First Milestone Definition
 
 The first milestone is complete only when:
@@ -665,7 +704,7 @@ The homepage lists games.
 Sidebar categories work.
 Search works.
 A game detail page opens.
-“Oyunu Başlat” loads iframe or Ruffle player.
+"Oyunu Başlat" loads iframe or Ruffle player.
 Admin can create/edit a game.
 Admin can create/edit categories and tags.
 A sitemap can discover at least 50 game URLs.
@@ -673,8 +712,6 @@ At least 10 imported games can enter pending_review.
 Admin can approve an imported game.
 Approved game appears publicly.
 ```
-
----
 
 ## Do Not Do
 
@@ -690,18 +727,17 @@ Do not:
 8. Store raw imported HTML on public pages.
 9. Skip review queue.
 10. Use English UI on the Turkish public site.
-11. Put game files directly into the Next.js repo if they belong in R2.
-12. Add paid infrastructure unless absolutely required.
+11. Put game files directly into the Next.js repo if they belong in object storage.
+12. Add paid infrastructure unless absolutely required and approved.
 13. Over-optimize before the first vertical slice works.
-
----
+14. Rebuild production deployment around a different hosting model without explicit approval.
 
 ## Guiding Principle
 
-Always prioritize this flow:
+Always prioritize:
 
 ```txt
-Find game → open game → start game → play game → discover another game
+Find game -> open game -> start game -> play game -> discover another game
 ```
 
 Everything else is secondary.
