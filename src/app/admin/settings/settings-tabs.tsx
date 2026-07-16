@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { SoundLink } from "@/components/audio/sound-link";
-import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const tabs = [
   ["general", "Genel"],
@@ -22,27 +22,23 @@ const tabs = [
 
 export function SettingsTabs() {
   const pathname = usePathname();
+  const activeTab = tabs.find(([key]) => pathname === `/admin/settings/${key}`)?.[0] ?? "general";
+
   return (
-    <nav aria-label="Ayar bölümleri" className="rounded-md border border-border bg-card p-2">
-      <div className="flex flex-wrap gap-1">
+    <Tabs value={activeTab} className="gap-0">
+      <TabsList variant="line" aria-label="Ayar bölümleri" className="h-auto w-full flex-wrap justify-start gap-x-5 gap-y-3 overflow-visible border-b border-border p-0 pb-2">
         {tabs.map(([key, label]) => {
           const href = `/admin/settings/${key}`;
           const active = pathname === href;
           return (
-            <SoundLink
-              key={key}
-              href={href}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "rounded-md px-3 py-2 text-xs font-bold transition-colors",
-                active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              {label}
-            </SoundLink>
+            <TabsTrigger key={key} value={key} asChild className="h-8 flex-none px-0 text-sm font-bold text-muted-foreground data-active:text-foreground">
+              <SoundLink href={href} aria-current={active ? "page" : undefined}>
+                {label}
+              </SoundLink>
+            </TabsTrigger>
           );
         })}
-      </div>
-    </nav>
+      </TabsList>
+    </Tabs>
   );
 }
