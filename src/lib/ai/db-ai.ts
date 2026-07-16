@@ -349,22 +349,25 @@ export async function runTranslationAutomationTick(source = "cron", options: { l
   const startedAt = new Date().toISOString();
   const supabase = requiredServiceClient();
   const automation = await getTranslationAutomation();
+  const shouldRecordQuietSkip = source !== "cron" && source !== "worker";
   if (!automation.enabled) {
-    if (source !== "cron") {
+    if (shouldRecordQuietSkip) {
       await recordAutomationRun({ source, status: "skipped", message: "Otomatik çeviri kapalı.", dailyCompleted: automation.todayCompleted, startedAt });
     }
     return { status: "skipped" as const, message: "Otomatik çeviri kapalı.", automation };
   }
   if (automation.todayCompleted >= automation.dailyTarget) {
     const message = `Günlük hedef doldu: ${automation.todayCompleted}/${automation.dailyTarget}.`;
-    if (source !== "cron") {
+    if (shouldRecordQuietSkip) {
       await recordAutomationRun({ source, status: "skipped", message, dailyCompleted: automation.todayCompleted, startedAt });
     }
     return { status: "skipped" as const, message, automation };
   }
   const locked = await acquireAutomationLock(automation);
   if (!locked) {
-    await recordAutomationRun({ source, status: "skipped", message: "Önceki otomasyon tick'i hâlâ çalışıyor.", dailyCompleted: automation.todayCompleted, startedAt });
+    if (shouldRecordQuietSkip) {
+      await recordAutomationRun({ source, status: "skipped", message: "Önceki otomasyon tick'i hâlâ çalışıyor.", dailyCompleted: automation.todayCompleted, startedAt });
+    }
     return { status: "skipped" as const, message: "Önceki otomasyon tick'i hâlâ çalışıyor.", automation };
   }
 

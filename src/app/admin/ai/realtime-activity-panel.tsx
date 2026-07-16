@@ -55,7 +55,7 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
   const lastErrorToast = useRef("");
 
   const runningJobIds = new Set(payload.jobs.filter((job) => job.status === "running").map((job) => job.id));
-  const hasRunningWork = runningJobIds.size > 0 || processLoopActive;
+  const hasRunningWork = Boolean(payload.automation?.enabled) || runningJobIds.size > 0 || processLoopActive;
   const activityRows: ActivityTableRow[] = payload.activity.slice(0, LOG_LIMIT).map((item) => ({
     ...item,
     isActuallyProcessing: item.status === "processing" && runningJobIds.has(item.jobId),
