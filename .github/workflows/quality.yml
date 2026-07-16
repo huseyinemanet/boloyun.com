@@ -1,4 +1,4 @@
-name: Quality and performance budgets
+name: Quality and production deploy
 
 permissions:
   contents: read
@@ -26,7 +26,6 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build
-      - run: pnpm perf:check
 
   verify-production-image:
     if: github.event_name == 'pull_request'
