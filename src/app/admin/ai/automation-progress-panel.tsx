@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { IconCircleCheck2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCircleCheck2FillDuo18";
+import { IconCircleWarningFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCircleWarningFillDuo18";
+import { IconHourglassClockFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHourglassClockFillDuo18";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -174,10 +177,24 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
         </Progress>
       </div>
 
-      <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
-        <MetricCard label="Tamamlandı" value={totalProgress} live={completedPulse} />
-        <MetricCard label="Bekleyen" value={remainingCount.toLocaleString("tr-TR")} />
-        <MetricCard label="Sorunlu / atlanan" value={stats.failed.toLocaleString("tr-TR")} tone={stats.failed ? "danger" : "muted"} />
+      <div className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-4 border-y border-border py-3 text-sm">
+        <MetricStat
+          icon={<IconCircleCheck2FillDuo18 className="size-5" />}
+          label="Tamamlandı"
+          value={totalProgress}
+          live={completedPulse}
+        />
+        <MetricStat
+          icon={<IconHourglassClockFillDuo18 className="size-5" />}
+          label="Bekleyen"
+          value={remainingCount.toLocaleString("tr-TR")}
+        />
+        <MetricStat
+          icon={<IconCircleWarningFillDuo18 className="size-5" />}
+          label="Sorunlu / atlanan"
+          value={stats.failed.toLocaleString("tr-TR")}
+          tone={stats.failed ? "danger" : "muted"}
+        />
       </div>
 
       {automation.lastError ? (
@@ -209,11 +226,31 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
   );
 }
 
-function MetricCard({ label, value, tone = "muted", live = false }: { label: string; value: string; tone?: "muted" | "danger"; live?: boolean }) {
+function MetricStat({
+  icon,
+  label,
+  value,
+  tone = "muted",
+  live = false,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  tone?: "muted" | "danger";
+  live?: boolean;
+}) {
+  const iconClassName = tone === "danger" ? "bg-destructive/10 text-destructive" : live ? "bg-primary/15 text-primary" : "bg-primary/10 text-primary";
+  const valueClassName = tone === "danger" ? "text-lg font-bold text-destructive" : "text-lg font-bold";
+
   return (
-    <div className={live ? "rounded-md border border-primary/70 bg-primary/10 px-3 py-2 transition-colors" : "rounded-md border border-border bg-background/40 px-3 py-2 transition-colors"}>
-      <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-      <p className={tone === "danger" ? "mt-1 text-lg font-bold text-destructive" : "mt-1 text-lg font-bold"} aria-live={live ? "polite" : undefined}>{value}</p>
+    <div className={live ? "flex items-center gap-3 text-primary transition-colors" : "flex items-center gap-3 transition-colors"}>
+      <span className={`grid size-9 shrink-0 place-items-center rounded-full ${iconClassName}`} aria-hidden="true">
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="text-xs font-semibold text-muted-foreground">{label}</p>
+        <p className={valueClassName} aria-live={live ? "polite" : undefined}>{value}</p>
+      </div>
     </div>
   );
 }
