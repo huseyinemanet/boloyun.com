@@ -232,12 +232,12 @@ function MetricStat({
   tone?: "muted" | "danger";
   live?: boolean;
 }) {
-  const iconClassName = tone === "danger" ? "bg-destructive/10 text-destructive" : live ? "bg-primary/15 text-primary" : "bg-primary/10 text-primary";
+  const iconClassName = tone === "danger" ? "text-destructive" : live ? "text-primary" : "text-primary";
   const valueClassName = tone === "danger" ? "text-lg font-bold text-destructive" : "text-lg font-bold";
 
   return (
     <div className={live ? "flex items-center gap-3 text-primary transition-colors" : "flex items-center gap-3 transition-colors"}>
-      <span className={`grid size-9 shrink-0 place-items-center rounded-full ${iconClassName}`} aria-hidden="true">
+      <span className={`grid size-5 shrink-0 place-items-center ${iconClassName}`} aria-hidden="true">
         {icon}
       </span>
       <div className="min-w-0">
