@@ -3,6 +3,7 @@ import Image from "next/image";
 import { SoundLink } from "@/components/audio/sound-link";
 import { notFound } from "next/navigation";
 import { AdSlot } from "@/components/ads/ad-slot";
+import { GameCard } from "@/components/game/game-card";
 import { PlayCountMetric } from "@/components/game/play-count-metric";
 import {
   Breadcrumb,
@@ -160,16 +161,9 @@ export default async function GameDetailPage({ params }: Props) {
 
       <section className="rounded-md border border-border bg-card p-4">
         <h2 className="mb-3 text-lg font-semibold">Benzer Oyunlar</h2>
-        <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {similarGames.slice(0, 4).map((similar) => (
-            <SoundLink
-              key={similar.id}
-              href={`/oyun/${similar.slug}`}
-              className="truncate rounded-md border border-border bg-muted/40 px-3 py-2 text-sm font-semibold hover:bg-accent"
-              title={similar.title}
-            >
-              {similar.title}
-            </SoundLink>
+            <GameCard key={similar.id} game={similar} />
           ))}
         </div>
       </section>

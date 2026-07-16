@@ -154,7 +154,7 @@ export function SearchAutocomplete() {
             if (normalizedQuery.length >= MINIMUM_QUERY_LENGTH) setOpen(true);
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Oyun ara..."
+          placeholder="Bugün ne oynamak istersin?"
           autoComplete="off"
           spellCheck={false}
           role="combobox"

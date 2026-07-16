@@ -136,6 +136,46 @@ select {
 
 .skip-link:focus { transform: translateY(0); }
 
+.logo-glitch {
+  animation: logo-glitch 6s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes logo-glitch {
+  0%, 82%, 85.5%, 100% {
+    filter: none;
+    transform: translate(0) skewX(0);
+  }
+  82.4% {
+    filter: drop-shadow(3px 0 #21b5cc) drop-shadow(-3px 0 #f06d5e);
+    transform: translate(-2px, 1px) skewX(3deg);
+  }
+  82.8% {
+    filter: drop-shadow(-4px 0 #21b5cc) drop-shadow(4px 0 #f06d5e);
+    transform: translate(3px, -1px) skewX(-4deg);
+  }
+  83.2% {
+    filter: none;
+    transform: translate(-1px, 0) skewX(0);
+  }
+  83.6% {
+    filter: drop-shadow(2px 0 #21b5cc) drop-shadow(-2px 0 #f06d5e);
+    transform: translate(2px, 1px) skewX(2deg);
+  }
+  84% {
+    filter: none;
+    transform: translate(0);
+  }
+  84.4% {
+    filter: drop-shadow(-3px 0 #21b5cc) drop-shadow(3px 0 #f06d5e);
+    transform: translate(-2px, -1px) skewX(-2deg);
+  }
+  84.8% {
+    filter: none;
+    transform: translate(1px, 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     scroll-behavior: auto !important;
