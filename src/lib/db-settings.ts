@@ -97,6 +97,8 @@ const getCachedPublicSettings = unstable_cache(async (): Promise<PublicSettings>
     ads: readValue("ads", rows.get("ads")),
     community: readValue("community", rows.get("community")),
     integrations: readValue("integrations", rows.get("integrations")),
+    media: readValue("media", rows.get("media")),
+    permalinks: readValue("permalinks", rows.get("permalinks")),
     security: readValue("security", rows.get("security")),
     audio: readValue("audio", rows.get("audio")),
   };
@@ -142,6 +144,8 @@ function publicDefaults(failClosed = false): PublicSettings {
     ads: structuredClone(DEFAULT_SETTINGS.ads),
     community: structuredClone(DEFAULT_SETTINGS.community),
     integrations: structuredClone(DEFAULT_SETTINGS.integrations),
+    media: structuredClone(DEFAULT_SETTINGS.media),
+    permalinks: structuredClone(DEFAULT_SETTINGS.permalinks),
     security: failClosed ? failClosedSecurity() : structuredClone(DEFAULT_SETTINGS.security),
     audio: structuredClone(DEFAULT_SETTINGS.audio),
   };

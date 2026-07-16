@@ -6,6 +6,9 @@ import { cn } from "@/lib/utils";
 
 const tabs = [
   ["general", "Genel"],
+  ["ai", "AI"],
+  ["media", "Media"],
+  ["permalinks", "Permalinks"],
   ["appearance", "Görünüm ve Ana Sayfa"],
   ["games", "Oyunlar"],
   ["seo", "SEO"],
@@ -20,8 +23,8 @@ const tabs = [
 export function SettingsTabs() {
   const pathname = usePathname();
   return (
-    <nav aria-label="Ayar bölümleri" className="overflow-x-auto rounded-md border border-border bg-card p-1">
-      <div className="flex min-w-max gap-1">
+    <nav aria-label="Ayar bölümleri" className="rounded-md border border-border bg-card p-2">
+      <div className="flex flex-wrap gap-1">
         {tabs.map(([key, label]) => {
           const href = `/admin/settings/${key}`;
           const active = pathname === href;

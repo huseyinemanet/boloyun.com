@@ -35,6 +35,8 @@ const sectionDescriptions: Record<SettingsSection, string> = {
   ads: "Global reklam davranışları; slot içerikleri ayrı Reklam Yönetimi’nde kalır.",
   community: "Üyelik, kullanıcı adı, yorum ve etkileşim kuralları.",
   integrations: "Analitik sağlayıcı kimlikleri ve servis bağlantılarının durumu.",
+  media: "Kapak görselleri, yükleme düzeni ve varsayılan medya tercihleri.",
+  permalinks: "Public oyun, kategori, etiket ve sayfa bağlantılarının temel yapısı.",
   security: "Dosya yükleme ve oyun iframe domain güvenliği.",
   audio: "Site genelindeki tıklama sesini ve kullanılan ses dosyasını yönet.",
   system: "Uygulama sağlığı, servis durumu ve bakım işlemleri.",
@@ -138,6 +140,8 @@ function renderSection(
     case "ads": return <AdFields draft={draft} update={update} />;
     case "community": return <CommunityFields draft={draft} update={update} />;
     case "integrations": return <IntegrationFields draft={draft} update={update} status={systemStatus} />;
+    case "media": return <MediaFields draft={draft} update={update} />;
+    case "permalinks": return <PermalinkFields draft={draft} update={update} />;
     case "security": return <SecurityFields draft={draft} update={update} status={systemStatus} />;
     case "audio": return <AudioFields draft={draft} update={update} />;
     case "system": return <SystemFields status={systemStatus} />;
@@ -202,6 +206,55 @@ function IntegrationFields({ draft, update, status }: FieldsProps & { status: Sy
   return <div className="grid gap-3 xl:grid-cols-2"><Card title="Analitik kimlikleri"><TextField label="Google Analytics (G-...)" value={str(draft.googleAnalyticsId)} onChange={(v) => update("googleAnalyticsId", v)} /><TextField label="Google Tag Manager (GTM-...)" value={str(draft.googleTagManagerId)} onChange={(v) => update("googleTagManagerId", v)} /><TextField label="Microsoft Clarity" value={str(draft.clarityProjectId)} onChange={(v) => update("clarityProjectId", v)} /><TextField label="Meta Pixel" value={str(draft.metaPixelId)} onChange={(v) => update("metaPixelId", v)} /><ToggleField label="Consent Mode" description="Google Analytics varsayılan olarak izin reddedilmiş durumda başlatılır; pazarlama scriptleri izin verilene kadar yüklenmez." checked={bool(draft.consentModeEnabled)} onChange={(v) => update("consentModeEnabled", v)} /></Card><div className="grid gap-3 sm:grid-cols-2"><StatusCard title="Cloudflare R2" status={status?.r2} /><StatusCard title="CDN" status={status?.cdn} /><StatusCard title="E-posta servisi (Brevo)" status={status?.email} /></div></div>;
 }
 
+function MediaFields({ draft, update }: FieldsProps) {
+  return <div className="grid gap-3 xl:grid-cols-2">
+    <Card title="Görsel boyutları">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <NumberField label="Küçük görsel genişliği" value={num(draft.thumbnailWidth)} min={80} max={1200} onChange={(v) => update("thumbnailWidth", v)} />
+        <NumberField label="Küçük görsel yüksekliği" value={num(draft.thumbnailHeight)} min={80} max={1200} onChange={(v) => update("thumbnailHeight", v)} />
+      </div>
+      <ToggleField label="Küçük görseli tam ölçüye kırp" description="Kapak kartlarının düzgün görünmesi için önerilir." checked={bool(draft.thumbnailCrop)} onChange={(v) => update("thumbnailCrop", v)} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <NumberField label="Orta görsel maksimum genişlik" value={num(draft.mediumMaxWidth)} min={120} max={2400} onChange={(v) => update("mediumMaxWidth", v)} />
+        <NumberField label="Orta görsel maksimum yükseklik" value={num(draft.mediumMaxHeight)} min={120} max={2400} onChange={(v) => update("mediumMaxHeight", v)} />
+        <NumberField label="Büyük görsel maksimum genişlik" value={num(draft.largeMaxWidth)} min={240} max={4000} onChange={(v) => update("largeMaxWidth", v)} />
+        <NumberField label="Büyük görsel maksimum yükseklik" value={num(draft.largeMaxHeight)} min={240} max={4000} onChange={(v) => update("largeMaxHeight", v)} />
+      </div>
+    </Card>
+    <Card title="Yükleme tercihleri">
+      <ToggleField label="Yüklemeleri ay/yıl klasörlerinde düzenle" description="Örn. uploads/2026/07/..." checked={bool(draft.organizeUploadsByDate)} onChange={(v) => update("organizeUploadsByDate", v)} />
+      <AssetField label="Varsayılan oyun kapak görseli" kind="cover" value={str(draft.defaultCoverUrl)} onChange={(v) => update("defaultCoverUrl", v)} />
+      <p className="text-xs leading-5 text-muted-foreground">Bu bölüm görsellerle ilgili kararları tek yerde toplar. R2/CDN bağlantı durumunu Entegrasyonlar ve Sistem bölümlerinde görebilirsin.</p>
+    </Card>
+  </div>;
+}
+
+function PermalinkFields({ draft, update }: FieldsProps) {
+  const gameBase = str(draft.gameBase) || "oyun";
+  const categoryBase = str(draft.categoryBase) || "kategori";
+  const tagBase = str(draft.tagBase) || "etiket";
+  const pageBase = str(draft.pageBase) || "sayfa";
+  const paginationBase = str(draft.paginationBase) || "sayfa";
+  return <div className="grid gap-3 xl:grid-cols-2">
+    <Card title="Public bağlantı yapısı">
+      <TextField label="Oyun bağlantı tabanı" value={gameBase} onChange={(v) => update("gameBase", v)} />
+      <TextField label="Kategori bağlantı tabanı" value={categoryBase} onChange={(v) => update("categoryBase", v)} />
+      <TextField label="Etiket bağlantı tabanı" value={tagBase} onChange={(v) => update("tagBase", v)} />
+      <TextField label="Statik sayfa bağlantı tabanı" value={pageBase} onChange={(v) => update("pageBase", v)} />
+      <TextField label="Sayfalama tabanı" value={paginationBase} onChange={(v) => update("paginationBase", v)} />
+      <ToggleField label="Eski bağlantıları koru/yönlendir" description="Arama motorlarında eski URL’ler varsa açık kalması önerilir." checked={bool(draft.redirectLegacyUrls)} onChange={(v) => update("redirectLegacyUrls", v)} />
+    </Card>
+    <Card title="Önizleme">
+      <PermalinkPreview label="Oyun" href={`/${gameBase}/ates-ve-su`} />
+      <PermalinkPreview label="Kategori" href={`/${categoryBase}/aksiyon-oyunlari`} />
+      <PermalinkPreview label="Etiket" href={`/${tagBase}/beceri`} />
+      <PermalinkPreview label="Sayfa" href={`/${pageBase}/gizlilik-politikasi`} />
+      <PermalinkPreview label="Kategori sayfalama" href={`/${categoryBase}/aksiyon-oyunlari/${paginationBase}/2`} />
+      <p className="rounded-md border border-warning/30 bg-warning/10 p-3 text-xs font-semibold leading-5 text-warning">Not: URL tabanlarını değiştirmek SEO etkisi yaratır. Değişiklikten sonra canlı linkleri ve sitemap’i kontrol etmek gerekir.</p>
+    </Card>
+  </div>;
+}
+
 function SecurityFields({ draft, update, status }: FieldsProps & { status: SystemStatus | null }) {
   return <div className="grid gap-3 xl:grid-cols-2"><Card title="Dosya yükleme"><NumberField label="Maksimum yükleme boyutu (MB)" value={num(draft.uploadMaxMb)} min={1} max={20} onChange={(v) => update("uploadMaxMb", v)} /><ListField label="İzin verilen MIME türleri" value={strings(draft.allowedUploadMimeTypes)} onChange={(v) => update("allowedUploadMimeTypes", v)} /></Card><Card title="Iframe domain izin listesi"><ToggleField label="İzin listesini zorunlu tut" description="Açılmadan önce mevcut oyun domainlerini aşağıdaki listeye ekleyin." checked={bool(draft.enforceIframeAllowlist)} onChange={(v) => update("enforceIframeAllowlist", v)} /><ListField label="İzin verilen domainler" value={strings(draft.iframeAllowlist)} onChange={(v) => update("iframeAllowlist", v)} />{status?.detectedIframeDomains.length ? <div><p className="text-xs font-bold">Mevcut oyunlarda algılanan domainler</p><p className="mt-1 break-words text-xs text-muted-foreground">{status.detectedIframeDomains.join(", ")}</p></div> : null}</Card></div>;
 }
@@ -233,6 +286,7 @@ function HomepageSectionsEditor({ sections, setSections }: { sections: HomepageS
 const sectionTypeOptions: Array<[string, string]> = [["latest_games", "Yeni oyunlar"], ["popular_games", "Popüler oyunlar"], ["trending_games", "Trend oyunlar"], ["manual_games", "Manuel oyunlar"], ["category_based", "Kategori bazlı"], ["tag_based", "Etiket bazlı"], ["random_picks", "Rastgele seçimler"]];
 
 function Card({ title, children, className = "", actions }: { title: string; children: React.ReactNode; className?: string; actions?: React.ReactNode }) { return <section className={`rounded-md border border-border bg-card p-4 ${className}`}><div className="mb-3 flex items-center justify-between gap-3"><h3 className="font-semibold">{title}</h3>{actions}</div><div className="grid gap-3">{children}</div></section>; }
+function PermalinkPreview({ label, href }: { label: string; href: string }) { return <div className="rounded-md border border-border bg-background p-3"><p className="text-xs font-bold text-muted-foreground">{label}</p><p className="mt-1 break-all font-mono text-sm text-foreground">https://boloyun.com{href}</p></div>; }
 function StatusCard({ title, status = "Yapılandırılmadı" }: { title: string; status?: string }) { return <div className="rounded-md border border-border bg-card p-4"><p className="text-sm font-semibold">{title}</p><p className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-bold ${status === "Yapılandırıldı" || status === "Bağlı" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>{status}</p></div>; }
 function SystemCard({ title, value, icon }: { title: string; value: string; icon?: React.ReactNode }) { return <div className="rounded-md border border-border bg-card p-3"><div className="flex items-start justify-between gap-2"><p className="text-xs font-semibold text-muted-foreground">{title}</p>{icon ? <span className="text-primary/80">{icon}</span> : null}</div><p className="mt-1 text-lg font-semibold">{value}</p></div>; }
 function TextField({ label, value, onChange, type = "text", disabled = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; disabled?: boolean }) { return <label className="grid gap-1 text-sm font-bold">{label}<Input type={type} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} /></label>; }
@@ -347,7 +401,7 @@ function useUnsavedChangesWarning(isDirty: boolean) {
 }
 
 function countChangedKeys(left: Draft, right: Draft) { return [...new Set([...Object.keys(left), ...Object.keys(right)])].filter((key) => JSON.stringify(left[key]) !== JSON.stringify(right[key])).length; }
-function sectionTitle(section: SettingsSection) { return ({ general: "Genel", appearance: "Görünüm ve Ana Sayfa", games: "Oyunlar", seo: "SEO", ads: "Reklamlar", community: "Üyelik ve Yorumlar", integrations: "Entegrasyonlar", security: "Güvenlik", audio: "Ses", system: "Sistem" } as const)[section]; }
+function sectionTitle(section: SettingsSection) { return ({ general: "Genel", appearance: "Görünüm ve Ana Sayfa", games: "Oyunlar", seo: "SEO", ads: "Reklamlar", community: "Üyelik ve Yorumlar", integrations: "Entegrasyonlar", media: "Media", permalinks: "Permalinks", security: "Güvenlik", audio: "Ses", system: "Sistem" } as const)[section]; }
 function str(value: unknown) { return typeof value === "string" ? value : ""; }
 function bool(value: unknown) { return value === true; }
 function num(value: unknown) { return typeof value === "number" ? value : 0; }

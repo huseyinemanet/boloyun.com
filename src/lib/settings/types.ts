@@ -6,6 +6,8 @@ export const SETTINGS_SECTIONS = [
   "ads",
   "community",
   "integrations",
+  "media",
+  "permalinks",
   "security",
   "audio",
   "system",
@@ -91,6 +93,27 @@ export type IntegrationSettings = {
   consentModeEnabled: boolean;
 };
 
+export type MediaSettings = {
+  thumbnailWidth: number;
+  thumbnailHeight: number;
+  thumbnailCrop: boolean;
+  mediumMaxWidth: number;
+  mediumMaxHeight: number;
+  largeMaxWidth: number;
+  largeMaxHeight: number;
+  organizeUploadsByDate: boolean;
+  defaultCoverUrl: string;
+};
+
+export type PermalinkSettings = {
+  gameBase: string;
+  categoryBase: string;
+  tagBase: string;
+  pageBase: string;
+  paginationBase: string;
+  redirectLegacyUrls: boolean;
+};
+
 export type SecuritySettings = {
   uploadMaxMb: number;
   allowedUploadMimeTypes: string[];
@@ -113,6 +136,8 @@ export type SettingsDataMap = {
   ads: AdSettings;
   community: CommunitySettings;
   integrations: IntegrationSettings;
+  media: MediaSettings;
+  permalinks: PermalinkSettings;
   security: SecuritySettings;
   audio: AudioSettings;
   system: SystemSettings;
@@ -133,6 +158,8 @@ export type PublicSettings = {
   ads: AdSettings;
   community: CommunitySettings;
   integrations: IntegrationSettings;
+  media: MediaSettings;
+  permalinks: PermalinkSettings;
   security: SecuritySettings;
   audio: AudioSettings;
 };

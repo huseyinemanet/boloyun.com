@@ -50,6 +50,7 @@ export async function submitAiProviderConfigAction(_state: AiActionState, formDa
     if (intent === "test") {
       await testProviderConfig(provider);
       revalidatePath("/admin/ai");
+      revalidatePath("/admin/settings/ai");
       return { status: "success", message: "DeepSeek bağlantısı başarılı." };
     }
 
@@ -60,6 +61,7 @@ export async function submitAiProviderConfigAction(_state: AiActionState, formDa
       enabled: formData.get("enabled") === "on",
     });
     revalidatePath("/admin/ai");
+    revalidatePath("/admin/settings/ai");
     return { status: "success", message: "DeepSeek ayarı kaydedildi." };
   } catch (error) {
     const message = error instanceof Error ? error.message : "AI ayarı kaydedilemedi.";

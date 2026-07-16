@@ -3,6 +3,7 @@ import type { SettingsDataMap, SettingsSection } from "@/lib/settings/types";
 
 const TEMPLATE_VARIABLES = new Set(["site_adı", "oyun_adı", "kategori_adı", "sayfa"]);
 const ALLOWED_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/x-icon", "image/vnd.microsoft.icon"]);
+const RESERVED_PATH_BASES = new Set(["", "admin", "api", "auth", "_next", "giris", "kayit", "profil", "rastgele", "arama", "kategoriler"]);
 const LEGACY_SETTINGS_KEYS: Partial<Record<SettingsSection, string[]>> = {
   general: ["tagline", "description", "contactEmail", "locale", "timezone", "defaultCoverUrl"],
   community: ["emailVerificationRequired"],
@@ -96,6 +97,31 @@ export function validateSettingsSection<S extends SettingsSection>(section: S, i
         metaPixelId: integrationId(value.metaPixelId, "Meta Pixel", /^\d+$/),
         consentModeEnabled: boolean(value.consentModeEnabled, "Consent Mode"),
       } as SettingsDataMap[S];
+    case "media":
+      return {
+        thumbnailWidth: integer(value.thumbnailWidth, "Küçük görsel genişliği", 80, 1200),
+        thumbnailHeight: integer(value.thumbnailHeight, "Küçük görsel yüksekliği", 80, 1200),
+        thumbnailCrop: boolean(value.thumbnailCrop, "Küçük görsel kırpma"),
+        mediumMaxWidth: integer(value.mediumMaxWidth, "Orta görsel genişliği", 120, 2400),
+        mediumMaxHeight: integer(value.mediumMaxHeight, "Orta görsel yüksekliği", 120, 2400),
+        largeMaxWidth: integer(value.largeMaxWidth, "Büyük görsel genişliği", 240, 4000),
+        largeMaxHeight: integer(value.largeMaxHeight, "Büyük görsel yüksekliği", 240, 4000),
+        organizeUploadsByDate: boolean(value.organizeUploadsByDate, "Tarihe göre dosyalama"),
+        defaultCoverUrl: assetUrl(value.defaultCoverUrl, "Varsayılan oyun görseli"),
+      } as SettingsDataMap[S];
+    case "permalinks": {
+      const permalinks = {
+        gameBase: pathBase(value.gameBase, "Oyun bağlantı tabanı"),
+        categoryBase: pathBase(value.categoryBase, "Kategori bağlantı tabanı"),
+        tagBase: pathBase(value.tagBase, "Etiket bağlantı tabanı"),
+        pageBase: pathBase(value.pageBase, "Sayfa bağlantı tabanı"),
+        paginationBase: pathBase(value.paginationBase, "Sayfalama bağlantı tabanı"),
+        redirectLegacyUrls: boolean(value.redirectLegacyUrls, "Eski bağlantıları yönlendir"),
+      };
+      const uniqueBases = new Set([permalinks.gameBase, permalinks.categoryBase, permalinks.tagBase, permalinks.pageBase]);
+      if (uniqueBases.size !== 4) throw new Error("Permalink tabanları birbirinden farklı olmalıdır.");
+      return permalinks as SettingsDataMap[S];
+    }
     case "security":
       return {
         uploadMaxMb: integer(value.uploadMaxMb, "Yükleme boyutu", 1, 20),
@@ -220,4 +246,11 @@ function domainArray(value: unknown) {
     if (!/^(?:\*\.)?[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/i.test(domain) || domain.includes("..")) throw new Error(`Geçersiz iframe domaini: ${domain}`);
   }
   return values;
+}
+
+function pathBase(value: unknown, label: string) {
+  const result = text(value, label, 1, 40).replace(/^\/+|\/+$/g, "").toLocaleLowerCase("tr-TR");
+  if (!/^[a-z0-9][a-z0-9-]*$/i.test(result)) throw new Error(`${label} yalnızca harf, rakam ve tire içerebilir.`);
+  if (RESERVED_PATH_BASES.has(result)) throw new Error(`${label} sistem yolu ile çakışıyor.`);
+  return result;
 }

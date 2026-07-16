@@ -17,8 +17,11 @@ export async function POST(request: Request) {
     const kind = formData.get("kind");
     if (!(file instanceof File)) return NextResponse.json({ error: "Dosya seçilmedi." }, { status: 400 });
     if (kind !== "logo" && kind !== "favicon" && kind !== "cover") return NextResponse.json({ error: "Geçersiz görsel alanı." }, { status: 400 });
-    const { value: security } = await getSettingsSection("security");
-    const asset = await uploadSiteAsset(file, kind, security.allowedUploadMimeTypes, security.uploadMaxMb);
+    const [{ value: security }, { value: media }] = await Promise.all([
+      getSettingsSection("security"),
+      getSettingsSection("media"),
+    ]);
+    const asset = await uploadSiteAsset(file, kind, security.allowedUploadMimeTypes, security.uploadMaxMb, { organizeByDate: media.organizeUploadsByDate });
     return NextResponse.json({ url: asset.url });
   } catch (error) {
     console.error("Admin asset upload failed", error);

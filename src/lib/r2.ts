@@ -38,7 +38,7 @@ export type StoredSiteAsset = {
   cacheControl: string;
 };
 
-export async function uploadSiteAsset(file: File, kind: "logo" | "favicon" | "cover" | "avatar", allowedMimeTypes: string[], maxMb: number) {
+export async function uploadSiteAsset(file: File, kind: "logo" | "favicon" | "cover" | "avatar", allowedMimeTypes: string[], maxMb: number, options: { organizeByDate?: boolean } = {}) {
   if (!isR2Configured()) throw new Error("Cloudflare R2 yapılandırılmamış.");
   if (!allowedMimeTypes.includes(file.type) || !acceptedInputMimeTypes.has(file.type)) throw new Error("Yalnızca PNG, JPEG veya WebP görseller yüklenebilir.");
   if (file.size < 1 || file.size > maxMb * 1024 * 1024) throw new Error(`Dosya en fazla ${maxMb} MB olabilir.`);
@@ -65,7 +65,8 @@ export async function uploadSiteAsset(file: File, kind: "logo" | "favicon" | "co
   }
 
   const sha256 = createHash("sha256").update(outputBytes).digest("hex");
-  const key = `site-assets/${kind}/${sha256.slice(0, 16)}-${randomUUID()}.webp`;
+  const keyPrefix = options.organizeByDate ? `site-assets/${kind}/${datePath(new Date())}` : `site-assets/${kind}`;
+  const key = `${keyPrefix}/${sha256.slice(0, 16)}-${randomUUID()}.webp`;
   await putObject(key, outputBytes, "image/webp");
   return {
     url: getSiteAssetPublicUrl(key),
@@ -76,6 +77,10 @@ export async function uploadSiteAsset(file: File, kind: "logo" | "favicon" | "co
     height: dimensions.height,
     mimeType: "image/webp" as const,
   };
+}
+
+function datePath(date: Date) {
+  return `${date.getUTCFullYear()}/${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
 export async function uploadSiteAudioAsset(file: File, maxMb: number): Promise<UploadedSiteAudioAsset> {

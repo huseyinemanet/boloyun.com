@@ -16,6 +16,8 @@ const sectionTitles: Record<SettingsSection, string> = {
   ads: "Reklam Ayarları",
   community: "Topluluk Ayarları",
   integrations: "Entegrasyon Ayarları",
+  media: "Media Ayarları",
+  permalinks: "Permalink Ayarları",
   security: "Güvenlik Ayarları",
   audio: "Ses Ayarları",
   system: "Sistem Ayarları",
