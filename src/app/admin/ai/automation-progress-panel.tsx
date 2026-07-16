@@ -172,7 +172,7 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
         </Progress>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-4 border-y border-border py-3 text-sm">
+      <div className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-4 py-3 text-sm">
         <MetricStat
           icon={<IconCircleCheck2FillDuo18 className="size-5" />}
           label="Tamamlandı"
