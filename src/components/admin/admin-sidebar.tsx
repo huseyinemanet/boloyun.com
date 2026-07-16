@@ -6,7 +6,6 @@ import { LoaderCircleIcon } from "lucide-react";
 import { IconGamepadFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGamepadFillDuo18";
 import { IconGridCircleListFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGridCircleListFillDuo18";
 import { IconHouseDashboard2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHouseDashboard2FillDuo18";
-import { IconListCheckbox2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconListCheckbox2FillDuo18";
 import { IconMagnifierSparkle2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMagnifierSparkle2FillDuo18";
 import { IconMegaphoneFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMegaphoneFillDuo18";
 import { IconMsgs2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMsgs2FillDuo18";
@@ -23,7 +22,6 @@ const adminLinks = [
   { href: "/admin", label: "Genel Bakış", icon: IconHouseDashboard2FillDuo18 },
   { href: "/admin/ai", label: "AI Merkezi", icon: IconArtificialIntelligenceFillDuo18 },
   { href: "/admin/crawler", label: "Yeni Oyun Tara", icon: IconMagnifierSparkle2FillDuo18 },
-  { href: "/admin/imports", label: "Onay Kuyruğu", icon: IconListCheckbox2FillDuo18 },
   { href: "/admin/games", label: "Oyunlar", icon: IconGamepadFillDuo18 },
   { href: "/admin/categories", label: "Kategoriler", icon: IconGridCircleListFillDuo18 },
   { href: "/admin/tags", label: "Etiketler", icon: IconTag2FillDuo18 },

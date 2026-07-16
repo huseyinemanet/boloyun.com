@@ -139,7 +139,7 @@ export function CrawlerRunner() {
       setOk(event.ok);
       if (event.ok) {
         toast.success("Tarama tamamlandı.", {
-          description: `${event.stats.inserted.toLocaleString("tr-TR")} yeni oyun eklendi, ${event.stats.pendingReview.toLocaleString("tr-TR")} oyun onay kuyruğuna alındı.`,
+          description: `${event.stats.inserted.toLocaleString("tr-TR")} yeni oyun eklendi, ${event.stats.pendingReview.toLocaleString("tr-TR")} oyun içeriği hazırlandı.`,
         });
       } else {
         toast.error("Tarama tamamlanamadı.", {
@@ -191,7 +191,7 @@ export function CrawlerRunner() {
         </label>
         <AdminCheckboxField
           name="scrape_now"
-          label="Yeni bulunan oyunları scrape et, AI içeriğini hazırla ve onay kuyruğuna al"
+          label="Yeni bulunan oyunları scrape et ve AI içeriğini hazırla"
           defaultChecked
           disabled={isRunning}
           fieldClassName="md:col-span-2"
@@ -224,7 +224,7 @@ export function CrawlerRunner() {
             <ProgressStat label="Bekleyen discovered" value={stats.pendingDiscovered} />
             <ProgressStat label="Bilgisi çekilen" value={stats.scraped} />
             <ProgressStat label="AI içerik" value={stats.aiGenerated} />
-            <ProgressStat label="Onay kuyruğu" value={stats.pendingReview} />
+            <ProgressStat label="Hazırlanan" value={stats.pendingReview} />
             <ProgressStat label="Hata" value={stats.failed} />
             <ProgressStat label="Uygulanan limit" value={stats.limit} />
             <ProgressStat label="İşlem limiti" value={stats.scrapeLimit} />

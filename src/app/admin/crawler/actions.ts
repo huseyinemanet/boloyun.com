@@ -45,7 +45,6 @@ export async function crawlNewGamesAction(formData: FormData) {
 
   revalidatePath("/admin");
   revalidatePath("/admin/crawler");
-  revalidatePath("/admin/imports");
 
   const params = new URLSearchParams({
     discovered: String(insertResult.discovered),

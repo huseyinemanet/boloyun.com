@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { IconAddSectionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconAddSectionFillDuo18";
 import { IconCloudUploadFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCloudUploadFillDuo18";
 import { IconDatabaseCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconDatabaseCheckFillDuo18";
-import { IconFolderImportFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconFolderImportFillDuo18";
 import { IconMediaPauseFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMediaPauseFillDuo18";
 import { IconMediaPlayFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMediaPlayFillDuo18";
 import { IconSavedItemsFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconSavedItemsFillDuo18";
@@ -221,24 +220,7 @@ function AudioFields({ draft, update }: FieldsProps) {
 function SystemFields({ status }: { status: SystemStatus | null }) {
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  return <div className="space-y-3"><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4"><SystemCard title="Uygulama sürümü" value={status?.appVersion ?? "-"} icon={<IconVersionsFillDuo18 className="size-4" />} /><SystemCard title="Veritabanı" value={status?.database ?? "Bağlantı yok"} icon={<IconDatabaseCheckFillDuo18 className="size-4" />} /><SystemCard title="Cloudflare R2" value={status?.r2 ?? "Yapılandırılmadı"} icon={<IconCloudUploadFillDuo18 className="size-4" />} /><SystemCard title="Son import hareketi" value={status?.lastImportAt ? formatRelativeDate(status.lastImportAt) : "Kayıt yok"} icon={<IconFolderImportFillDuo18 className="size-4" />} /></div><section className="space-y-3 py-1"><div><h3 className="font-semibold">Bakım işlemleri</h3><p className="mt-2 text-sm text-muted-foreground">Ayarlar ve public oyun listeleri için kullanılan Next veri önbelleklerini geçersiz kılar.</p></div><SoundButton type="button" variant="outline" disabled={pending} onClick={() => startTransition(async () => { try { const result = await clearSettingsCacheAction(); const nextMessage = `Önbellek ${new Date(result.clearedAt).toLocaleTimeString("tr-TR")} tarihinde temizlendi.`; setMessage(nextMessage); toast.success(nextMessage); } catch (caught) { toast.error(errorMessage(caught)); } })}>{pending ? "Temizleniyor…" : "Önbelleği Temizle"}</SoundButton>{message ? <p className="text-sm font-semibold text-success">{message}</p> : null}</section></div>;
-}
-
-function formatRelativeDate(value: string) {
-  const diffMs = new Date(value).getTime() - Date.now();
-  const absMs = Math.abs(diffMs);
-  if (!Number.isFinite(diffMs)) return "Bilinmiyor";
-  if (absMs < 60_000) return "az önce";
-  const units: Array<[Intl.RelativeTimeFormatUnit, number]> = [
-    ["year", 31_536_000_000],
-    ["month", 2_592_000_000],
-    ["week", 604_800_000],
-    ["day", 86_400_000],
-    ["hour", 3_600_000],
-    ["minute", 60_000],
-  ];
-  const [unit, unitMs] = units.find(([, duration]) => absMs >= duration) ?? units.at(-1)!;
-  return new Intl.RelativeTimeFormat("tr-TR", { numeric: "always" }).format(Math.round(diffMs / unitMs), unit);
+  return <div className="space-y-3"><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3"><SystemCard title="Uygulama sürümü" value={status?.appVersion ?? "-"} icon={<IconVersionsFillDuo18 className="size-4" />} /><SystemCard title="Veritabanı" value={status?.database ?? "Bağlantı yok"} icon={<IconDatabaseCheckFillDuo18 className="size-4" />} /><SystemCard title="Cloudflare R2" value={status?.r2 ?? "Yapılandırılmadı"} icon={<IconCloudUploadFillDuo18 className="size-4" />} /></div><section className="space-y-3 py-1"><div><h3 className="font-semibold">Bakım işlemleri</h3><p className="mt-2 text-sm text-muted-foreground">Ayarlar ve public oyun listeleri için kullanılan Next veri önbelleklerini geçersiz kılar.</p></div><SoundButton type="button" variant="outline" disabled={pending} onClick={() => startTransition(async () => { try { const result = await clearSettingsCacheAction(); const nextMessage = `Önbellek ${new Date(result.clearedAt).toLocaleTimeString("tr-TR")} tarihinde temizlendi.`; setMessage(nextMessage); toast.success(nextMessage); } catch (caught) { toast.error(errorMessage(caught)); } })}>{pending ? "Temizleniyor…" : "Önbelleği Temizle"}</SoundButton>{message ? <p className="text-sm font-semibold text-success">{message}</p> : null}</section></div>;
 }
 
 function HomepageSectionsEditor({ sections, setSections }: { sections: HomepageSectionInput[]; setSections: React.Dispatch<React.SetStateAction<HomepageSectionInput[]>> }) {

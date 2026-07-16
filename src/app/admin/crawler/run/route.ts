@@ -233,7 +233,7 @@ async function runCrawler({
         send({
           type: "progress",
           phase: "ai",
-          message: `${parsed.originalTitle} onay kuyruğuna alındı.`,
+          message: `${parsed.originalTitle} içeriği hazırlandı.`,
           stats,
         });
       } catch (error) {
@@ -261,7 +261,6 @@ async function runCrawler({
     try {
       revalidatePath("/admin");
       revalidatePath("/admin/crawler");
-      revalidatePath("/admin/imports");
     } catch (error) {
       console.error("[crawler] revalidate_failed", { error: error instanceof Error ? error.message : String(error) });
     }
@@ -269,7 +268,7 @@ async function runCrawler({
     send({
       type: "done",
       ok: true,
-      message: `Tamamlandı. ${stats.discovered.toLocaleString("tr-TR")} URL tarandı, ${stats.pendingReview.toLocaleString("tr-TR")} oyun onay kuyruğuna alındı.`,
+      message: `Tamamlandı. ${stats.discovered.toLocaleString("tr-TR")} URL tarandı, ${stats.pendingReview.toLocaleString("tr-TR")} oyun içeriği hazırlandı.`,
       stats,
     });
   } catch (error) {

@@ -6,24 +6,20 @@ export type SystemStatus = {
   r2: "Yapılandırıldı" | "Yapılandırılmadı";
   cdn: "Yapılandırıldı" | "Yapılandırılmadı";
   email: "Yapılandırıldı" | "Yapılandırılmadı";
-  lastImportAt: string | null;
   detectedIframeDomains: string[];
 };
 
 export async function getSystemStatus(): Promise<SystemStatus> {
   const supabase = createSupabaseServiceClient();
   let database: SystemStatus["database"] = "Bağlantı yok";
-  let lastImportAt: string | null = null;
   const domains = new Set<string>();
 
   if (supabase) {
-    const [{ error: dbError }, { data: imports }, { data: games }] = await Promise.all([
+    const [{ error: dbError }, { data: games }] = await Promise.all([
       supabase.from("games").select("id", { head: true, count: "exact" }).limit(1),
-      supabase.from("game_imports").select("updated_at").order("updated_at", { ascending: false }).limit(1),
       supabase.from("games").select("embed_url, html5_url, swf_url, external_url").eq("status", "published").limit(1000),
     ]);
     database = dbError ? "Bağlantı yok" : "Bağlı";
-    lastImportAt = (imports?.[0] as { updated_at?: string } | undefined)?.updated_at ?? null;
     for (const game of (games ?? []) as Array<Record<string, string | null>>) {
       for (const value of Object.values(game)) {
         if (!value) continue;
@@ -38,7 +34,6 @@ export async function getSystemStatus(): Promise<SystemStatus> {
     r2: isR2Configured() ? "Yapılandırıldı" : "Yapılandırılmadı",
     cdn: isCdnConfigured() ? "Yapılandırıldı" : "Yapılandırılmadı",
     email: isEmailConfigured() ? "Yapılandırıldı" : "Yapılandırılmadı",
-    lastImportAt,
     detectedIframeDomains: [...domains].sort(),
   };
 }
