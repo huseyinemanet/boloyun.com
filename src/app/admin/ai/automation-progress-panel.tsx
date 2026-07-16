@@ -208,6 +208,7 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
         <Button
           type="button"
           variant={isWorkerActive ? "outline" : "default"}
+          className="w-full sm:w-auto"
           disabled={controlPending || isDone}
           onClick={() => updateAutomationEnabled(!isWorkerActive)}
         >
