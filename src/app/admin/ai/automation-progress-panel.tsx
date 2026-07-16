@@ -30,6 +30,7 @@ const initialAiActionState: AiActionState = {
 
 const BULK_RETRY_LIMIT = 3;
 const BULK_STEP_DELAY_MS = 250;
+const BULK_LOCK_WAIT_MS = 2_000;
 
 export function AutomationProgressPanel({ automation: initialAutomation, stats: initialStats }: AutomationProgressPanelProps) {
   const router = useRouter();
@@ -212,7 +213,7 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
               setBulkError(null);
               window.dispatchEvent(new CustomEvent("ai-translation:process-loop", { detail: { active: true } }));
               try {
-                const steps = await runBulkLoop((snapshot) => {
+                const result = await runBulkLoop((snapshot) => {
                   const { step, attempted, completedOrSkipped, failedOrSkipped, automation: nextAutomation, stats: nextStats } = snapshot;
                   setBulkSteps(step);
                   setBulkAttempted(attempted);
@@ -222,9 +223,11 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
                   if (nextStats) setStats(nextStats);
                 }, stopBulkRequested);
                 if (stopBulkRequested.current) {
-                  toast.info("Toplu çeviri durduruldu.", { description: steps ? `${steps} çalışma turu tamamlandı.` : "Yeni çalışma turu başlatılmadı." });
+                  toast.info("Toplu çeviri durduruldu.", { description: result.attempted ? `${result.attempted.toLocaleString("tr-TR")} oyun denendi.` : "Yeni oyun başlatılmadı." });
+                } else if (result.reason === "finished") {
+                  toast.success("Toplu çeviri tamamlandı.", { description: "Çevrilecek aday kalmadı." });
                 } else {
-                  toast.success("Toplu çeviri turu tamamlandı.", { description: `${steps} çalışma turu tamamlandı. Loglar birazdan güncellenir.` });
+                  toast.info("Toplu çeviri beklemede.", { description: result.message || "Sistem devam edilecek yeni işi bekliyor." });
                 }
                 router.refresh();
               } catch (error) {
@@ -309,6 +312,7 @@ async function runBulkLoop(
   let attemptedTotal = 0;
   let completedOrSkippedTotal = 0;
   let failedOrSkippedTotal = 0;
+  let lastMessage = "";
 
   while (!stopRequested.current) {
     const controller = new AbortController();
@@ -359,10 +363,11 @@ async function runBulkLoop(
       }
 
       transientFailures = 0;
-      steps += 1;
+      lastMessage = result?.message ?? "";
       attemptedTotal += Math.max(0, result?.attempted ?? 0);
       completedOrSkippedTotal += Math.max(0, result?.processed ?? 0);
       failedOrSkippedTotal += Math.max(0, result?.failed ?? 0);
+      if (result?.status === "completed" || Math.max(0, result?.attempted ?? 0) > 0) steps += 1;
       onStep({
         step: steps,
         attempted: attemptedTotal,
@@ -371,7 +376,17 @@ async function runBulkLoop(
         automation: result?.automation,
         stats: result?.stats,
       });
-      if (result?.status === "skipped") break;
+      if (result?.status === "skipped") {
+        if (isAutomationLockMessage(result.message)) {
+          await sleep(BULK_LOCK_WAIT_MS);
+          continue;
+        }
+        if (isNoMoreWorkMessage(result.message)) {
+          return { steps, attempted: attemptedTotal, reason: "finished" as const, message: result.message ?? "Çevrilecek aday kalmadı." };
+        }
+        await sleep(BULK_LOCK_WAIT_MS);
+        continue;
+      }
       await sleep(BULK_STEP_DELAY_MS);
     } catch (error) {
       if (transientFailures < BULK_RETRY_LIMIT) {
@@ -385,7 +400,19 @@ async function runBulkLoop(
     }
   }
 
-  return steps;
+  return { steps, attempted: attemptedTotal, reason: "stopped" as const, message: lastMessage };
+}
+
+function isAutomationLockMessage(message: string | undefined) {
+  return Boolean(message?.includes("hâlâ çalışıyor") || message?.includes("hala çalışıyor"));
+}
+
+function isNoMoreWorkMessage(message: string | undefined) {
+  return Boolean(
+    message?.includes("Çevrilecek aday bulunamadı")
+      || message?.includes("Otomatik çeviri kapalı")
+      || message?.includes("Günlük hedef doldu"),
+  );
 }
 
 function isTransientStatus(status: number) {
