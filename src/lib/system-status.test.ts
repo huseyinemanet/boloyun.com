@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { isCdnConfigured, isEmailConfigured, isR2Configured } from "./system-status";
 
-const keys = ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET_NAME", "R2_PUBLIC_BASE_URL", "EMAIL_SERVICE_PROVIDER", "EMAIL_FROM_ADDRESS", "BREVO_API_KEY", "BREVO_MARKETING_LIST_ID"] as const;
+const keys = ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET_NAME", "R2_PUBLIC_BASE_URL", "SUPABASE_AUTH_SMTP_PROVIDER"] as const;
 const originalValues = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
 
 afterEach(() => {
@@ -34,29 +34,14 @@ describe("system integration status", () => {
     assert.equal(isCdnConfigured(), true);
   });
 
-  it("reports email only for complete Brevo contact sync configuration", () => {
-    Reflect.deleteProperty(process.env, "EMAIL_SERVICE_PROVIDER");
-    Reflect.deleteProperty(process.env, "EMAIL_FROM_ADDRESS");
-    Reflect.deleteProperty(process.env, "BREVO_API_KEY");
-    Reflect.deleteProperty(process.env, "BREVO_MARKETING_LIST_ID");
+  it("reports the configured Supabase Auth SMTP provider", () => {
+    Reflect.deleteProperty(process.env, "SUPABASE_AUTH_SMTP_PROVIDER");
     assert.equal(isEmailConfigured(), false);
 
-    Reflect.set(process.env, "EMAIL_SERVICE_PROVIDER", "brevo");
+    Reflect.set(process.env, "SUPABASE_AUTH_SMTP_PROVIDER", "resend");
     assert.equal(isEmailConfigured(), false);
 
-    Reflect.set(process.env, "EMAIL_FROM_ADDRESS", "noreply@example.com");
-    assert.equal(isEmailConfigured(), false);
-
-    Reflect.set(process.env, "EMAIL_FROM_ADDRESS", "noreply@boloyun.com");
-    assert.equal(isEmailConfigured(), false);
-
-    Reflect.set(process.env, "BREVO_API_KEY", "xkeysib-secret");
-    assert.equal(isEmailConfigured(), false);
-
-    Reflect.set(process.env, "BREVO_MARKETING_LIST_ID", "abc");
-    assert.equal(isEmailConfigured(), false);
-
-    Reflect.set(process.env, "BREVO_MARKETING_LIST_ID", "42");
+    Reflect.set(process.env, "SUPABASE_AUTH_SMTP_PROVIDER", " Brevo ");
     assert.equal(isEmailConfigured(), true);
   });
 });

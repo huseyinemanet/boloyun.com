@@ -33,6 +33,9 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
+# Supabase Auth custom SMTP is configured in the Supabase control plane.
+# This non-secret marker lets the admin status page report that external setup.
+ENV SUPABASE_AUTH_SMTP_PROVIDER=brevo
 RUN groupadd --system --gid 1001 nodejs \
   && useradd --system --uid 1001 --gid nodejs --home-dir /app --shell /usr/sbin/nologin nextjs
 WORKDIR /app

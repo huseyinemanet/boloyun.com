@@ -5,7 +5,7 @@ export type SystemStatus = {
   database: "Bağlı" | "Bağlantı yok";
   r2: "Yapılandırıldı" | "Yapılandırılmadı";
   cdn: "Yapılandırıldı" | "Yapılandırılmadı";
-  email: "Yapılandırıldı" | "Yapılandırılmadı";
+  email: "Bağlı" | "Yapılandırılmadı";
   detectedIframeDomains: string[];
 };
 
@@ -33,7 +33,7 @@ export async function getSystemStatus(): Promise<SystemStatus> {
     database,
     r2: isR2Configured() ? "Yapılandırıldı" : "Yapılandırılmadı",
     cdn: isCdnConfigured() ? "Yapılandırıldı" : "Yapılandırılmadı",
-    email: isEmailConfigured() ? "Yapılandırıldı" : "Yapılandırılmadı",
+    email: isEmailConfigured() ? "Bağlı" : "Yapılandırılmadı",
     detectedIframeDomains: [...domains].sort(),
   };
 }
@@ -48,14 +48,5 @@ export function isCdnConfigured() {
 }
 
 export function isEmailConfigured() {
-  const provider = process.env.EMAIL_SERVICE_PROVIDER?.trim().toLocaleLowerCase("tr-TR");
-  const fromAddress = process.env.EMAIL_FROM_ADDRESS?.trim();
-  const brevoApiKey = process.env.BREVO_API_KEY?.trim();
-  const brevoMarketingListId = Number(process.env.BREVO_MARKETING_LIST_ID);
-
-  return provider === "brevo" &&
-    Boolean(fromAddress && /^[^\s@]+@boloyun\.com$/i.test(fromAddress)) &&
-    Boolean(brevoApiKey) &&
-    Number.isInteger(brevoMarketingListId) &&
-    brevoMarketingListId > 0;
+  return process.env.SUPABASE_AUTH_SMTP_PROVIDER?.trim().toLocaleLowerCase("tr-TR") === "brevo";
 }
