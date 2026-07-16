@@ -20,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function CategoriesIndexPage() {
-  const categories = await getPublicCategories(500);
+  const categories = await getPublicCategories();
 
   return (
     <div className="space-y-4">

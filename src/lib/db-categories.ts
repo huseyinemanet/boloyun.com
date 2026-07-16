@@ -68,7 +68,7 @@ export async function getCategoriesCount(): Promise<number> {
 
 const publicCategorySelect = "id,name,slug,description,icon_svg,icon_url,status,seo_title,seo_description,og_image_url,is_indexable,sort_order,show_in_sidebar,sidebar_sort_order";
 
-const getPublicCategoriesCached = unstable_cache(async function getPublicCategories(limit = 120): Promise<CategoryRow[]> {
+const getPublicCategoriesCached = unstable_cache(async function getPublicCategories(limit?: number): Promise<CategoryRow[]> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
     return sortCategoriesByName(fallbackCategories.map((category: Category) => ({
@@ -84,13 +84,18 @@ const getPublicCategoriesCached = unstable_cache(async function getPublicCategor
     })));
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("categories")
     .select(publicCategorySelect)
     .eq("status", "active")
     .order("sort_order", { ascending: true })
-    .order("name", { ascending: true })
-    .limit(limit);
+    .order("name", { ascending: true });
+
+  if (typeof limit === "number" && Number.isFinite(limit) && limit > 0) {
+    query = query.limit(Math.floor(limit));
+  }
+
+  const { data, error } = await query;
 
   if (error || !data) return [];
   return sortCategoriesByName(normalizePublicCategoryRows(data as CategoryRow[]));
@@ -110,11 +115,11 @@ export async function getAllActiveCategorySlugs(): Promise<Array<{ slug: string 
 
 const getSidebarCategoriesCached = unstable_cache(async function getSidebarCategoriesCached(): Promise<PublicNavCategory[]> {
   const snapshot = await getPublicShellSnapshot();
-  if (snapshot) return snapshot.categories.slice(0, 24);
+  if (snapshot) return snapshot.categories;
 
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
-    return fallbackCategories.slice(0, 24).map((category, index) => ({
+    return fallbackCategories.map((category, index) => ({
       id: category.id,
       name: category.name,
       slug: category.slug,
@@ -128,13 +133,11 @@ const getSidebarCategoriesCached = unstable_cache(async function getSidebarCateg
     .from("categories")
     .select("id,name,slug,icon_svg,icon_url,sidebar_sort_order")
     .eq("status", "active")
-    .eq("show_in_sidebar", true)
     .order("sidebar_sort_order", { ascending: true })
-    .order("name", { ascending: true })
-    .limit(24);
+    .order("name", { ascending: true });
 
   return error || !data ? [] : data as PublicNavCategory[];
-}, ["public-sidebar-categories-v1"], { revalidate: 3600, tags: ["categories", "public-shell"] });
+}, ["public-sidebar-categories-v2"], { revalidate: 3600, tags: ["categories", "public-shell"] });
 
 export const getSidebarCategories = cache(getSidebarCategoriesCached);
 
