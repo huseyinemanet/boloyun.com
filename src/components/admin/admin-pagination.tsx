@@ -16,6 +16,7 @@ export function AdminPagination({
   itemName,
   pathStyle = "query",
   queryParams,
+  variant = "card",
 }: {
   currentPage: number;
   perPage: number;
@@ -24,6 +25,7 @@ export function AdminPagination({
   itemName: string;
   pathStyle?: "query" | "segment";
   queryParams?: Record<string, string>;
+  variant?: "card" | "plain";
 }) {
   const totalPages = Math.max(1, Math.ceil(total / perPage));
   const from = total === 0 ? 0 : (currentPage - 1) * perPage + 1;
@@ -31,7 +33,7 @@ export function AdminPagination({
   const pages = getVisiblePages(currentPage, totalPages);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2 text-sm">
+    <div className={`flex flex-wrap items-center justify-between gap-3 text-sm ${variant === "card" ? "rounded-md border border-border bg-card px-3 py-2" : ""}`}>
       <p className="shrink-0 text-muted-foreground">
         {total === 0 ? (
           <>Henüz {itemName} yok.</>

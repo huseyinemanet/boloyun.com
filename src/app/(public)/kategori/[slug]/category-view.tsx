@@ -52,21 +52,21 @@ export async function CategoryView({ slug, page }: { slug: string; page: number 
         ]),
         itemListJsonLd(`${category.name}${page > 1 ? ` - Sayfa ${page}` : ""}`, categoryGames.items.map((game) => `/oyun/${game.slug}`)),
       ]} /> : null}
-      <section className="rounded-md border border-border bg-card p-4">
+      <section>
         <h1 className="text-2xl font-semibold">{category.name}{page > 1 ? ` - Sayfa ${page}` : ""}</h1>
         {category.description ? <p className="mt-2 max-w-4xl text-sm leading-6 text-muted-foreground">{category.description}</p> : null}
       </section>
       <AdSlot slotKey="category_page_top" />
       {categoryGames.items.length ? (
         <>
-          <AdminPagination currentPage={page} perPage={PER_PAGE} total={categoryGames.total} basePath={`/kategori/${slug}`} itemName="oyun" pathStyle="segment" />
+          <AdminPagination currentPage={page} perPage={PER_PAGE} total={categoryGames.total} basePath={`/kategori/${slug}`} itemName="oyun" pathStyle="segment" variant="plain" />
           <GameSection title={category.name} games={categoryGames.items} eagerCount={4} />
-          <AdminPagination currentPage={page} perPage={PER_PAGE} total={categoryGames.total} basePath={`/kategori/${slug}`} itemName="oyun" pathStyle="segment" />
+          <AdminPagination currentPage={page} perPage={PER_PAGE} total={categoryGames.total} basePath={`/kategori/${slug}`} itemName="oyun" pathStyle="segment" variant="plain" />
         </>
       ) : (
         <section className="rounded-md border border-border bg-card p-6 text-sm font-semibold text-muted-foreground">Bu kategoride henüz yayınlanmış oyun yok.</section>
       )}
-      <nav aria-label="İlgili kategoriler" className="rounded-md border border-border bg-card p-4">
+      <nav aria-label="İlgili kategoriler">
         <h2 className="text-lg font-semibold">Diğer Oyun Kategorileri</h2>
         <div className="mt-3 flex flex-wrap gap-2">
           {categories.filter((item) => item.slug !== slug).slice(0, 12).map((item) => (
