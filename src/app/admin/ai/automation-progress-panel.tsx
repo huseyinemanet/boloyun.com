@@ -41,11 +41,6 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
     [stats.completed, stats.totalPublished],
   );
   const remainingCount = Math.max(0, stats.totalPublished - stats.completed - stats.failed - stats.processing);
-  const helperText = isWorkerActive
-    ? "VPS arka planda çeviriyor. Bu sayfayı kapatsan bile işlem devam eder; sayılar yeni sonuç geldikçe güncellenir."
-    : isDone
-      ? "Tüm yayınlı oyunlar işlendi."
-      : "Başlatınca VPS arka planda sırayla çevirir; tarayıcıya bağlı kalmaz.";
 
   useEffect(() => {
     function handleDashboardSnapshot(event: Event) {
@@ -154,10 +149,10 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
           animation: ai-progress-stripes 0.85s linear infinite;
         }
       `}</style>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold">Toplu AI Çeviri</h2>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+          <p className="mt-0.5 max-w-2xl text-sm leading-5 text-muted-foreground">
             Başlatınca sistem oyunları sırayla çevirir. Bir oyun 3 kez sorun çıkarırsa onu atlar ve sıradakine geçer.
           </p>
         </div>
@@ -218,9 +213,6 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
         >
           {controlPending ? "Bekle..." : isWorkerActive ? "Durdur" : "Başlat"}
         </Button>
-        <p className="max-w-2xl text-sm text-muted-foreground" aria-live="polite">
-          {helperText}
-        </p>
       </div>
     </section>
   );

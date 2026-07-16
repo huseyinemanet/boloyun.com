@@ -189,10 +189,10 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
           animation: ai-row-shimmer 1.35s ease-in-out infinite;
         }
       `}</style>
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold">Canlı çeviri akışı</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-0.5 text-sm leading-5 text-muted-foreground">
             Son {LOG_LIMIT} işlem gösterilir. Yeni işlem geldikçe liste yenilenir; eski satırlar otomatik düşer.
           </p>
         </div>
