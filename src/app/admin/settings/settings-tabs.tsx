@@ -26,7 +26,7 @@ export function SettingsTabs() {
 
   return (
     <Tabs value={activeTab} className="gap-0">
-      <TabsList variant="line" aria-label="Ayar bölümleri" className="h-auto w-full flex-wrap justify-start gap-x-5 gap-y-3 overflow-visible border-b border-border p-0 pb-2">
+      <TabsList variant="line" aria-label="Ayar bölümleri" className="h-auto w-full flex-wrap justify-start gap-x-5 gap-y-3 overflow-visible p-0 pb-2">
         {tabs.map(([key, label]) => {
           const href = `/admin/settings/${key}`;
           const active = pathname === href;
