@@ -109,7 +109,7 @@ const MAX_ACTIVITY_LIMIT = 100;
 const AUTOMATION_JOB_BATCH_SIZE: AiBatchSize = 500;
 const AUTOMATION_DAILY_TARGET = 1_000_000;
 const AUTOMATION_PER_RUN_LIMIT = 20;
-const AUTOMATION_LOCK_STALE_MINUTES = 10;
+const AUTOMATION_LOCK_STALE_MINUTES = 2;
 
 export async function getAiDashboardData() {
   const [configs, stats, jobs, automation] = await Promise.all([
@@ -675,9 +675,24 @@ async function recoverStaleProcessingItems(jobId: string) {
     .eq("job_id", jobId)
     .eq("status", "processing")
     .lt("updated_at", staleBefore)
-    .select("id");
+    .select("id, game_id");
   if (error) throw new Error(`Yarım kalan çeviri kalemleri toparlanamadı: ${error.message}`);
-  if (data?.length) logAi("job.processing.recovered", { jobId, count: data.length });
+  const recoveredRows = (data ?? []) as Array<{ id: string; game_id: string }>;
+  if (!recoveredRows.length) return;
+
+  const gameIds = recoveredRows.map((row) => row.game_id);
+  const { error: statesError } = await supabase
+    .from("game_translation_state")
+    .update({
+      status: "pending",
+      last_error: "Önceki işlem yarıda kaldı; tekrar sıraya alındı.",
+      updated_at: new Date().toISOString(),
+    })
+    .in("game_id", gameIds)
+    .eq("status", "processing");
+  if (statesError) throw new Error(`Yarım kalan çeviri durumları toparlanamadı: ${statesError.message}`);
+
+  logAi("job.processing.recovered", { jobId, count: recoveredRows.length });
 }
 
 async function upsertPendingStates(candidates: CandidateRow[]) {
