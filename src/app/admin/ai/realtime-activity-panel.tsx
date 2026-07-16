@@ -231,7 +231,7 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
                   </time>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={item.status === "completed" ? "default" : item.status === "failed" || item.status === "skipped" ? "destructive" : "outline"}>
+                  <Badge variant={item.status === "completed" ? "secondary" : item.status === "failed" || item.status === "skipped" ? "destructive" : "outline"}>
                     {itemStatusText(item.status, item.isActuallyProcessing)}
                   </Badge>
                 </TableCell>
