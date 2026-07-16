@@ -113,7 +113,6 @@ export function SettingsForm({
       <div className="sticky bottom-3 z-30 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card/95 p-3 shadow-xl backdrop-blur">
         <div>
           <p className="text-sm font-bold">{isDirty ? `${changeCount} değişiklik kaydedilmedi` : "Tüm değişiklikler kaydedildi"}</p>
-          {record.updatedByLabel ? <p className="text-xs text-muted-foreground">Son değişiklik: {record.updatedByLabel}</p> : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <SoundButton type="button" variant="outline" aria-label="Değişiklikleri Sıfırla" onClick={reset} disabled={!isDirty || pending}><IconUndo3FillDuo18 className="size-4" /><span className="hidden sm:inline">Değişiklikleri Sıfırla</span></SoundButton>
