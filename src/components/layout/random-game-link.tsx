@@ -6,15 +6,17 @@ import { LoaderCircleIcon } from "lucide-react";
 import { IconShuffleFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconShuffleFillDuo18";
 import { Button } from "@/components/ui/button";
 import { SoundLink } from "@/components/audio/sound-link";
+import { getRandomGameHref } from "@/lib/random-game";
 
 export function RandomGameLink() {
   const [pendingPath, setPendingPath] = useState<string | null>(null);
   const pathname = usePathname();
   const pending = pendingPath === pathname;
+  const href = getRandomGameHref(pathname);
 
   return (
     <Button asChild size="lg" className="hidden shrink-0 md:inline-flex" aria-busy={pending}>
-      <SoundLink href="/rastgele" native onClick={() => setPendingPath(pathname)}>
+      <SoundLink href={href} native onClick={() => setPendingPath(pathname)}>
         <span className="grid size-[18px] shrink-0 place-items-center">
           {pending ? <LoaderCircleIcon className="size-[18px] animate-spin" aria-hidden="true" /> : <IconShuffleFillDuo18 className="size-[18px]" aria-hidden="true" />}
         </span>

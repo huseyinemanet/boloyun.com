@@ -352,20 +352,33 @@ export async function getAdminPopularGames(limit = 8): Promise<AdminPopularGame[
   return popularGames.map((game) => ({ ...game, categoryName: categoryNames.get(game.id) ?? "" }));
 }
 
-export async function getRandomPublishedGameSlug(): Promise<string | null> {
-  const publishedFallbackGames = fallbackGames.filter((game) => game.status === "published");
+export async function getRandomPublishedGameSlug(excludeSlug?: string): Promise<string | null> {
+  const publishedFallbackGames = fallbackGames.filter(
+    (game) => game.status === "published" && game.slug !== excludeSlug,
+  );
   const fallbackSlug = pickRandomItem(publishedFallbackGames)?.slug ?? null;
   const supabase = createSupabaseServiceClient();
   if (!supabase) return fallbackSlug;
 
-  const count = await getPublishedGamesCount().catch(() => 0);
+  const count = excludeSlug
+    ? await measuredQuery("games.random.count", supabase
+      .from("games")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "published")
+      .neq("slug", excludeSlug))
+      .then(({ count, error }) => error ? 0 : count ?? 0)
+    : await getPublishedGamesCount().catch(() => 0);
   if (!count) return fallbackSlug;
 
   const offset = Math.floor(Math.random() * count);
-  const { data, error } = await measuredQuery("games.random.slug", supabase
+  const publishedGamesQuery = supabase
     .from("games")
     .select("slug")
-    .eq("status", "published")
+    .eq("status", "published");
+  const eligibleGamesQuery = excludeSlug
+    ? publishedGamesQuery.neq("slug", excludeSlug)
+    : publishedGamesQuery;
+  const { data, error } = await measuredQuery("games.random.slug", eligibleGamesQuery
     .range(offset, offset)
     .maybeSingle());
 
