@@ -6,6 +6,7 @@ import { LoaderCircleIcon } from "lucide-react";
 import { IconBrainSparkleFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBrainSparkleFillDuo18";
 import { IconChartAreaFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconChartAreaFillDuo18";
 import { IconChatBubbleWritingFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconChatBubbleWritingFillDuo18";
+import { IconFolderFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconFolderFillDuo18";
 import { IconGamepadButtonsFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGamepadButtonsFillDuo18";
 import { IconGridListFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGridListFillDuo18";
 import { IconPageFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconPageFillDuo18";
@@ -31,7 +32,7 @@ const adminGroups = [
       { href: "/admin/games", label: "Oyunlar", icon: IconGamepadButtonsFillDuo18 },
       { href: "/admin/crawler", label: "Yeni Oyun Tara", icon: IconRadarFillDuo18 },
       { href: "/admin/imports", label: "İnceleme Kuyruğu", icon: IconGridListFillDuo18 },
-      { href: "/admin/categories", label: "Kategoriler", icon: IconGridListFillDuo18 },
+      { href: "/admin/categories", label: "Kategoriler", icon: IconFolderFillDuo18 },
       { href: "/admin/tags", label: "Etiketler", icon: IconTagsFillDuo18 },
       { href: "/admin/static-pages", label: "Sayfalar", icon: IconPageFillDuo18 },
     ],
