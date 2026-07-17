@@ -6,6 +6,7 @@ import { IconMsgs2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMsgs2Fi
 import { IconCircleCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCircleCheckFillDuo18";
 import { IconUsersFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconUsersFillDuo18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -117,7 +118,13 @@ export default async function AdminPage() {
               <div key={activity.id}>
                 {index > 0 ? <Separator /> : null}
                 <div className="flex items-start justify-between gap-3 py-2">
-                  <div><p className="font-medium">{activity.title}</p><p className="text-xs text-muted-foreground">{activity.actor} · {activity.target}</p></div>
+                  <div className="flex items-start gap-2">
+                    <Avatar size="sm" className="mt-0.5">
+                      {activity.actorAvatarUrl ? <AvatarImage src={activity.actorAvatarUrl} alt={activity.actor} /> : null}
+                      <AvatarFallback>{actorInitials(activity.actor)}</AvatarFallback>
+                    </Avatar>
+                    <div><p className="font-medium">{activity.title}</p><p className="text-xs text-muted-foreground">{activity.actor} · {activity.target}</p></div>
+                  </div>
                   <time className="shrink-0 text-xs text-muted-foreground" dateTime={activity.createdAt} title={formatFullDateTime(activity.createdAt)}>{formatRelativeDateTime(activity.createdAt)}</time>
                 </div>
               </div>
@@ -154,4 +161,14 @@ function MetricCard({ label, value }: { label: string; value: number }) {
 function SystemRow({ label, status }: { label: string; status: string }) {
   const connected = status === "Bağlı" || status === "Yapılandırıldı";
   return <div className="flex items-center justify-between gap-3 py-2"><span>{label}</span><Badge variant={connected ? "default" : "outline"}>{status}</Badge></div>;
+}
+
+function actorInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toLocaleUpperCase("tr-TR");
 }

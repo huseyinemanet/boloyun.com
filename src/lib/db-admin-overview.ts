@@ -4,6 +4,7 @@ import { getAdminPopularGames } from "@/lib/db-games";
 import { isCdnConfigured, isEmailConfigured, isR2Configured } from "@/lib/system-status";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 import { activityLabel } from "@/lib/admin-activity-label";
+import { normalizeSiteAssetUrl } from "@/lib/site-assets";
 
 type AuditRow = {
   id: string;
@@ -13,11 +14,13 @@ type AuditRow = {
   created_at: string;
   profiles: {
     username: string;
+    avatar_url: string | null;
     display_name: string | null;
     first_name: string | null;
     last_name: string | null;
   } | Array<{
     username: string;
+    avatar_url: string | null;
     display_name: string | null;
     first_name: string | null;
     last_name: string | null;
@@ -49,7 +52,7 @@ export async function getAdminOverviewData() {
     supabase.from("comments").select("id", { count: "exact", head: true }).eq("status", "pending"),
     supabase
       .from("admin_audit_events")
-      .select("id, action, target_type, details, created_at, profiles(username, display_name, first_name, last_name)")
+      .select("id, action, target_type, details, created_at, profiles(username, avatar_url, display_name, first_name, last_name)")
       .order("created_at", { ascending: false })
       .limit(5),
     getAdminPopularGames(10),
@@ -107,6 +110,7 @@ function mapAuditRows(rows: AuditRow[]) {
       id: row.id,
       title: activityLabel(row.action),
       actor: profile?.display_name || fullName || profile?.username || "Sistem",
+      actorAvatarUrl: normalizeSiteAssetUrl(profile?.avatar_url),
       target: detailLabel(row.details) || targetLabel(row.target_type),
       createdAt: row.created_at,
     };
@@ -155,7 +159,7 @@ function emptyOverview() {
     totals: { games: 0, categories: 0, comments: 0, users: 0 },
     performance: { plays24Hours: 0, plays7Days: 0 },
     attention: { reviewImports: 0, needsFixImports: 0, failedImports: 0, brokenGames: 0, coverIssues: 0, pendingComments: 0 },
-    activities: [] as Array<{ id: string; title: string; actor: string; target: string; createdAt: string }>,
+    activities: [] as Array<{ id: string; title: string; actor: string; actorAvatarUrl: string | null; target: string; createdAt: string }>,
     popularGames: [] as Awaited<ReturnType<typeof getAdminPopularGames>>,
     system: {
       database: "Bağlantı yok" as const,
