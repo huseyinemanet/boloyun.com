@@ -8,7 +8,7 @@ export async function Sidebar() {
 
   return (
     <aside className="md:sticky md:top-20 md:h-[calc(100vh-6rem)]">
-      <SidebarScroll>
+      <SidebarScroll categories={categories}>
         <SidebarActiveState />
         {categories.map((category) => (
           <SidebarCategoryLink key={category.id} category={category} />
