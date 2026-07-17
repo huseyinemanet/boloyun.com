@@ -21,8 +21,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,7 +40,6 @@ export type StaticPageListItem = {
 
 export function StaticPagesTable({ pages }: { pages: StaticPageListItem[] }) {
   const router = useRouter();
-  const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [sort, setSort] = useState<SortKey>("updated_at");
   const [descending, setDescending] = useState(true);
@@ -56,20 +53,15 @@ export function StaticPagesTable({ pages }: { pages: StaticPageListItem[] }) {
   }), [pages]);
 
   const rows = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase("tr");
     return pages
       .filter((page) => status === "all" || page.status === status)
-      .filter((page) => !normalizedQuery || [page.title, page.slug, page.seo_title, page.seo_description]
-        .join(" ")
-        .toLocaleLowerCase("tr")
-        .includes(normalizedQuery))
       .sort((left, right) => {
         const leftValue = sort === "title" ? left.title : left.updated_at ?? "";
         const rightValue = sort === "title" ? right.title : right.updated_at ?? "";
         const result = leftValue.localeCompare(rightValue, "tr");
         return descending ? -result : result;
       });
-  }, [descending, pages, query, sort, status]);
+  }, [descending, pages, sort, status]);
 
   function toggleSort(key: SortKey) {
     if (sort === key) setDescending((value) => !value);
@@ -101,17 +93,6 @@ export function StaticPagesTable({ pages }: { pages: StaticPageListItem[] }) {
             <TabsTrigger value="draft" className="h-8 flex-none px-0 text-sm font-bold text-primary data-active:text-foreground">Taslak ({counts.draft})</TabsTrigger>
           </TabsList>
         </Tabs>
-        <div className="flex w-full items-center gap-2 sm:w-auto">
-          <Input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Sayfalarda ara..."
-            aria-label="Sayfalarda ara"
-            className="h-10 min-w-0 sm:w-72"
-          />
-          <Button type="button" variant="outline" className="h-10 font-bold">Sayfa Ara</Button>
-        </div>
       </div>
 
       <div className="flex items-center justify-between gap-3">
@@ -189,7 +170,7 @@ export function StaticPagesTable({ pages }: { pages: StaticPageListItem[] }) {
               </TableRow>
             ))}
             {!rows.length ? (
-              <TableRow><TableCell colSpan={4} className="h-32 text-center font-medium text-muted-foreground">{pages.length ? "Aramanızla eşleşen sayfa bulunamadı." : "Henüz statik sayfa yok. Yeni bir sayfa ekleyebilirsiniz."}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="h-32 text-center font-medium text-muted-foreground">{pages.length ? "Bu durumda sayfa bulunamadı." : "Henüz statik sayfa yok. Yeni bir sayfa ekleyebilirsiniz."}</TableCell></TableRow>
             ) : null}
           </TableBody>
         </Table>
