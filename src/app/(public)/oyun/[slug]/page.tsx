@@ -96,9 +96,9 @@ export default async function GameDetailPage({ params }: Props) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <h1 className="min-w-0 flex-1 text-2xl font-semibold">{game.title}</h1>
-                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
+                  <h1 className="w-full min-w-0 text-2xl font-semibold sm:flex-1">{game.title}</h1>
+                  <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
                     <LazyGameActions
                       gameId={game.id}
                       slug={game.slug}
