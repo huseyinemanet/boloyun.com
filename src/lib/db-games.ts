@@ -561,21 +561,23 @@ export const getPublishedGamesByCategorySlugPage = cache(async function getPubli
   return getPublishedGamesByCategorySlugPageCached(slug, page, perPage);
 });
 
-export type AdminGameHealthFilter = "all" | "broken" | "cover";
-
 export type AdminGameListItem = Pick<Game, "id" | "title" | "slug" | "shortDescription" | "thumbnailUrl" | "status" | "playCount" | "isBroken" | "thumbnailSyncStatus"> & {
   updatedAt: string;
 };
 
-export async function getAdminGamesPage({ cursor, direction, perPage, health = "all" }: {
+export async function getAdminGamesPage({ cursor, direction, perPage, search = "" }: {
   cursor: KeysetCursor | null;
   direction: KeysetDirection;
   perPage: number;
-  health?: AdminGameHealthFilter;
+  search?: string;
 }): Promise<{ items: AdminGameListItem[]; previousCursor: KeysetCursor | null; nextCursor: KeysetCursor | null }> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
-    const items = fallbackGames.slice(0, perPage).map((game, index) => ({ ...game, updatedAt: new Date(index).toISOString() }));
+    const normalizedSearch = search.trim().toLocaleLowerCase("tr");
+    const items = fallbackGames
+      .filter((game) => !normalizedSearch || game.title.toLocaleLowerCase("tr").includes(normalizedSearch))
+      .slice(0, perPage)
+      .map((game, index) => ({ ...game, updatedAt: new Date(index).toISOString() }));
     return {
       items,
       previousCursor: null,
@@ -591,8 +593,11 @@ export async function getAdminGamesPage({ cursor, direction, perPage, health = "
     .order("id", { ascending })
     .limit(perPage + 1);
 
-  if (health === "broken") query = query.eq("is_broken", true);
-  if (health === "cover") query = query.in("thumbnail_sync_status", ["pending", "failed", "rolled_back"]);
+  const normalizedSearch = search.trim();
+  if (normalizedSearch) {
+    const searchPattern = `%${normalizedSearch.replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
+    query = query.ilike("title", searchPattern);
+  }
   if (cursor) query = query.or(keysetFilter(cursor, direction));
   const { data, error } = await query;
 

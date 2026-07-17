@@ -12,9 +12,9 @@ import { AdminCursorPagination } from "@/components/admin/admin-cursor-paginatio
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getAdminGamesPage } from "@/lib/db-games";
-import type { AdminGameHealthFilter } from "@/lib/db-games";
 import type { PublishStatus } from "@/types/game";
 import { decodeKeysetCursor, parseKeysetDirection } from "@/lib/keyset-pagination";
 import { adminPageMetadata } from "@/lib/seo/metadata";
@@ -29,7 +29,7 @@ type AdminGamesPageProps = {
     cursor?: string;
     direction?: string;
     notice?: string;
-    health?: string;
+    q?: string;
   }>;
 };
 
@@ -37,29 +37,28 @@ export default async function AdminGamesPage({ searchParams }: AdminGamesPagePro
   const params = await searchParams;
   const cursor = decodeKeysetCursor(params.cursor);
   const direction = parseKeysetDirection(params.direction);
-  const health: AdminGameHealthFilter = params.health === "broken" || params.health === "cover" ? params.health : "all";
-  const { items: games, previousCursor, nextCursor } = await getAdminGamesPage({ cursor, direction, perPage: PER_PAGE, health });
+  const query = params.q?.trim().slice(0, 120) ?? "";
+  const { items: games, previousCursor, nextCursor } = await getAdminGamesPage({ cursor, direction, perPage: PER_PAGE, search: query });
 
   return (
     <div className="space-y-3">
       <GameNoticeToast notice={params.notice} />
 
-      <AdminPageHeader
-        title="Oyunlar"
-        description="Yayındaki, taslak ve pasif oyunları buradan düzenleyebilirsin."
-        actions={(
-          <ButtonGroup aria-label="Oyun sağlık filtresi">
-            <Button asChild size="sm" variant={health === "all" ? "default" : "outline"}><Link href="/admin/games">Tümü</Link></Button>
-            <ButtonGroupSeparator />
-            <Button asChild size="sm" variant={health === "broken" ? "default" : "outline"}><Link href="/admin/games?health=broken">Bozuk</Link></Button>
-            <ButtonGroupSeparator />
-            <Button asChild size="sm" variant={health === "cover" ? "default" : "outline"}><Link href="/admin/games?health=cover">Kapak Sorunu</Link></Button>
-          </ButtonGroup>
-        )}
-      />
+      <AdminPageHeader title="Oyunlar" description="Yayındaki, taslak ve pasif oyunları buradan düzenleyebilirsin." />
 
-      <AdminCursorPagination basePath="/admin/games" itemCount={games.length} itemName="oyun" previousCursor={previousCursor} nextCursor={nextCursor} query={{ health: health === "all" ? undefined : health }} />
+      <AdminCursorPagination basePath="/admin/games" itemCount={games.length} itemName="oyun" previousCursor={previousCursor} nextCursor={nextCursor} query={{ q: query || undefined }} />
       <section className="overflow-hidden rounded-md border border-border bg-card">
+        <form action="/admin/games" className="flex gap-2 border-b border-border bg-muted/20 p-3">
+          <Input
+            type="search"
+            name="q"
+            defaultValue={query}
+            placeholder="Tüm oyunlarda ara..."
+            aria-label="Tüm oyunlarda ara"
+            autoComplete="off"
+          />
+          <Button type="submit" variant="outline" className="shrink-0">Ara</Button>
+        </form>
         <Table>
           <TableHeader className="bg-muted/40">
             <TableRow>
@@ -140,14 +139,14 @@ export default async function AdminGamesPage({ searchParams }: AdminGamesPagePro
             {games.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="h-28 text-center font-medium text-muted-foreground">
-                  Bu sayfada oyun yok.
+                  {query ? "Aramanla eşleşen oyun bulunamadı." : "Bu sayfada oyun yok."}
                 </TableCell>
               </TableRow>
             ) : null}
           </TableBody>
         </Table>
       </section>
-      <AdminCursorPagination basePath="/admin/games" itemCount={games.length} itemName="oyun" previousCursor={previousCursor} nextCursor={nextCursor} query={{ health: health === "all" ? undefined : health }} />
+      <AdminCursorPagination basePath="/admin/games" itemCount={games.length} itemName="oyun" previousCursor={previousCursor} nextCursor={nextCursor} query={{ q: query || undefined }} />
     </div>
   );
 }
