@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LoaderCircleIcon } from "lucide-react";
 import { IconBrainSparkleFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBrainSparkleFillDuo18";
-import { IconChartAreaFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconChartAreaFillDuo18";
 import { IconChatBubbleWritingFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconChatBubbleWritingFillDuo18";
 import { IconFolderFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconFolderFillDuo18";
 import { IconGamepadButtonsFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGamepadButtonsFillDuo18";
@@ -15,6 +14,7 @@ import { IconRadarFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconRadarFi
 import { IconSettingsWrenchFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconSettingsWrenchFillDuo18";
 import { IconTagsFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconTagsFillDuo18";
 import { IconUserGroupFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconUserGroupFillDuo18";
+import { IconWindowLayoutFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconWindowLayoutFillDuo18";
 import { useEffect, useState, type ChangeEvent, type MouseEvent } from "react";
 import { useClickSound } from "@/components/audio/click-sound-provider";
 import { cn } from "@/lib/utils";
@@ -23,7 +23,7 @@ const adminGroups = [
   {
     label: "Genel",
     links: [
-      { href: "/admin", label: "Genel Bakış", icon: IconChartAreaFillDuo18 },
+      { href: "/admin", label: "Genel Bakış", icon: IconWindowLayoutFillDuo18 },
     ],
   },
   {
