@@ -25,6 +25,7 @@ export type GameImportQueueItem = {
 
 export type ScrapedGameImport = {
   id: string;
+  created_at: string;
   updated_at: string;
   source_url: string;
   source_domain: string | null;
@@ -53,7 +54,24 @@ export type ScrapedGameImport = {
   ai_seo_description_tr: string | null;
   ai_categories_tr: string[] | null;
   ai_tags_tr: string[] | null;
+  error_message: string | null;
+  raw_html_snapshot: string | null;
+  published_game_id: string | null;
 };
+
+export type AdminImportFilter = "review" | "needs_fix" | "failed" | "approved" | "rejected";
+
+export type AdminImportStats = Record<AdminImportFilter, number>;
+
+export const ADMIN_IMPORT_FILTERS: AdminImportFilter[] = ["review", "needs_fix", "failed", "approved", "rejected"];
+
+export function parseAdminImportFilter(value: string | undefined): AdminImportFilter {
+  return ADMIN_IMPORT_FILTERS.includes(value as AdminImportFilter) ? value as AdminImportFilter : "review";
+}
+
+export function statusesForAdminImportFilter(filter: AdminImportFilter): GameImportStatus[] {
+  return filter === "review" ? ["scraped", "ai_generated", "pending_review"] : [filter];
+}
 
 export type InsertNewImportsProgress = {
   phase: "duplicates" | "insert";
@@ -376,53 +394,33 @@ export async function getAdminImports(limit: number) {
 
 export async function getAdminImportStats() {
   const supabase = getRequiredSupabaseServiceClient();
-  const [pendingResult, failedResult, totalResult] = await Promise.all([
-    supabase
-      .from("game_imports")
-      .select("id", { count: "exact", head: true })
-      .in("import_status", ["scraped", "ai_generated", "pending_review"]),
-    supabase
-      .from("game_imports")
-      .select("id", { count: "exact", head: true })
-      .eq("import_status", "failed"),
-    supabase
-      .from("game_imports")
-      .select("id", { count: "exact", head: true }),
-  ]);
-
-  if (pendingResult.error) {
-    throw new Error(`Onay bekleyen import sayisi okunamadi: ${pendingResult.error.message}`);
-  }
-
-  if (failedResult.error) {
-    throw new Error(`Failed import sayisi okunamadi: ${failedResult.error.message}`);
-  }
-
-  if (totalResult.error) {
-    throw new Error(`Toplam import sayisi okunamadi: ${totalResult.error.message}`);
-  }
-
-  return {
-    pending: pendingResult.count ?? 0,
-    failed: failedResult.count ?? 0,
-    total: totalResult.count ?? 0,
-  };
+  const entries = await Promise.all(ADMIN_IMPORT_FILTERS.map(async (filter) => {
+    const statuses = statusesForAdminImportFilter(filter);
+    const result = statuses.length === 1
+      ? await supabase.from("game_imports").select("id", { count: "exact", head: true }).eq("import_status", statuses[0])
+      : await supabase.from("game_imports").select("id", { count: "exact", head: true }).in("import_status", statuses);
+    if (result.error) throw new Error(`${filter} import sayısı okunamadı: ${result.error.message}`);
+    return [filter, result.count ?? 0] as const;
+  }));
+  return Object.fromEntries(entries) as AdminImportStats;
 }
 
-export async function getAdminImportsPage({ cursor, direction, perPage }: {
+export async function getAdminImportsPage({ cursor, direction, perPage, filter = "review" }: {
   cursor: KeysetCursor | null;
   direction: KeysetDirection;
   perPage: number;
+  filter?: AdminImportFilter;
 }) {
   const supabase = getRequiredSupabaseServiceClient();
   const ascending = direction === "previous";
   let query = supabase
     .from("game_imports")
     .select("*")
-    .in("import_status", ["scraped", "ai_generated", "pending_review", "needs_fix", "failed"])
     .order("updated_at", { ascending })
     .order("id", { ascending })
     .limit(perPage + 1);
+  const statuses = statusesForAdminImportFilter(filter);
+  query = statuses.length === 1 ? query.eq("import_status", statuses[0]) : query.in("import_status", statuses);
   if (cursor) query = query.or(keysetFilter(cursor, direction));
   const { data, error } = await query;
 

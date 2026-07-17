@@ -12,6 +12,7 @@ import { scrapeGame } from "@/import/scrape/scrape-game";
 import { discoverGameUrls } from "@/import/sitemap/discover";
 import { getCurrentProfile } from "@/lib/auth";
 import { hasTrustedMutationOrigin } from "@/lib/request-security";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -78,6 +79,7 @@ export async function POST(request: Request) {
         },
         send,
         signal: operationAbort.signal,
+        actorProfileId: profile.id,
       }).finally(() => { if (!operationAbort.signal.aborted) controller.close(); });
     },
     cancel() { operationAbort.abort(); },
@@ -116,6 +118,7 @@ async function runCrawler({
   stats,
   send,
   signal,
+  actorProfileId,
 }: {
   sitemapUrl: string;
   shouldScrape: boolean;
@@ -123,6 +126,7 @@ async function runCrawler({
   stats: CrawlerStats;
   send: (event: CrawlerEvent) => void;
   signal: AbortSignal;
+  actorProfileId: string;
 }) {
   try {
     send({
@@ -261,9 +265,17 @@ async function runCrawler({
     try {
       revalidatePath("/admin");
       revalidatePath("/admin/crawler");
+      revalidatePath("/admin/imports");
     } catch (error) {
       console.error("[crawler] revalidate_failed", { error: error instanceof Error ? error.message : String(error) });
     }
+
+    await recordAdminAudit({
+      actorProfileId,
+      action: "crawler.run",
+      targetType: "crawler",
+      details: { sourceUrl: sitemapUrl, discovered: stats.discovered, pendingReview: stats.pendingReview, failed: stats.failed },
+    }).catch((error) => console.error("[crawler] audit failed", error));
 
     send({
       type: "done",

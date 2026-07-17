@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth";
 import { updateAdminGameFromForm } from "@/lib/admin-game-update";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -15,6 +16,8 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   try {
     await updateAdminGameFromForm(id, await request.formData());
+    await recordAdminAudit({ actorProfileId: profile.id, action: "game.update", targetType: "game", targetIds: [id] })
+      .catch((auditError) => console.error("[admin-game] audit failed", auditError));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Oyun güncellenemedi.";
     const url = new URL(`/admin/games/${id}/edit`, request.url);

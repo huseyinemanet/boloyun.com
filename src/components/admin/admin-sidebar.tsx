@@ -30,6 +30,7 @@ const adminGroups = [
     links: [
       { href: "/admin/games", label: "Oyunlar", icon: IconGamepadButtonsFillDuo18 },
       { href: "/admin/crawler", label: "Yeni Oyun Tara", icon: IconRadarFillDuo18 },
+      { href: "/admin/imports", label: "İnceleme Kuyruğu", icon: IconGridListFillDuo18 },
       { href: "/admin/categories", label: "Kategoriler", icon: IconGridListFillDuo18 },
       { href: "/admin/tags", label: "Etiketler", icon: IconTagsFillDuo18 },
       { href: "/admin/static-pages", label: "Sayfalar", icon: IconFileTreeFillDuo18 },
@@ -91,7 +92,7 @@ export function AdminSidebar() {
     <aside className="overflow-x-auto lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-visible">
       <nav className="flex min-w-max gap-3 lg:grid lg:min-w-0 lg:gap-3" aria-label="Admin menüsü">
         {adminGroups.map((group) => (
-          <div key={group.label} className="flex gap-1 lg:grid lg:gap-0.5">
+          <div key={group.label} className="flex gap-0 lg:grid lg:gap-0">
             <p className="hidden px-2 pb-1 text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-muted-foreground/70 lg:block">
               {group.label}
             </p>
@@ -107,7 +108,7 @@ export function AdminSidebar() {
                   aria-busy={pending || undefined}
                   onClick={(event) => markPending(event, href)}
                   className={cn(
-                    "group flex items-center gap-2 whitespace-nowrap rounded-md px-2 py-1.5 text-sm font-semibold transition-colors",
+                    "group flex items-center gap-2 whitespace-nowrap rounded-md px-2 py-1.5 text-sm font-semibold",
                     active
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
@@ -115,7 +116,7 @@ export function AdminSidebar() {
                 >
                   <span
                     className={cn(
-                      "grid size-6 shrink-0 place-items-center rounded-md transition-colors",
+                      "grid size-6 shrink-0 place-items-center rounded-md",
                       active ? "bg-primary-foreground/10" : "bg-muted text-foreground group-hover:bg-background",
                     )}
                     aria-hidden="true"

@@ -7,9 +7,10 @@ import { insertNewDiscoveredImports, markImportFailed, markImportPendingReview, 
 import { scrapeGame } from "@/import/scrape/scrape-game";
 import { discoverGameUrls } from "@/import/sitemap/discover";
 import { requireAdmin } from "@/lib/auth";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 export async function crawlNewGamesAction(formData: FormData) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const sitemapUrl = String(formData.get("sitemap_url") ?? "https://www.miniplay.com/sitemap.xml");
   const discoverLimit = parsePositiveInt(String(formData.get("discover_limit") ?? "100"), 100);
   const rawScrapeLimit = String(formData.get("scrape_limit") ?? "");
@@ -45,6 +46,12 @@ export async function crawlNewGamesAction(formData: FormData) {
 
   revalidatePath("/admin");
   revalidatePath("/admin/crawler");
+  await recordAdminAudit({
+    actorProfileId: admin.id,
+    action: "crawler.run",
+    targetType: "crawler",
+    details: { sourceUrl: sitemapUrl, discovered: insertResult.discovered, pendingReview: pendingReviewCount, failed: failedCount },
+  }).catch((error) => console.error("[crawler] audit failed", error));
 
   const params = new URLSearchParams({
     discovered: String(insertResult.discovered),

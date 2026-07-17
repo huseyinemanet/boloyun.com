@@ -8,6 +8,7 @@ export function AdminCursorPagination({
   emptyLabel,
   previousCursor,
   nextCursor,
+  query,
 }: {
   basePath: string;
   itemCount: number;
@@ -15,6 +16,7 @@ export function AdminCursorPagination({
   emptyLabel?: string;
   previousCursor: KeysetCursor | null;
   nextCursor: KeysetCursor | null;
+  query?: Record<string, string | undefined>;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2 text-sm">
@@ -37,14 +39,14 @@ export function AdminCursorPagination({
         <PaginationContent>
           <PaginationItem>
             {previousCursor ? (
-              <PaginationPrevious href={cursorHref(basePath, previousCursor, "previous")} text="Önceki" />
+              <PaginationPrevious href={cursorHref(basePath, previousCursor, "previous", query)} text="Önceki" />
             ) : (
               <DisabledPageLink label="Önceki" side="previous" />
             )}
           </PaginationItem>
           <PaginationItem>
             {nextCursor ? (
-              <PaginationNext href={cursorHref(basePath, nextCursor, "next")} text="Sonraki" />
+              <PaginationNext href={cursorHref(basePath, nextCursor, "next", query)} text="Sonraki" />
             ) : (
               <DisabledPageLink label="Sonraki" side="next" />
             )}
@@ -55,8 +57,13 @@ export function AdminCursorPagination({
   );
 }
 
-function cursorHref(basePath: string, cursor: KeysetCursor, direction: "next" | "previous") {
-  const params = new URLSearchParams({ cursor: encodeKeysetCursor(cursor), direction });
+function cursorHref(basePath: string, cursor: KeysetCursor, direction: "next" | "previous", query?: Record<string, string | undefined>) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query ?? {})) {
+    if (value) params.set(key, value);
+  }
+  params.set("cursor", encodeKeysetCursor(cursor));
+  params.set("direction", direction);
   return `${basePath}?${params.toString()}`;
 }
 

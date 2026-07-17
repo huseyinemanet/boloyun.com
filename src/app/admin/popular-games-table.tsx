@@ -21,6 +21,7 @@ import { IconRankingStarFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconR
 import { IconStarFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconStarFillDuo18";
 import { IconThumbsUpFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsUpFillDuo18";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export type PopularGameTableRow = {
@@ -64,11 +65,9 @@ export function PopularGamesTable({ games }: { games: PopularGameTableRow[] }) {
   });
 
   return (
-    <section className="overflow-hidden rounded-md border border-border bg-card">
-      <div className="border-b border-border bg-muted/40 p-4">
-        <h2 className="font-bold">Popüler Oyunlar</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">Oynanma, favori, beğeni ve puanlama sinyallerine göre ilk 10 oyun.</p>
-      </div>
+    <Card size="sm">
+      <CardHeader><CardTitle>Popüler Oyunlar</CardTitle><CardDescription>Oynanma, favori, beğeni ve puanlama sinyallerine göre ilk 10 oyun.</CardDescription></CardHeader>
+      <CardContent className="px-0">
       <Table className="min-w-[760px] table-fixed">
         <TableHeader className="bg-muted/40">
           {table.getHeaderGroups().map((headerGroup) => (
@@ -93,7 +92,8 @@ export function PopularGamesTable({ games }: { games: PopularGameTableRow[] }) {
           ))}
         </TableBody>
       </Table>
-    </section>
+      </CardContent>
+    </Card>
   );
 }
 

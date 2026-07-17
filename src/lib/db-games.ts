@@ -561,14 +561,17 @@ export const getPublishedGamesByCategorySlugPage = cache(async function getPubli
   return getPublishedGamesByCategorySlugPageCached(slug, page, perPage);
 });
 
-export type AdminGameListItem = Pick<Game, "id" | "title" | "slug" | "shortDescription" | "thumbnailUrl" | "status" | "playCount"> & {
+export type AdminGameHealthFilter = "all" | "broken" | "cover";
+
+export type AdminGameListItem = Pick<Game, "id" | "title" | "slug" | "shortDescription" | "thumbnailUrl" | "status" | "playCount" | "isBroken" | "thumbnailSyncStatus"> & {
   updatedAt: string;
 };
 
-export async function getAdminGamesPage({ cursor, direction, perPage }: {
+export async function getAdminGamesPage({ cursor, direction, perPage, health = "all" }: {
   cursor: KeysetCursor | null;
   direction: KeysetDirection;
   perPage: number;
+  health?: AdminGameHealthFilter;
 }): Promise<{ items: AdminGameListItem[]; previousCursor: KeysetCursor | null; nextCursor: KeysetCursor | null }> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
@@ -583,11 +586,13 @@ export async function getAdminGamesPage({ cursor, direction, perPage }: {
   const ascending = direction === "previous";
   let query = supabase
     .from("games")
-    .select("id,title,slug,short_description,thumbnail_url,status,play_count,updated_at")
+    .select("id,title,slug,short_description,thumbnail_url,status,play_count,is_broken,thumbnail_sync_status,updated_at")
     .order("updated_at", { ascending })
     .order("id", { ascending })
     .limit(perPage + 1);
 
+  if (health === "broken") query = query.eq("is_broken", true);
+  if (health === "cover") query = query.in("thumbnail_sync_status", ["pending", "failed", "rolled_back"]);
   if (cursor) query = query.or(keysetFilter(cursor, direction));
   const { data, error } = await query;
 
@@ -606,6 +611,8 @@ export async function getAdminGamesPage({ cursor, direction, perPage }: {
     thumbnailUrl: normalizeGameThumbnail(row.thumbnail_url, "/images/game-placeholder.svg"),
     status: row.status as PublishStatus,
     playCount: row.play_count ?? 0,
+    isBroken: Boolean(row.is_broken),
+    thumbnailSyncStatus: row.thumbnail_sync_status ?? undefined,
     updatedAt: row.updated_at,
   }));
 
