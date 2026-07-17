@@ -61,8 +61,9 @@ export function AdminContentSkeleton() {
 
 function AdminSidebarSkeleton() {
   return (
-    <aside className="overflow-x-auto lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-visible">
-      <nav className="flex min-w-max gap-1 lg:grid lg:min-w-0 lg:gap-0.5" aria-hidden="true">
+    <aside className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)]">
+      <SkeletonBlock className="h-11 w-full lg:hidden" />
+      <nav className="hidden gap-0.5 lg:grid" aria-hidden="true">
         {Array.from({ length: 11 }, (_, index) => (
           <div key={index} className="flex items-center gap-2 rounded-md px-2 py-1.5">
             <SkeletonBlock className="size-6 shrink-0" />

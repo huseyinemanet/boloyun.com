@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LoaderCircleIcon } from "lucide-react";
 import { IconBrainSparkleFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBrainSparkleFillDuo18";
 import { IconChartAreaFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconChartAreaFillDuo18";
@@ -14,7 +14,7 @@ import { IconRadarFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconRadarFi
 import { IconSettingsWrenchFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconSettingsWrenchFillDuo18";
 import { IconTagsFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconTagsFillDuo18";
 import { IconUserGroupFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconUserGroupFillDuo18";
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type MouseEvent } from "react";
 import { useClickSound } from "@/components/audio/click-sound-provider";
 import { cn } from "@/lib/utils";
 
@@ -57,9 +57,11 @@ const PENDING_SPINNER_TIMEOUT_MS = 8000;
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { playClickSound } = useClickSound();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const visiblePendingHref = pendingHref && !isAdminLinkActive(pathname, pendingHref) ? pendingHref : null;
+  const activeHref = getActiveAdminHref(pathname);
 
   useEffect(() => {
     if (!visiblePendingHref) return;
@@ -88,9 +90,42 @@ export function AdminSidebar() {
     setPendingHref(href);
   }
 
+  function navigateFromMobileMenu(event: ChangeEvent<HTMLSelectElement>) {
+    const href = event.target.value;
+
+    if (isAdminLinkActive(pathname, href)) return;
+
+    playClickSound();
+    setPendingHref(href);
+    router.push(href);
+  }
+
   return (
-    <aside className="overflow-x-auto lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-visible">
-      <nav className="flex min-w-max gap-3 lg:grid lg:min-w-0 lg:gap-3" aria-label="Admin menüsü">
+    <aside className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)]">
+      <div className="lg:hidden">
+        <label htmlFor="mobile-admin-menu" className="sr-only">
+          Yönetim sayfası seç
+        </label>
+        <select
+          id="mobile-admin-menu"
+          value={activeHref}
+          onChange={navigateFromMobileMenu}
+          className="h-11 w-full rounded-md border border-input bg-background px-3 text-base font-semibold text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          aria-label="Yönetim sayfası seç"
+        >
+          {adminGroups.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.links.map(({ href, label }) => (
+                <option key={href} value={href}>
+                  {label}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </div>
+
+      <nav className="hidden gap-3 lg:grid" aria-label="Admin menüsü">
         {adminGroups.map((group) => (
           <div key={group.label} className="flex gap-0 lg:grid lg:gap-0">
             <p className="hidden px-2 pb-1 text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-muted-foreground/70 lg:block">
@@ -136,4 +171,14 @@ export function AdminSidebar() {
 
 function isAdminLinkActive(pathname: string, href: string) {
   return href === "/admin" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function getActiveAdminHref(pathname: string) {
+  for (const group of adminGroups) {
+    for (const link of group.links) {
+      if (isAdminLinkActive(pathname, link.href)) return link.href;
+    }
+  }
+
+  return "/admin";
 }
