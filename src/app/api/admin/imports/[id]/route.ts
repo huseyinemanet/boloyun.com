@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { parseImportIntent, runImportWorkflow, type ImportIntent } from "@/import/admin/import-workflow";
 import { getCurrentProfile } from "@/lib/auth";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { publicUrlFromRequest } from "@/lib/request-origin";
 import { hasTrustedMutationOrigin } from "@/lib/request-security";
 
 type Context = { params: Promise<{ id: string }> };
@@ -9,7 +10,7 @@ type Context = { params: Promise<{ id: string }> };
 export async function POST(request: Request, { params }: Context) {
   const { id } = await params;
   const profile = await getCurrentProfile();
-  if (profile?.role !== "admin" || profile.status !== "active") return NextResponse.redirect(new URL(`/giris?next=/admin/imports/${id}`, request.url), 303);
+  if (profile?.role !== "admin" || profile.status !== "active") return NextResponse.redirect(publicUrlFromRequest(request, `/giris?next=/admin/imports/${id}`), 303);
   if (!hasTrustedMutationOrigin(request)) return NextResponse.json({ error: "Geçersiz istek kaynağı." }, { status: 403 });
 
   let intent: ImportIntent = "save";
@@ -27,12 +28,12 @@ export async function POST(request: Request, { params }: Context) {
 
     if (intent === "approve" || intent === "reject" || intent === "needs_fix") {
       const status = intent === "approve" ? "approved" : intent === "reject" ? "rejected" : "needs_fix";
-      return NextResponse.redirect(new URL(`/admin/imports?status=${status}&notice=${workflow.notice}`, request.url), 303);
+      return NextResponse.redirect(publicUrlFromRequest(request, `/admin/imports?status=${status}&notice=${workflow.notice}`), 303);
     }
-    return NextResponse.redirect(new URL(`/admin/imports/${id}?notice=${workflow.notice}`, request.url), 303);
+    return NextResponse.redirect(publicUrlFromRequest(request, `/admin/imports/${id}?notice=${workflow.notice}`), 303);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Import işlemi tamamlanamadı.";
-    const url = new URL(`/admin/imports/${id}`, request.url);
+    const url = publicUrlFromRequest(request, `/admin/imports/${id}`);
     url.searchParams.set("error", message.slice(0, 240));
     url.searchParams.set("intent", intent);
     return NextResponse.redirect(url, 303);
