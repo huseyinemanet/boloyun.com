@@ -38,7 +38,7 @@ export default async function AdminTagsPage({ searchParams }: Props) {
 
         <div className="space-y-3">
           <TagsSearchForm query={query} />
-          <AdminPagination currentPage={page} perPage={PER_PAGE} total={total} basePath="/admin/tags" itemName="etiket" queryParams={query ? { q: query } : undefined} />
+          <AdminPagination currentPage={page} perPage={PER_PAGE} total={total} basePath="/admin/tags" itemName="etiket" queryParams={query ? { q: query } : undefined} variant="plain" />
           <section className="overflow-hidden rounded-md border border-border bg-card">
             <Table>
               <TableHeader>
