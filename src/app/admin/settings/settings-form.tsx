@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
-import { ArrowDownIcon, ArrowUpIcon, Trash2Icon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, DownloadIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 import { IconAddSectionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconAddSectionFillDuo18";
 import { IconCloudUploadFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCloudUploadFillDuo18";
@@ -161,6 +161,13 @@ function GeneralFields({ draft, update }: FieldsProps) {
         <AssetField label="Logo" value={str(draft.logoUrl)} kind="logo" onChange={(value) => update("logoUrl", value)} />
         <AssetField label="Favicon" value={str(draft.faviconUrl)} kind="favicon" onChange={(value) => update("faviconUrl", value)} />
       </div>
+    </Card>
+    <Card title="Oyun verilerini dışa aktar" className="xl:col-span-2">
+      <p className="text-sm leading-6 text-muted-foreground">Tüm oyunları; Türkçe açıklamalar, nasıl oynanır metni, satır satır kontroller ve özellikler, oynatıcı URL’leri, kategori, etiket, SEO ve teknik alanlarla birlikte CSV olarak indirir.</p>
+      <p className="text-xs leading-5 text-muted-foreground">Büyük oyun arşivi sunucuda parçalar halinde hazırlanır. İndirme tamamlanana kadar bu sekmeyi kapatmayın.</p>
+      <Button asChild variant="outline" className="w-fit">
+        <a href="/api/admin/games/export" download data-click-sound="true"><DownloadIcon className="size-4" />Tüm Oyunları CSV İndir</a>
+      </Button>
     </Card>
   </div>;
 }

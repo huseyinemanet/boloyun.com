@@ -9,6 +9,7 @@ export function activityLabel(action: string) {
     "import.approve": "Import yayınlandı",
     "crawler.run": "Oyun taraması tamamlandı",
     "game.update": "Oyun güncellendi",
+    "game.export": "Oyunlar dışa aktarıldı",
     "comment.status": "Yorum durumu değiştirildi",
     "comment.bulk_status": "Yorumlar toplu güncellendi",
     "settings.save": "Ayarlar kaydedildi",
