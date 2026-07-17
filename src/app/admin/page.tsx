@@ -1,5 +1,9 @@
 import Link from "next/link";
+import { IconCloudFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCloudFillDuo18";
+import { IconDatabaseFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconDatabaseFillDuo18";
+import { IconEnvelopeFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconEnvelopeFillDuo18";
 import { IconGamepadFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGamepadFillDuo18";
+import { IconGlobe2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGlobe2FillDuo18";
 import { IconGridCircleListFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGridCircleListFillDuo18";
 import { IconMediaPlayFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMediaPlayFillDuo18";
 import { IconMsgs2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMsgs2FillDuo18";
@@ -135,13 +139,13 @@ export default async function AdminPage() {
         <Card size="sm">
           <CardHeader className="gap-0.5"><CardTitle>Sistem Durumu</CardTitle><CardDescription>Temel servis bağlantıları.</CardDescription><CardAction><Badge variant="outline">{overview.system.version}</Badge></CardAction></CardHeader>
           <CardContent className="grid gap-0">
-            <SystemRow label="Veritabanı" status={overview.system.database} />
+            <SystemRow label="Veritabanı" status={overview.system.database} icon={IconDatabaseFillDuo18} />
             <Separator />
-            <SystemRow label="Cloudflare R2" status={overview.system.r2} />
+            <SystemRow label="Cloudflare R2" status={overview.system.r2} icon={IconCloudFillDuo18} />
             <Separator />
-            <SystemRow label="CDN" status={overview.system.cdn} />
+            <SystemRow label="CDN" status={overview.system.cdn} icon={IconGlobe2FillDuo18} />
             <Separator />
-            <SystemRow label="E-posta servisi (Brevo)" status={overview.system.email} />
+            <SystemRow label="E-posta servisi (Brevo)" status={overview.system.email} icon={IconEnvelopeFillDuo18} />
           </CardContent>
         </Card>
       </div>
@@ -158,9 +162,14 @@ function MetricCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-function SystemRow({ label, status }: { label: string; status: string }) {
+function SystemRow({ label, status, icon: Icon }: { label: string; status: string; icon: typeof IconDatabaseFillDuo18 }) {
   const connected = status === "Bağlı" || status === "Yapılandırıldı";
-  return <div className="flex items-center justify-between gap-3 py-2"><span>{label}</span><Badge variant={connected ? "default" : "outline"}>{status}</Badge></div>;
+  return (
+    <div className="flex items-center justify-between gap-3 py-2">
+      <span className="flex items-center gap-2"><Icon className="size-4 shrink-0 text-primary" aria-hidden="true" />{label}</span>
+      <Badge variant={connected ? "default" : "outline"}>{status}</Badge>
+    </div>
+  );
 }
 
 function actorInitials(name: string) {
