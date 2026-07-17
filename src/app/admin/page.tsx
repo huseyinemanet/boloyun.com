@@ -3,12 +3,13 @@ import { IconGamepadFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGamep
 import { IconGridCircleListFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGridCircleListFillDuo18";
 import { IconMediaPlayFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMediaPlayFillDuo18";
 import { IconMsgs2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMsgs2FillDuo18";
+import { IconCircleCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCircleCheckFillDuo18";
 import { IconUsersFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconUsersFillDuo18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Separator } from "@/components/ui/separator";
 import { getAdminOverviewData } from "@/lib/db-admin-overview";
 import { formatFullDateTime, formatRelativeDateTime } from "@/lib/date-time";
@@ -73,8 +74,11 @@ export default async function AdminPage() {
               ))}
             </div>
           ) : (
-            <Empty>
-              <EmptyHeader><EmptyTitle>Dikkat gerektiren iş yok</EmptyTitle><EmptyDescription>Aktif operasyon kayıtları temiz görünüyor.</EmptyDescription></EmptyHeader>
+            <Empty className="flex-none gap-1.5 px-3 py-1">
+              <EmptyMedia className="mb-0 text-primary">
+                <IconCircleCheckFillDuo18 className="size-6" aria-hidden="true" />
+              </EmptyMedia>
+              <EmptyHeader className="gap-0.5"><EmptyTitle>Dikkat gerektiren iş yok</EmptyTitle><EmptyDescription>Aktif operasyon kayıtları temiz görünüyor.</EmptyDescription></EmptyHeader>
             </Empty>
           )}
         </CardContent>
