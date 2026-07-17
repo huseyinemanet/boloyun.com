@@ -6,9 +6,9 @@ import { LoaderCircleIcon } from "lucide-react";
 import { IconBrainSparkleFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBrainSparkleFillDuo18";
 import { IconChartAreaFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconChartAreaFillDuo18";
 import { IconChatBubbleWritingFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconChatBubbleWritingFillDuo18";
-import { IconFileTreeFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconFileTreeFillDuo18";
 import { IconGamepadButtonsFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGamepadButtonsFillDuo18";
 import { IconGridListFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGridListFillDuo18";
+import { IconPageFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconPageFillDuo18";
 import { IconPromotionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconPromotionFillDuo18";
 import { IconRadarFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconRadarFillDuo18";
 import { IconSettingsWrenchFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconSettingsWrenchFillDuo18";
@@ -33,7 +33,7 @@ const adminGroups = [
       { href: "/admin/imports", label: "İnceleme Kuyruğu", icon: IconGridListFillDuo18 },
       { href: "/admin/categories", label: "Kategoriler", icon: IconGridListFillDuo18 },
       { href: "/admin/tags", label: "Etiketler", icon: IconTagsFillDuo18 },
-      { href: "/admin/static-pages", label: "Sayfalar", icon: IconFileTreeFillDuo18 },
+      { href: "/admin/static-pages", label: "Sayfalar", icon: IconPageFillDuo18 },
     ],
   },
   {
