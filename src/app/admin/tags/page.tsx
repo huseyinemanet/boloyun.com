@@ -33,7 +33,7 @@ export default async function AdminTagsPage({ searchParams }: Props) {
   return (
     <div className="space-y-4">
       <AdminPageHeader title="Etiketler" description="Etiketleri düzenle; yalnız kaliteli ve yeterli oyunu olan sayfaları indekslemeye aç." />
-      <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
+      <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
         <TagForm tag={editingTag} />
 
         <div className="space-y-3">
