@@ -30,6 +30,8 @@ type ActivityTableRow = AiTranslationActivity & {
 };
 
 const LOG_LIMIT = 20;
+const ACTIVE_REFRESH_MS = 5_000;
+const IDLE_REFRESH_MS = 60_000;
 
 const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
   dateStyle: "short",
@@ -50,6 +52,7 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [processLoopActive, setProcessLoopActive] = useState(false);
+  const [isPageVisible, setIsPageVisible] = useState(true);
   const previousStatuses = useRef(new Map(initialActivity.map((item) => [item.id, item.status])));
   const consecutiveErrors = useRef(0);
   const lastErrorToast = useRef("");
@@ -64,6 +67,16 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 15000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    function updateVisibility() {
+      setIsPageVisible(document.visibilityState === "visible");
+    }
+
+    updateVisibility();
+    document.addEventListener("visibilitychange", updateVisibility);
+    return () => document.removeEventListener("visibilitychange", updateVisibility);
   }, []);
 
   useEffect(() => {
@@ -107,6 +120,8 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
   }, []);
 
   useEffect(() => {
+    if (!isPageVisible) return;
+
     let disposed = false;
     let timeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -160,7 +175,11 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
         if (!disposed) {
           setIsRefreshing(false);
           const errorDelay = Math.min(20000, 5000 * Math.max(1, consecutiveErrors.current));
-          const nextDelay = consecutiveErrors.current ? errorDelay : hasRunningWork ? 1500 : 5000;
+          const nextDelay = consecutiveErrors.current
+            ? errorDelay
+            : hasRunningWork
+              ? ACTIVE_REFRESH_MS
+              : IDLE_REFRESH_MS;
           timeout = setTimeout(refresh, nextDelay);
         }
       }
@@ -171,7 +190,7 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
       disposed = true;
       if (timeout) clearTimeout(timeout);
     };
-  }, [hasRunningWork]);
+  }, [hasRunningWork, isPageVisible]);
 
   return (
     <section className="rounded-md border border-border bg-card p-4">

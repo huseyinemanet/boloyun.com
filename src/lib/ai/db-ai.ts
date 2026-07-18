@@ -100,6 +100,22 @@ type AutomationRow = {
   updated_at: string | null;
 };
 
+type TranslationStatsRow = {
+  total_published?: number | string | null;
+  completed?: number | string | null;
+  failed?: number | string | null;
+  skipped?: number | string | null;
+  processing?: number | string | null;
+};
+
+type TranslationJobCountsRow = {
+  completed?: number | string | null;
+  failed?: number | string | null;
+  skipped?: number | string | null;
+  pending?: number | string | null;
+  processing?: number | string | null;
+};
+
 const PROCESS_ITEMS_PER_CLICK = 20;
 const MAX_ITEMS_PER_PROCESS = 25;
 const MAX_TRANSLATION_ATTEMPTS = 3;
@@ -120,10 +136,8 @@ export async function getAiDashboardData() {
   ]);
   const activeJob = jobs.find((job) => job.status === "running") ?? jobs.find((job) => job.status === "queued") ?? jobs[0];
   const activityLimit = Math.min(Math.max(activeJob?.totalCount ?? DEFAULT_ACTIVITY_LIMIT, DEFAULT_ACTIVITY_LIMIT), MAX_ACTIVITY_LIMIT);
-  const [activity, activityTotal] = await Promise.all([
-    listRecentTranslationActivity(activityLimit, activeJob?.id),
-    countTranslationActivity(activeJob?.id),
-  ]);
+  const activity = await listRecentTranslationActivity(activityLimit, activeJob?.id);
+  const activityTotal = activeJob?.totalCount ?? 0;
   return { configs, stats, jobs, activity, activityTotal, automation };
 }
 
@@ -311,6 +325,7 @@ export async function resumeTranslationJob(jobId: string) {
 
 export async function getTranslationAutomation(): Promise<AiTranslationAutomation> {
   const row = await getAutomationRow();
+  if (!row.enabled) return mapAutomation(row, 0);
   const todayCompleted = await countCompletedItemsSince(istanbulDayStartIso());
   return mapAutomation(row, todayCompleted);
 }
@@ -423,14 +438,16 @@ export async function runTranslationAutomationTick(source = "cron", options: { l
 
 export async function getTranslationStats(): Promise<AiTranslationStats> {
   const supabase = requiredServiceClient();
-  const [published, completed, failed, skipped, processing] = await Promise.all([
-    countRows("games", { column: "status", value: "published" }),
-    countRows("game_translation_state", { column: "status", value: "completed" }),
-    countRows("game_translation_state", { column: "status", value: "failed" }),
-    countRows("game_translation_state", { column: "status", value: "skipped" }),
-    countRows("game_translation_state", { column: "status", value: "processing" }),
-  ]);
-  void supabase;
+  const { data, error } = await supabase.rpc("get_ai_translation_stats");
+  if (error || !data || typeof data !== "object") {
+    throw new Error(`AI istatistikleri okunamadı: ${error?.message ?? "geçersiz yanıt"}`);
+  }
+  const row = data as TranslationStatsRow;
+  const published = Number(row.total_published ?? 0);
+  const completed = Number(row.completed ?? 0);
+  const failed = Number(row.failed ?? 0);
+  const skipped = Number(row.skipped ?? 0);
+  const processing = Number(row.processing ?? 0);
   return {
     totalPublished: published,
     completed,
@@ -615,14 +632,19 @@ async function getJob(jobId: string) {
 
 async function refreshJobCounts(jobId: string) {
   const supabase = requiredServiceClient();
-  const [job, completed, failed, skipped, pending, processing] = await Promise.all([
+  const [job, countsResult] = await Promise.all([
     getJob(jobId),
-    countRows("ai_translation_job_items", { column: "job_id", value: jobId }, { column: "status", value: "completed" }),
-    countRows("ai_translation_job_items", { column: "job_id", value: jobId }, { column: "status", value: "failed" }),
-    countRows("ai_translation_job_items", { column: "job_id", value: jobId }, { column: "status", value: "skipped" }),
-    countRows("ai_translation_job_items", { column: "job_id", value: jobId }, { column: "status", value: "pending" }),
-    countRows("ai_translation_job_items", { column: "job_id", value: jobId }, { column: "status", value: "processing" }),
+    supabase.rpc("get_ai_translation_job_counts", { p_job_id: jobId }),
   ]);
+  if (countsResult.error || !countsResult.data || typeof countsResult.data !== "object") {
+    throw new Error(`Çeviri işi sayaçları okunamadı: ${countsResult.error?.message ?? "geçersiz yanıt"}`);
+  }
+  const counts = countsResult.data as TranslationJobCountsRow;
+  const completed = Number(counts.completed ?? 0);
+  const failed = Number(counts.failed ?? 0);
+  const skipped = Number(counts.skipped ?? 0);
+  const pending = Number(counts.pending ?? 0);
+  const processing = Number(counts.processing ?? 0);
   const terminalFailures = failed + skipped;
   const status = job.status === "paused" || job.status === "cancelled"
     ? job.status
@@ -698,15 +720,6 @@ async function upsertPendingStates(candidates: CandidateRow[]) {
     updated_at: new Date().toISOString(),
   })));
   if (error) throw new Error(`Çeviri durumları hazırlanamadı: ${error.message}`);
-}
-
-async function countRows(table: "games" | "game_translation_state" | "ai_translation_job_items", ...filters: Array<{ column: string; value: string }>) {
-  const supabase = requiredServiceClient();
-  let query = supabase.from(table).select("*", { count: "exact", head: true });
-  for (const filter of filters) query = query.eq(filter.column, filter.value);
-  const { count, error } = await query;
-  if (error) throw new Error(`Sayaç okunamadı: ${error.message}`);
-  return count ?? 0;
 }
 
 async function ensureAutomationRow() {

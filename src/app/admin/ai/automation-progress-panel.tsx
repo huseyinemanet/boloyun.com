@@ -61,37 +61,6 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
     return () => clearTimeout(timeout);
   }, [stats.completed]);
 
-  useEffect(() => {
-    if (!isWorkerActive) return;
-
-    let disposed = false;
-    let timeout: ReturnType<typeof setTimeout> | null = null;
-
-    async function refreshStats() {
-      const controller = new AbortController();
-      const abortTimeout = setTimeout(() => controller.abort(), 6000);
-      try {
-        const response = await fetch("/api/admin/ai/activity?limit=20", { cache: "no-store", signal: controller.signal });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const snapshot = await response.json() as DashboardSnapshot;
-        if (disposed) return;
-        if (snapshot.stats) setStats(snapshot.stats);
-        if (snapshot.automation) setAutomation(snapshot.automation);
-      } catch {
-        // Canlı sayaç yardımcıdır; geçici okuma hatası arka plan işçisini durdurmaz.
-      } finally {
-        clearTimeout(abortTimeout);
-        if (!disposed) timeout = setTimeout(refreshStats, 1500);
-      }
-    }
-
-    timeout = setTimeout(refreshStats, 500);
-    return () => {
-      disposed = true;
-      if (timeout) clearTimeout(timeout);
-    };
-  }, [isWorkerActive]);
-
   async function updateAutomationEnabled(enabled: boolean) {
     setControlPending(true);
     setControlError(null);

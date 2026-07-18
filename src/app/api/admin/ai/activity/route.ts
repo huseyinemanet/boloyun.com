@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth";
 import {
-  countTranslationActivity,
   getTranslationAutomation,
   getTranslationStats,
   listRecentJobs,
@@ -25,12 +24,12 @@ export async function GET(request: Request) {
       : DEFAULT_ACTIVITY_LIMIT;
     const jobs = await listRecentJobs();
     const activeJob = jobs.find((job) => job.status === "running") ?? jobs.find((job) => job.status === "queued") ?? jobs[0];
-    const [activity, activityTotal, stats, automation] = await Promise.all([
+    const [activity, stats, automation] = await Promise.all([
       listRecentTranslationActivity(activityLimit, activeJob?.id),
-      countTranslationActivity(activeJob?.id),
       getTranslationStats(),
       getTranslationAutomation(),
     ]);
+    const activityTotal = activeJob?.totalCount ?? 0;
 
     return NextResponse.json(
       { stats, jobs, activity, activityTotal, activityLimit, automation, serverTime: new Date().toISOString() },
