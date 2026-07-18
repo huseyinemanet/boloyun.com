@@ -1,16 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  LinkIcon,
-  PlusIcon,
-  Trash2Icon,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useCallback, useRef, useState } from "react";
+import { LinkIcon } from "lucide-react";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import {
   parseStaticPageEditorContent,
   serializeStaticPageEditorContent,
@@ -27,76 +19,48 @@ type StaticPageContentEditorProps = {
   error?: string;
 };
 
-type ActiveRichTextEditor = {
-  element: HTMLDivElement;
-  commit: () => void;
-};
-
-const EMPTY_SECTION: StaticPageEditorSection = { heading: "", paragraphs: [""] };
-
 export function StaticPageContentEditor({ initialValue, error }: StaticPageContentEditorProps) {
-  const activeEditorRef = useRef<ActiveRichTextEditor | null>(null);
-  const [sections, setSections] = useState<StaticPageEditorSection[]>(() => {
-    const parsed = parseStaticPageEditorContent(initialValue);
-    return parsed.length ? parsed : [{ ...EMPTY_SECTION, paragraphs: [...EMPTY_SECTION.paragraphs] }];
-  });
-  const serializedContent = serializeStaticPageEditorContent(sections);
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const initializedRef = useRef(false);
+  const initialValueRef = useRef(initialValue);
+  const [serializedContent, setSerializedContent] = useState(initialValue);
   const errorId = "content-error";
   const descriptionId = "content-description";
 
-  function updateSection(index: number, update: (section: StaticPageEditorSection) => StaticPageEditorSection) {
-    setSections((current) => current.map((section, sectionIndex) => (
-      sectionIndex === index ? update(section) : section
-    )));
-  }
+  const setEditorRef = useCallback((node: HTMLDivElement | null) => {
+    editorRef.current = node;
+    if (!node || initializedRef.current) return;
+    node.innerHTML = editorContentToHtml(initialValueRef.current);
+    initializedRef.current = true;
+  }, []);
 
-  function addSection() {
-    setSections((current) => [...current, { heading: "", paragraphs: [""] }]);
-  }
-
-  function removeSection(index: number) {
-    setSections((current) => current.length === 1
-      ? [{ heading: "", paragraphs: [""] }]
-      : current.filter((_, sectionIndex) => sectionIndex !== index));
-  }
-
-  function moveSection(index: number, direction: -1 | 1) {
-    setSections((current) => {
-      const targetIndex = index + direction;
-      if (targetIndex < 0 || targetIndex >= current.length) return current;
-      const next = [...current];
-      [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
-      return next;
-    });
-  }
-
-  function getActiveEditor() {
-    const activeEditor = activeEditorRef.current;
-    if (!activeEditor || !document.contains(activeEditor.element)) {
-      window.alert("Önce bir paragrafta metin seçin.");
-      return null;
-    }
-    return activeEditor;
+  function commitValue() {
+    const editor = editorRef.current;
+    if (!editor) return;
+    setSerializedContent(serializeEditorContent(editor));
   }
 
   function runCommand(command: "bold" | "italic" | "underline") {
-    const activeEditor = getActiveEditor();
-    if (!activeEditor) return;
-    activeEditor.element.focus();
+    const editor = editorRef.current;
+    if (!editor || !selectionIsInside(editor)) {
+      window.alert("Önce biçimlendirilecek metni seçin.");
+      return;
+    }
+    editor.focus();
     document.execCommand("styleWithCSS", false, "false");
     document.execCommand(command, false);
-    activeEditor.commit();
+    commitValue();
   }
 
   function addLink() {
-    const activeEditor = getActiveEditor();
-    if (!activeEditor) return;
+    const editor = editorRef.current;
     const selection = window.getSelection();
     const selectedRange = selection?.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
-    if (!selectedRange || selectedRange.collapsed || !activeEditor.element.contains(selectedRange.commonAncestorContainer)) {
+    if (!editor || !selectedRange || selectedRange.collapsed || !editor.contains(selectedRange.commonAncestorContainer)) {
       window.alert("Önce bağlantı verilecek metni seçin.");
       return;
     }
+
     const url = window.prompt("Bağlantı adresi (https://…)");
     if (url === null) return;
     const normalizedUrl = normalizeStaticPageLinkUrl(url);
@@ -104,221 +68,65 @@ export function StaticPageContentEditor({ initialValue, error }: StaticPageConte
       window.alert("Geçerli bir http veya https bağlantısı girin.");
       return;
     }
+
     selection?.removeAllRanges();
     selection?.addRange(selectedRange);
     document.execCommand("createLink", false, normalizedUrl);
-    activeEditor.commit();
+    commitValue();
   }
 
   return (
     <Field data-invalid={error ? true : undefined}>
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <FieldLabel htmlFor="content-heading-0">
-            İçerik <span className="ml-1 text-destructive" aria-hidden="true">*</span>
-          </FieldLabel>
-          <FieldDescription id={descriptionId} className="mt-1">
-            Sayfada görüneceği düzende bölüm ve paragrafları düzenleyin.
-          </FieldDescription>
-        </div>
-        <Button type="button" variant="outline" size="sm" onClick={addSection}>
-          <PlusIcon /> Bölüm ekle
-        </Button>
+      <div>
+        <FieldLabel htmlFor="static-page-content">
+          İçerik <span className="ml-1 text-destructive" aria-hidden="true">*</span>
+        </FieldLabel>
+        <FieldDescription id={descriptionId} className="mt-1">
+          Sayfanın tüm içeriğini tek alanda düzenleyin.
+        </FieldDescription>
       </div>
 
       <input type="hidden" name="content" value={serializedContent} />
 
       <div
-        className="overflow-hidden rounded-md border border-border bg-muted/10"
+        className="overflow-hidden rounded-md border border-border bg-background focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/40"
         aria-describedby={error ? errorId : descriptionId}
       >
-        <div role="toolbar" aria-label="Metin biçimlendirme araçları" className="flex flex-wrap items-center gap-1 border-b border-border bg-muted/50 px-3 py-2">
-          <span className="mr-1 text-xs font-semibold text-muted-foreground">Metin biçimi</span>
+        <div
+          role="toolbar"
+          aria-label="Metin biçimlendirme araçları"
+          className="flex min-h-11 flex-wrap items-center gap-1 border-b border-border bg-muted/50 px-3 py-2"
+        >
           <FormatButton label="Kalın" onMouseDown={() => runCommand("bold")}><strong>B</strong></FormatButton>
           <FormatButton label="İtalik" onMouseDown={() => runCommand("italic")}><em>I</em></FormatButton>
           <FormatButton label="Altı çizili" onMouseDown={() => runCommand("underline")}><u>U</u></FormatButton>
+          <span className="mx-1 h-5 w-px bg-border" aria-hidden="true" />
           <FormatButton label="Bağlantı ver" onMouseDown={addLink}><LinkIcon /></FormatButton>
-          <span className="ml-1 text-xs text-muted-foreground">Önce paragraftaki metni seçin.</span>
         </div>
 
-        <div className="space-y-3 p-3 md:p-4">
-          {sections.map((section, sectionIndex) => (
-            <section
-              key={sectionIndex}
-              className="rounded-md border border-border bg-card p-4"
-              aria-labelledby={`content-heading-${sectionIndex}`}
-            >
-              <div className="flex items-start gap-2 border-b border-border pb-3">
-              <Input
-                id={`content-heading-${sectionIndex}`}
-                value={section.heading}
-                onChange={(event) => updateSection(sectionIndex, (current) => ({
-                  ...current,
-                  heading: event.target.value,
-                }))}
-                placeholder="Bölüm başlığı"
-                aria-label={`${sectionIndex + 1}. bölüm başlığı`}
-                className="h-auto flex-1 rounded-none border-0 bg-transparent px-0 py-1 text-lg font-semibold shadow-none focus-visible:ring-0 dark:bg-transparent"
-              />
-              <div className="flex shrink-0 items-center gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  disabled={sectionIndex === 0}
-                  onClick={() => moveSection(sectionIndex, -1)}
-                  aria-label={`${sectionIndex + 1}. bölümü yukarı taşı`}
-                  title="Yukarı taşı"
-                >
-                  <ArrowUpIcon />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  disabled={sectionIndex === sections.length - 1}
-                  onClick={() => moveSection(sectionIndex, 1)}
-                  aria-label={`${sectionIndex + 1}. bölümü aşağı taşı`}
-                  title="Aşağı taşı"
-                >
-                  <ArrowDownIcon />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => removeSection(sectionIndex)}
-                  aria-label={`${sectionIndex + 1}. bölümü sil`}
-                  title="Bölümü sil"
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2Icon />
-                </Button>
-              </div>
-              </div>
-
-              <div className="mt-3 divide-y divide-border overflow-hidden rounded-md border border-border bg-background">
-                {section.paragraphs.map((paragraph, paragraphIndex) => (
-                  <div key={paragraphIndex} className="group/paragraph flex items-stretch">
-                  <RichTextParagraph
-                    value={paragraph}
-                    onChange={(nextValue) => updateSection(sectionIndex, (current) => ({
-                      ...current,
-                      paragraphs: current.paragraphs.map((item, itemIndex) => (
-                        itemIndex === paragraphIndex ? nextValue : item
-                      )),
-                    }))}
-                    label={`${sectionIndex + 1}. bölüm, ${paragraphIndex + 1}. paragraf`}
-                    onActivate={(element, commit) => {
-                      activeEditorRef.current = { element, commit };
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => updateSection(sectionIndex, (current) => ({
-                      ...current,
-                      paragraphs: current.paragraphs.length === 1
-                        ? [""]
-                        : current.paragraphs.filter((_, itemIndex) => itemIndex !== paragraphIndex),
-                    }))}
-                    aria-label={`${paragraphIndex + 1}. paragrafı sil`}
-                    title="Paragrafı sil"
-                    className="m-2 shrink-0 self-start text-muted-foreground opacity-100 hover:text-destructive md:opacity-0 md:group-hover/paragraph:opacity-100 md:focus-visible:opacity-100"
-                  >
-                    <Trash2Icon />
-                  </Button>
-                  </div>
-                ))}
-              </div>
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="mt-2 text-muted-foreground"
-                onClick={() => updateSection(sectionIndex, (current) => ({
-                  ...current,
-                  paragraphs: [...current.paragraphs, ""],
-                }))}
-              >
-                <PlusIcon /> Paragraf ekle
-              </Button>
-            </section>
-          ))}
-        </div>
+        <div
+          id="static-page-content"
+          ref={setEditorRef}
+          contentEditable
+          suppressContentEditableWarning
+          role="textbox"
+          aria-label="Sayfa içeriği"
+          aria-multiline="true"
+          data-placeholder="Sayfa içeriğini buraya yazın…"
+          onInput={commitValue}
+          onBlur={commitValue}
+          onPaste={(event) => {
+            event.preventDefault();
+            document.execCommand("insertText", false, event.clipboardData.getData("text/plain"));
+          }}
+          className="min-h-[420px] px-5 py-4 text-sm leading-7 outline-none empty:before:pointer-events-none empty:before:text-muted-foreground empty:before:content-[attr(data-placeholder)] [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 [&_h2]:mb-2 [&_h2]:mt-7 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:leading-7 [&_h2:first-child]:mt-0 [&_p]:mb-4"
+        />
       </div>
 
       {error ? (
         <FieldDescription id={errorId} className="font-medium text-destructive">{error}</FieldDescription>
       ) : null}
     </Field>
-  );
-}
-
-function RichTextParagraph({
-  value,
-  label,
-  onChange,
-  onActivate,
-}: {
-  value: string;
-  label: string;
-  onChange: (value: string) => void;
-  onActivate: (element: HTMLDivElement, commit: () => void) => void;
-}) {
-  const editorRef = useRef<HTMLDivElement | null>(null);
-  const initializedRef = useRef(false);
-  const currentValueRef = useRef(value);
-  const initialValueRef = useRef(value);
-
-  const setEditorRef = useCallback((node: HTMLDivElement | null) => {
-    editorRef.current = node;
-    if (node && !initializedRef.current) {
-      node.innerHTML = staticPageInlineMarkupToHtml(initialValueRef.current);
-      initializedRef.current = true;
-    }
-  }, []);
-
-  useEffect(() => {
-    const editor = editorRef.current;
-    if (!editor || value === currentValueRef.current) return;
-    currentValueRef.current = value;
-    editor.innerHTML = staticPageInlineMarkupToHtml(value);
-  }, [value]);
-
-  function commitValue() {
-    const editor = editorRef.current;
-    if (!editor) return;
-    const nextValue = serializeRichText(editor).trim();
-    currentValueRef.current = nextValue;
-    onChange(nextValue);
-  }
-
-  return (
-    <div
-      ref={setEditorRef}
-      contentEditable
-      suppressContentEditableWarning
-      role="textbox"
-      aria-label={label}
-      aria-multiline="false"
-      data-placeholder="Paragraf metni"
-      onFocus={() => {
-        const editor = editorRef.current;
-        if (editor) onActivate(editor, commitValue);
-      }}
-      onBlur={commitValue}
-      onKeyDown={(event) => {
-        if (event.key === "Enter") event.preventDefault();
-      }}
-      onPaste={(event) => {
-        event.preventDefault();
-        document.execCommand("insertText", false, event.clipboardData.getData("text/plain"));
-      }}
-      className="min-h-14 min-w-0 flex-1 px-3 py-2 text-sm leading-7 outline-none empty:before:pointer-events-none empty:before:text-muted-foreground empty:before:content-[attr(data-placeholder)] focus:bg-primary/5 [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2"
-    />
   );
 }
 
@@ -339,15 +147,57 @@ function FormatButton({ label, onMouseDown, children }: { label: string; onMouse
   );
 }
 
-function serializeRichText(root: HTMLElement) {
-  return Array.from(root.childNodes).map(serializeRichNode).join("");
+function selectionIsInside(editor: HTMLElement) {
+  const selection = window.getSelection();
+  return Boolean(selection?.rangeCount && editor.contains(selection.getRangeAt(0).commonAncestorContainer));
 }
 
-function serializeRichNode(node: Node): string {
+function editorContentToHtml(value: string) {
+  return parseStaticPageEditorContent(value).map((section) => {
+    const heading = `<h2>${escapeHtml(section.heading)}</h2>`;
+    const paragraphs = section.paragraphs
+      .map((paragraph) => `<p>${staticPageInlineMarkupToHtml(paragraph)}</p>`)
+      .join("");
+    return heading + paragraphs;
+  }).join("");
+}
+
+function serializeEditorContent(editor: HTMLElement) {
+  const sections: StaticPageEditorSection[] = [];
+  let currentSection: StaticPageEditorSection | null = null;
+
+  for (const node of editor.childNodes) {
+    if (node instanceof HTMLHeadingElement) {
+      const heading = node.textContent?.trim() ?? "";
+      if (!heading) continue;
+      currentSection = { heading, paragraphs: [] };
+      sections.push(currentSection);
+      continue;
+    }
+
+    const paragraph = serializeBlock(node).trim();
+    if (!paragraph) continue;
+    if (!currentSection) {
+      currentSection = { heading: "İçerik", paragraphs: [] };
+      sections.push(currentSection);
+    }
+    currentSection.paragraphs.push(paragraph);
+  }
+
+  return serializeStaticPageEditorContent(sections);
+}
+
+function serializeBlock(node: Node) {
+  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
+  if (!(node instanceof HTMLElement)) return "";
+  return Array.from(node.childNodes).map(serializeInlineNode).join("");
+}
+
+function serializeInlineNode(node: Node): string {
   if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
   if (!(node instanceof HTMLElement)) return "";
 
-  const content = Array.from(node.childNodes).map(serializeRichNode).join("");
+  const content = Array.from(node.childNodes).map(serializeInlineNode).join("");
   switch (node.tagName) {
     case "B":
     case "STRONG":
@@ -366,4 +216,13 @@ function serializeRichNode(node: Node): string {
     default:
       return content;
   }
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
