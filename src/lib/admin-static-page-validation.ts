@@ -1,3 +1,5 @@
+import { parseStaticPageEditorContent } from "@/lib/static-page-editor-content";
+
 export type AdminStaticPageValues = {
   id: string;
   title: string;
@@ -68,10 +70,9 @@ export function adminStaticPageValuesToFormData(values: AdminStaticPageValues) {
 }
 
 function hasValidEditorBlock(value: string) {
-  return value.split(/\n\s*---\s*\n/).some((block) => {
-    const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
-    return lines.length >= 2;
-  });
+  return parseStaticPageEditorContent(value).some((section) => (
+    Boolean(section.heading) && section.paragraphs.some(Boolean)
+  ));
 }
 
 function isValidUrl(value: string) {

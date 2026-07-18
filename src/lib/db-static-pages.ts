@@ -1,5 +1,6 @@
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 import { unstable_cache } from "next/cache";
+import { parseStaticPageEditorContent } from "@/lib/static-page-editor-content";
 
 export type StaticPageSection = {
   heading: string;
@@ -60,7 +61,7 @@ export async function saveAdminStaticPage(formData: FormData) {
   const slug = String(formData.get("slug") ?? "").trim();
   if (!title) throw new Error("Sayfa başlığı gerekli.");
   if (!slug) throw new Error("Sayfa slug alanı gerekli.");
-  const sections = parseEditorContent(String(formData.get("content") ?? ""));
+  const sections = parseStaticPageEditorContent(String(formData.get("content") ?? ""));
   const document: StaticPageDocument = {
     updatedAt: new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }),
     sections,
@@ -114,14 +115,6 @@ export function readStaticPageDocument(page: Pick<StaticPageRow, "content" | "co
 
 function normalizeStaticPage(page: StaticPageRow): StaticPageRow {
   return { ...page, content_json: readStaticPageDocument(page) };
-}
-
-function parseEditorContent(value: string): StaticPageSection[] {
-  return value.split(/\n\s*---\s*\n/).flatMap((block) => {
-    const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
-    const [heading, ...paragraphs] = lines;
-    return heading && paragraphs.length ? [{ heading, paragraphs }] : [];
-  });
 }
 
 function formatDate(value?: string | null) {

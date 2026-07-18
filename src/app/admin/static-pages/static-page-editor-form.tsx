@@ -16,6 +16,7 @@ import {
   normalizeAdminStaticPageStatus,
   validateAdminStaticPageValues,
 } from "@/lib/admin-static-page-validation";
+import { StaticPageContentEditor } from "./static-page-content-editor";
 
 export type StaticPageEditorInitialValues = AdminStaticPageValues & {
   canonical_url: string;
@@ -96,17 +97,7 @@ export function StaticPageEditorForm({ initialValues, mode = "edit" }: StaticPag
           <TextField label="Başlık" name="title" value={values.title} required placeholder="Örn. Çocuk Güvenliği" error={state.fieldErrors.title} />
           <TextField label="Slug" name="slug" value={values.slug} required placeholder="cocuk-guvenligi" error={state.fieldErrors.slug} />
         </div>
-        <TextAreaField
-          label="İçerik"
-          name="content"
-          value={values.content}
-          rows={22}
-          required
-          description="Her bloğun ilk satırı bölüm başlığıdır. Bölümleri yalnızca --- satırıyla ayırın."
-          error={state.fieldErrors.content}
-          className="font-mono text-xs leading-6"
-          placeholder={"Bölüm başlığı\nİlk paragraf\nİkinci paragraf\n\n---\n\nYeni bölüm başlığı\nParagraf"}
-        />
+        <StaticPageContentEditor initialValue={values.content} error={state.fieldErrors.content} />
       </section>
 
       <section className="space-y-4 rounded-md border border-border bg-card p-4 md:p-5">
@@ -186,8 +177,6 @@ function TextAreaField({
   required = false,
   description,
   error,
-  className,
-  placeholder,
 }: {
   label: string;
   name: keyof AdminStaticPageValues;
@@ -196,8 +185,6 @@ function TextAreaField({
   required?: boolean;
   description?: string;
   error?: string;
-  className?: string;
-  placeholder?: string;
 }) {
   const descriptionId = `${name}-description`;
   const errorId = `${name}-error`;
@@ -217,8 +204,6 @@ function TextAreaField({
         aria-required={required}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? errorId : description ? descriptionId : undefined}
-        className={className}
-        placeholder={placeholder}
       />
       {error ? <FieldDescription id={errorId} className="font-medium text-destructive">{error}</FieldDescription> : null}
       {description ? <FieldDescription id={descriptionId}>{description}</FieldDescription> : null}
