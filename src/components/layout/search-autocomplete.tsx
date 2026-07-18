@@ -15,11 +15,14 @@ type SearchResponse = {
 
 const MINIMUM_QUERY_LENGTH = 3;
 const SEARCH_CACHE_KEY = "boloyun_search_suggestions_v1";
+const POPULAR_CACHE_KEY = "__popular__";
 
 export function SearchAutocomplete() {
   const listboxId = useId();
   const router = useRouter();
   const cache = useRef(new Map<string, GameSearchSuggestion[]>());
+  const popularRequest = useRef<Promise<GameSearchSuggestion[]> | null>(null);
+  const currentQuery = useRef("");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GameSearchSuggestion[]>([]);
   const [open, setOpen] = useState(false);
@@ -78,18 +81,54 @@ export function SearchAutocomplete() {
     const cachedResults = cache.current.get(cacheKey);
 
     setQuery(value);
+    currentQuery.current = value;
     setActiveIndex(-1);
 
     if (searchTerm.length < MINIMUM_QUERY_LENGTH) {
-      setResults([]);
       setLoading(false);
-      setOpen(false);
+      if (!searchTerm) {
+        setOpen(true);
+        void loadPopularSuggestions();
+      } else {
+        setResults([]);
+        setOpen(false);
+      }
       return;
     }
 
     setResults(cachedResults ?? []);
     setLoading(false);
     setOpen(true);
+  }
+
+  async function loadPopularSuggestions() {
+    const cachedResults = cache.current.get(POPULAR_CACHE_KEY);
+    if (cachedResults) {
+      setResults(cachedResults);
+      setOpen(true);
+      return;
+    }
+
+    setLoading(true);
+    setOpen(true);
+    const request = popularRequest.current ?? fetch("/api/search?mode=popular")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Popüler oyunlar yüklenemedi.");
+        const data = await response.json() as SearchResponse;
+        return Array.isArray(data.items) ? data.items.slice(0, 5) : [];
+      });
+    popularRequest.current = request;
+
+    try {
+      const items = await request;
+      rememberResults(cache.current, POPULAR_CACHE_KEY, items);
+      if (!currentQuery.current.trim()) setResults(items);
+    } catch {
+      if (!currentQuery.current.trim()) setResults([]);
+    } finally {
+      if (popularRequest.current === request) popularRequest.current = null;
+      if (!currentQuery.current.trim()) setLoading(false);
+    }
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -151,7 +190,11 @@ export function SearchAutocomplete() {
           value={query}
           onChange={(event) => handleQueryChange(event.target.value)}
           onFocus={() => {
-            if (normalizedQuery.length >= MINIMUM_QUERY_LENGTH) setOpen(true);
+            if (!normalizedQuery) {
+              void loadPopularSuggestions();
+            } else if (normalizedQuery.length >= MINIMUM_QUERY_LENGTH) {
+              setOpen(true);
+            }
           }}
           onKeyDown={handleKeyDown}
           placeholder="Bugün ne oynamak istersin?"
@@ -175,8 +218,13 @@ export function SearchAutocomplete() {
           aria-label="Oyun önerileri"
           className="absolute inset-x-0 top-[calc(100%+0.5rem)] z-50 max-h-[min(420px,70vh)] overflow-y-auto rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
+          {!normalizedQuery && !loading ? (
+            <p className="px-3 py-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Popüler Oyunlar</p>
+          ) : null}
           {loading && results.length === 0 ? (
-            <p className="px-3 py-6 text-center text-sm text-muted-foreground">Oyunlar aranıyor...</p>
+            <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+              {normalizedQuery ? "Oyunlar aranıyor..." : "Popüler oyunlar yükleniyor..."}
+            </p>
           ) : results.length ? (
             results.map((game, index) => (
               <IntentPrefetchLink
@@ -204,7 +252,7 @@ export function SearchAutocomplete() {
             <p className="px-3 py-6 text-center text-sm text-muted-foreground">Bu aramayla eşleşen oyun bulunamadı.</p>
           )}
 
-          {!loading ? (
+          {!loading && normalizedQuery ? (
             <SoundLink
               href={`/arama?q=${encodeURIComponent(normalizedQuery)}`}
               native
