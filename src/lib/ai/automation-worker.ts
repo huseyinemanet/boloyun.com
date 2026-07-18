@@ -8,10 +8,13 @@ type WorkerState = {
   timer: NodeJS.Timeout | null;
 };
 
-const DEFAULT_INTERVAL_MS = 15_000;
+const DEFAULT_ACTIVE_INTERVAL_MS = 15_000;
+const DEFAULT_IDLE_INTERVAL_MS = 300_000;
 const DEFAULT_LIMIT = 5;
 const MIN_INTERVAL_MS = 5_000;
-const MAX_INTERVAL_MS = 120_000;
+const MAX_ACTIVE_INTERVAL_MS = 120_000;
+const MIN_IDLE_INTERVAL_MS = 60_000;
+const MAX_IDLE_INTERVAL_MS = 1_800_000;
 
 declare global {
   var __boloyunAiAutomationWorker: WorkerState | undefined;
@@ -30,14 +33,25 @@ export function startAiAutomationWorker() {
   if (state.started) return;
   state.started = true;
 
-  const intervalMs = readIntegerEnv("AI_AUTOMATION_WORKER_INTERVAL_MS", DEFAULT_INTERVAL_MS, MIN_INTERVAL_MS, MAX_INTERVAL_MS);
+  const activeIntervalMs = readIntegerEnv("AI_AUTOMATION_WORKER_INTERVAL_MS", DEFAULT_ACTIVE_INTERVAL_MS, MIN_INTERVAL_MS, MAX_ACTIVE_INTERVAL_MS);
+  const idleIntervalMs = readIntegerEnv("AI_AUTOMATION_WORKER_IDLE_INTERVAL_MS", DEFAULT_IDLE_INTERVAL_MS, MIN_IDLE_INTERVAL_MS, MAX_IDLE_INTERVAL_MS);
   const limit = readIntegerEnv("AI_AUTOMATION_WORKER_LIMIT", DEFAULT_LIMIT, 1, 25);
 
+  const schedule = (delayMs: number) => {
+    state.timer = setTimeout(tick, delayMs);
+    state.timer.unref?.();
+  };
+
   const tick = async () => {
-    if (state.running) return;
+    if (state.running) {
+      schedule(activeIntervalMs);
+      return;
+    }
     state.running = true;
+    let nextDelayMs = idleIntervalMs;
     try {
       const result = await runTranslationAutomationTick("worker", { limit });
+      if (result.status === "completed") nextDelayMs = activeIntervalMs;
       if (result.status === "error") {
         console.error("[ai-translation] worker.tick.error", { message: result.message });
       }
@@ -46,13 +60,12 @@ export function startAiAutomationWorker() {
       console.error("[ai-translation] worker.tick.failed", { error: message });
     } finally {
       state.running = false;
+      schedule(nextDelayMs);
     }
   };
 
-  state.timer = setInterval(tick, intervalMs);
-  state.timer.unref?.();
-  setTimeout(tick, 3_000).unref?.();
-  console.log("[ai-translation] worker.started", { intervalMs, limit });
+  schedule(3_000);
+  console.log("[ai-translation] worker.started", { activeIntervalMs, idleIntervalMs, limit });
 }
 
 function shouldStartWorker() {

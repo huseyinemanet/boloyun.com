@@ -310,16 +310,9 @@ export async function resumeTranslationJob(jobId: string) {
 }
 
 export async function getTranslationAutomation(): Promise<AiTranslationAutomation> {
-  const supabase = requiredServiceClient();
-  await ensureAutomationRow();
-  const { data, error } = await supabase
-    .from("ai_translation_automation")
-    .select("enabled, provider, daily_target, per_run_limit, retry_failed, status, current_job_id, last_run_at, last_success_at, last_error, updated_at")
-    .eq("id", "default")
-    .single();
-  if (error || !data) throw new Error(`Otomatik çeviri ayarı okunamadı: ${error?.message ?? "kayıt yok"}`);
+  const row = await getAutomationRow();
   const todayCompleted = await countCompletedItemsSince(istanbulDayStartIso());
-  return mapAutomation(data as AutomationRow, todayCompleted);
+  return mapAutomation(row, todayCompleted);
 }
 
 export async function saveTranslationAutomation(input: {
@@ -348,7 +341,7 @@ export async function saveTranslationAutomation(input: {
 export async function runTranslationAutomationTick(source = "cron", options: { limit?: number } = {}) {
   const startedAt = new Date().toISOString();
   const supabase = requiredServiceClient();
-  const automation = await getTranslationAutomation();
+  const automation = await getTranslationAutomationForTick();
   const shouldRecordQuietSkip = source !== "cron" && source !== "worker";
   if (!automation.enabled) {
     if (shouldRecordQuietSkip) {
@@ -723,6 +716,32 @@ async function ensureAutomationRow() {
     updated_at: new Date().toISOString(),
   }, { onConflict: "id", ignoreDuplicates: true });
   if (error) throw new Error(`Otomatik çeviri ayarı hazırlanamadı: ${error.message}`);
+}
+
+async function getAutomationRow(): Promise<AutomationRow> {
+  const supabase = requiredServiceClient();
+  const selectRow = () => supabase
+    .from("ai_translation_automation")
+    .select("enabled, provider, daily_target, per_run_limit, retry_failed, status, current_job_id, last_run_at, last_success_at, last_error, updated_at")
+    .eq("id", "default");
+
+  const firstRead = await selectRow().maybeSingle();
+  if (firstRead.error) throw new Error(`Otomatik çeviri ayarı okunamadı: ${firstRead.error.message}`);
+  if (firstRead.data) return firstRead.data as AutomationRow;
+
+  await ensureAutomationRow();
+  const secondRead = await selectRow().single();
+  if (secondRead.error || !secondRead.data) {
+    throw new Error(`Otomatik çeviri ayarı okunamadı: ${secondRead.error?.message ?? "kayıt yok"}`);
+  }
+  return secondRead.data as AutomationRow;
+}
+
+async function getTranslationAutomationForTick(): Promise<AiTranslationAutomation> {
+  const row = await getAutomationRow();
+  if (!row.enabled) return mapAutomation(row, 0);
+  const todayCompleted = await countCompletedItemsSince(istanbulDayStartIso());
+  return mapAutomation(row, todayCompleted);
 }
 
 async function acquireAutomationLock(automation: AiTranslationAutomation) {
