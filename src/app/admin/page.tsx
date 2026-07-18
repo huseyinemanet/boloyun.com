@@ -107,7 +107,7 @@ export default async function AdminPage() {
       </section>
 
       <Card size="sm">
-        <CardHeader><CardTitle>İçerik Özeti</CardTitle><CardDescription>Yayındaki içerik ve hesap toplamları.</CardDescription></CardHeader>
+        <CardHeader><CardTitle>İçerik Özeti</CardTitle></CardHeader>
         <CardContent className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {totals.map((stat) => {
             const Icon = stat.icon;
