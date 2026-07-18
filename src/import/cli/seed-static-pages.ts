@@ -9,15 +9,19 @@ async function main() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error("Supabase environment değişkenleri eksik.");
   const supabase = createClient(url, key, { auth: { persistSession: false } });
-  const rows = Object.entries(pages).map(([slug, page]) => ({
-    title: page.title,
-    slug,
-    content: JSON.stringify({ updatedAt: page.updatedAt, sections: page.sections }),
-    seo_title: page.title,
-    seo_description: page.description,
-    status: "published",
-    updated_at: new Date().toISOString(),
-  }));
+  const rows = Object.entries(pages).map(([slug, page]) => {
+    const document = { updatedAt: page.updatedAt, sections: page.sections };
+    return {
+      title: page.title,
+      slug,
+      content: JSON.stringify(document),
+      content_json: document,
+      seo_title: page.title,
+      seo_description: page.description,
+      status: "published",
+      updated_at: new Date().toISOString(),
+    };
+  });
   const { error } = await supabase.from("static_pages").upsert(rows, { onConflict: "slug" });
   if (error) throw new Error(error.message);
   console.log(`${rows.length} statik sayfa Supabase'e kaydedildi.`);

@@ -27,9 +27,15 @@ type StaticPageContentEditorProps = {
   error?: string;
 };
 
+type ActiveRichTextEditor = {
+  element: HTMLDivElement;
+  commit: () => void;
+};
+
 const EMPTY_SECTION: StaticPageEditorSection = { heading: "", paragraphs: [""] };
 
 export function StaticPageContentEditor({ initialValue, error }: StaticPageContentEditorProps) {
+  const activeEditorRef = useRef<ActiveRichTextEditor | null>(null);
   const [sections, setSections] = useState<StaticPageEditorSection[]>(() => {
     const parsed = parseStaticPageEditorContent(initialValue);
     return parsed.length ? parsed : [{ ...EMPTY_SECTION, paragraphs: [...EMPTY_SECTION.paragraphs] }];
@@ -64,6 +70,46 @@ export function StaticPageContentEditor({ initialValue, error }: StaticPageConte
     });
   }
 
+  function getActiveEditor() {
+    const activeEditor = activeEditorRef.current;
+    if (!activeEditor || !document.contains(activeEditor.element)) {
+      window.alert("Önce bir paragrafta metin seçin.");
+      return null;
+    }
+    return activeEditor;
+  }
+
+  function runCommand(command: "bold" | "italic" | "underline") {
+    const activeEditor = getActiveEditor();
+    if (!activeEditor) return;
+    activeEditor.element.focus();
+    document.execCommand("styleWithCSS", false, "false");
+    document.execCommand(command, false);
+    activeEditor.commit();
+  }
+
+  function addLink() {
+    const activeEditor = getActiveEditor();
+    if (!activeEditor) return;
+    const selection = window.getSelection();
+    const selectedRange = selection?.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
+    if (!selectedRange || selectedRange.collapsed || !activeEditor.element.contains(selectedRange.commonAncestorContainer)) {
+      window.alert("Önce bağlantı verilecek metni seçin.");
+      return;
+    }
+    const url = window.prompt("Bağlantı adresi (https://…)");
+    if (url === null) return;
+    const normalizedUrl = normalizeStaticPageLinkUrl(url);
+    if (!normalizedUrl) {
+      window.alert("Geçerli bir http veya https bağlantısı girin.");
+      return;
+    }
+    selection?.removeAllRanges();
+    selection?.addRange(selectedRange);
+    document.execCommand("createLink", false, normalizedUrl);
+    activeEditor.commit();
+  }
+
   return (
     <Field data-invalid={error ? true : undefined}>
       <div className="flex flex-wrap items-end justify-between gap-2">
@@ -83,16 +129,26 @@ export function StaticPageContentEditor({ initialValue, error }: StaticPageConte
       <input type="hidden" name="content" value={serializedContent} />
 
       <div
-        className="overflow-hidden rounded-md border border-border bg-background"
+        className="overflow-hidden rounded-md border border-border bg-muted/10"
         aria-describedby={error ? errorId : descriptionId}
       >
-        {sections.map((section, sectionIndex) => (
-          <section
-            key={sectionIndex}
-            className="border-b border-border p-4 last:border-b-0 md:p-5"
-            aria-labelledby={`content-heading-${sectionIndex}`}
-          >
-            <div className="flex items-start gap-2">
+        <div role="toolbar" aria-label="Metin biçimlendirme araçları" className="flex flex-wrap items-center gap-1 border-b border-border bg-muted/50 px-3 py-2">
+          <span className="mr-1 text-xs font-semibold text-muted-foreground">Metin biçimi</span>
+          <FormatButton label="Kalın" onMouseDown={() => runCommand("bold")}><strong>B</strong></FormatButton>
+          <FormatButton label="İtalik" onMouseDown={() => runCommand("italic")}><em>I</em></FormatButton>
+          <FormatButton label="Altı çizili" onMouseDown={() => runCommand("underline")}><u>U</u></FormatButton>
+          <FormatButton label="Bağlantı ver" onMouseDown={addLink}><LinkIcon /></FormatButton>
+          <span className="ml-1 text-xs text-muted-foreground">Önce paragraftaki metni seçin.</span>
+        </div>
+
+        <div className="space-y-3 p-3 md:p-4">
+          {sections.map((section, sectionIndex) => (
+            <section
+              key={sectionIndex}
+              className="rounded-md border border-border bg-card p-4"
+              aria-labelledby={`content-heading-${sectionIndex}`}
+            >
+              <div className="flex items-start gap-2 border-b border-border pb-3">
               <Input
                 id={`content-heading-${sectionIndex}`}
                 value={section.heading}
@@ -102,7 +158,7 @@ export function StaticPageContentEditor({ initialValue, error }: StaticPageConte
                 }))}
                 placeholder="Bölüm başlığı"
                 aria-label={`${sectionIndex + 1}. bölüm başlığı`}
-                className="h-auto flex-1 border-0 bg-transparent px-0 py-1 text-lg font-semibold shadow-none focus-visible:ring-0"
+                className="h-auto flex-1 rounded-none border-0 bg-transparent px-0 py-1 text-lg font-semibold shadow-none focus-visible:ring-0 dark:bg-transparent"
               />
               <div className="flex shrink-0 items-center gap-1">
                 <Button
@@ -139,11 +195,11 @@ export function StaticPageContentEditor({ initialValue, error }: StaticPageConte
                   <Trash2Icon />
                 </Button>
               </div>
-            </div>
+              </div>
 
-            <div className="mt-3 space-y-2">
-              {section.paragraphs.map((paragraph, paragraphIndex) => (
-                <div key={paragraphIndex} className="group/paragraph flex items-start gap-2">
+              <div className="mt-3 divide-y divide-border overflow-hidden rounded-md border border-border bg-background">
+                {section.paragraphs.map((paragraph, paragraphIndex) => (
+                  <div key={paragraphIndex} className="group/paragraph flex items-stretch">
                   <RichTextParagraph
                     value={paragraph}
                     onChange={(nextValue) => updateSection(sectionIndex, (current) => ({
@@ -153,6 +209,9 @@ export function StaticPageContentEditor({ initialValue, error }: StaticPageConte
                       )),
                     }))}
                     label={`${sectionIndex + 1}. bölüm, ${paragraphIndex + 1}. paragraf`}
+                    onActivate={(element, commit) => {
+                      activeEditorRef.current = { element, commit };
+                    }}
                   />
                   <Button
                     type="button"
@@ -166,28 +225,29 @@ export function StaticPageContentEditor({ initialValue, error }: StaticPageConte
                     }))}
                     aria-label={`${paragraphIndex + 1}. paragrafı sil`}
                     title="Paragrafı sil"
-                    className="mt-1 shrink-0 text-muted-foreground opacity-100 hover:text-destructive md:opacity-0 md:group-hover/paragraph:opacity-100 md:focus-visible:opacity-100"
+                    className="m-2 shrink-0 self-start text-muted-foreground opacity-100 hover:text-destructive md:opacity-0 md:group-hover/paragraph:opacity-100 md:focus-visible:opacity-100"
                   >
                     <Trash2Icon />
                   </Button>
-                </div>
-              ))}
-            </div>
+                  </div>
+                ))}
+              </div>
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="mt-2 text-muted-foreground"
-              onClick={() => updateSection(sectionIndex, (current) => ({
-                ...current,
-                paragraphs: [...current.paragraphs, ""],
-              }))}
-            >
-              <PlusIcon /> Paragraf ekle
-            </Button>
-          </section>
-        ))}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="mt-2 text-muted-foreground"
+                onClick={() => updateSection(sectionIndex, (current) => ({
+                  ...current,
+                  paragraphs: [...current.paragraphs, ""],
+                }))}
+              >
+                <PlusIcon /> Paragraf ekle
+              </Button>
+            </section>
+          ))}
+        </div>
       </div>
 
       {error ? (
@@ -197,7 +257,17 @@ export function StaticPageContentEditor({ initialValue, error }: StaticPageConte
   );
 }
 
-function RichTextParagraph({ value, label, onChange }: { value: string; label: string; onChange: (value: string) => void }) {
+function RichTextParagraph({
+  value,
+  label,
+  onChange,
+  onActivate,
+}: {
+  value: string;
+  label: string;
+  onChange: (value: string) => void;
+  onActivate: (element: HTMLDivElement, commit: () => void) => void;
+}) {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const initializedRef = useRef(false);
   const currentValueRef = useRef(value);
@@ -226,62 +296,29 @@ function RichTextParagraph({ value, label, onChange }: { value: string; label: s
     onChange(nextValue);
   }
 
-  function runCommand(command: "bold" | "italic" | "underline") {
-    editorRef.current?.focus();
-    document.execCommand("styleWithCSS", false, "false");
-    document.execCommand(command, false);
-    commitValue();
-  }
-
-  function addLink() {
-    const editor = editorRef.current;
-    if (!editor) return;
-    const selection = window.getSelection();
-    const selectedRange = selection?.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
-    if (!selectedRange || selectedRange.collapsed || !editor.contains(selectedRange.commonAncestorContainer)) {
-      window.alert("Önce bağlantı verilecek metni seçin.");
-      return;
-    }
-    const url = window.prompt("Bağlantı adresi (https://…)");
-    if (url === null) return;
-    const normalizedUrl = normalizeStaticPageLinkUrl(url);
-    if (!normalizedUrl) {
-      window.alert("Geçerli bir http veya https bağlantısı girin.");
-      return;
-    }
-    selection?.removeAllRanges();
-    selection?.addRange(selectedRange);
-    document.execCommand("createLink", false, normalizedUrl);
-    commitValue();
-  }
-
   return (
-    <div className="min-w-0 flex-1 overflow-hidden rounded-md border border-border bg-muted/25 focus-within:border-ring focus-within:bg-background focus-within:ring-1 focus-within:ring-ring/40">
-      <div role="toolbar" aria-label={`${label} biçimlendirme araçları`} className="flex items-center gap-0.5 border-b border-border bg-muted/50 px-1 py-1">
-        <FormatButton label="Kalın" onMouseDown={() => runCommand("bold")}><strong>B</strong></FormatButton>
-        <FormatButton label="İtalik" onMouseDown={() => runCommand("italic")}><em>I</em></FormatButton>
-        <FormatButton label="Altı çizili" onMouseDown={() => runCommand("underline")}><u>U</u></FormatButton>
-        <FormatButton label="Bağlantı ver" onMouseDown={addLink}><LinkIcon /></FormatButton>
-      </div>
-      <div
-        ref={setEditorRef}
-        contentEditable
-        suppressContentEditableWarning
-        role="textbox"
-        aria-label={label}
-        aria-multiline="false"
-        data-placeholder="Paragraf metni"
-        onBlur={commitValue}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") event.preventDefault();
-        }}
-        onPaste={(event) => {
-          event.preventDefault();
-          document.execCommand("insertText", false, event.clipboardData.getData("text/plain"));
-        }}
-        className="min-h-16 px-3 py-2 text-sm leading-7 outline-none empty:before:pointer-events-none empty:before:text-muted-foreground empty:before:content-[attr(data-placeholder)] [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2"
-      />
-    </div>
+    <div
+      ref={setEditorRef}
+      contentEditable
+      suppressContentEditableWarning
+      role="textbox"
+      aria-label={label}
+      aria-multiline="false"
+      data-placeholder="Paragraf metni"
+      onFocus={() => {
+        const editor = editorRef.current;
+        if (editor) onActivate(editor, commitValue);
+      }}
+      onBlur={commitValue}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") event.preventDefault();
+      }}
+      onPaste={(event) => {
+        event.preventDefault();
+        document.execCommand("insertText", false, event.clipboardData.getData("text/plain"));
+      }}
+      className="min-h-14 min-w-0 flex-1 px-3 py-2 text-sm leading-7 outline-none empty:before:pointer-events-none empty:before:text-muted-foreground empty:before:content-[attr(data-placeholder)] focus:bg-primary/5 [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2"
+    />
   );
 }
 
