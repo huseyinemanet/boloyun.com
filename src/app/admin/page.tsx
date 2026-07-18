@@ -7,8 +7,11 @@ import { IconGlobe2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGlobe2
 import { IconGridCircleListFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGridCircleListFillDuo18";
 import { IconMediaPlayFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMediaPlayFillDuo18";
 import { IconMsgs2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMsgs2FillDuo18";
+import { IconNodes4FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconNodes4FillDuo18";
+import { IconServerFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconServerFillDuo18";
 import { IconCircleCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCircleCheckFillDuo18";
 import { IconUsersFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconUsersFillDuo18";
+import { IconWindowCodeFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconWindowCodeFillDuo18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -53,10 +56,10 @@ export default async function AdminPage() {
     popularityScore: game.popularityScore,
   }));
   const runtimeDetails = [
-    { label: "Next.js", value: overview.system.runtime.next },
-    { label: "React", value: overview.system.runtime.react },
-    { label: "Node.js", value: overview.system.runtime.node },
-    { label: "Veritabanı", value: `${overview.system.runtime.database} · Supabase` },
+    { label: "Next.js", value: overview.system.runtime.next, icon: IconWindowCodeFillDuo18 },
+    { label: "React", value: overview.system.runtime.react, icon: IconNodes4FillDuo18 },
+    { label: "Node.js", value: overview.system.runtime.node, icon: IconServerFillDuo18 },
+    { label: "Veritabanı", value: `${overview.system.runtime.database} · Supabase`, icon: IconDatabaseFillDuo18 },
   ];
 
   return (
@@ -152,13 +155,13 @@ export default async function AdminPage() {
             <SystemRow label="CDN" status={overview.system.cdn} icon={IconGlobe2FillDuo18} />
             <Separator />
             <SystemRow label="E-posta servisi (Brevo)" status={overview.system.email} icon={IconEnvelopeFillDuo18} />
-            <div className="mt-3 border-t pt-3">
-              <p className="mb-2 text-xs font-medium text-muted-foreground">Teknik altyapı</p>
-              <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
-                {runtimeDetails.map((detail) => (
-                  <div key={detail.label} className="flex items-center justify-between gap-2 rounded-md bg-muted/40 px-2.5 py-2">
-                    <dt className="text-xs text-muted-foreground">{detail.label}</dt>
-                    <dd className="text-xs font-medium tabular-nums">{detail.value}</dd>
+            <div className="mt-2 border-t pt-2">
+              <p className="py-1 text-xs font-medium text-muted-foreground">Teknik altyapı</p>
+              <dl>
+                {runtimeDetails.map((detail, index) => (
+                  <div key={detail.label}>
+                    {index > 0 ? <Separator /> : null}
+                    <TechnicalRow label={detail.label} value={detail.value} icon={detail.icon} />
                   </div>
                 ))}
               </dl>
@@ -185,6 +188,15 @@ function SystemRow({ label, status, icon: Icon }: { label: string; status: strin
     <div className="flex items-center justify-between gap-3 py-2">
       <span className="flex items-center gap-2"><Icon className="size-4 shrink-0 text-primary" aria-hidden="true" />{label}</span>
       <Badge variant={connected ? "default" : "outline"}>{status}</Badge>
+    </div>
+  );
+}
+
+function TechnicalRow({ label, value, icon: Icon }: { label: string; value: string; icon: typeof IconDatabaseFillDuo18 }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-2">
+      <dt className="flex items-center gap-2"><Icon className="size-4 shrink-0 text-primary" aria-hidden="true" />{label}</dt>
+      <dd className="text-sm text-muted-foreground tabular-nums">{value}</dd>
     </div>
   );
 }
