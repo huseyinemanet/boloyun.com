@@ -248,23 +248,6 @@ const getPublishedGamesCached = unstable_cache(async function getPublishedGames(
 }, ["published-game-cards-v2"], { revalidate: 3600, tags: ["games"] });
 export const getPublishedGames = cache(getPublishedGamesCached);
 
-const getPublishedGamesCountCached = unstable_cache(async function getPublishedGamesCount(): Promise<number> {
-  const supabase = createSupabaseServiceClient();
-  if (!supabase) return fallbackGames.filter((game) => game.status === "published").length;
-
-  const { count, error } = await measuredQuery("games.published.count", supabase
-    .from("games")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "published"));
-
-  if (error) {
-    throw new Error(`Yayindaki oyun sayisi okunamadi: ${error.message}`);
-  }
-
-  return count ?? 0;
-}, ["published-games-count-v1"], { revalidate: 3600, tags: ["games"] });
-export const getPublishedGamesCount = cache(getPublishedGamesCountCached);
-
 export async function getPrebuildGameSlugs(): Promise<Array<{ slug: string }>> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return fallbackGames.slice(0, 300).map(({ slug }) => ({ slug }));
@@ -360,30 +343,13 @@ export async function getRandomPublishedGameSlug(excludeSlug?: string): Promise<
   const supabase = createSupabaseServiceClient();
   if (!supabase) return fallbackSlug;
 
-  const count = excludeSlug
-    ? await measuredQuery("games.random.count", supabase
-      .from("games")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "published")
-      .neq("slug", excludeSlug))
-      .then(({ count, error }) => error ? 0 : count ?? 0)
-    : await getPublishedGamesCount().catch(() => 0);
-  if (!count) return fallbackSlug;
+  const { data, error } = await measuredQuery("games.random.slug", supabase.rpc(
+    "get_random_published_game_slug",
+    { p_exclude_slug: excludeSlug ?? null },
+  ));
 
-  const offset = Math.floor(Math.random() * count);
-  const publishedGamesQuery = supabase
-    .from("games")
-    .select("slug")
-    .eq("status", "published");
-  const eligibleGamesQuery = excludeSlug
-    ? publishedGamesQuery.neq("slug", excludeSlug)
-    : publishedGamesQuery;
-  const { data, error } = await measuredQuery("games.random.slug", eligibleGamesQuery
-    .range(offset, offset)
-    .maybeSingle());
-
-  if (error || !data || typeof data.slug !== "string") return fallbackSlug;
-  return data.slug;
+  if (error || typeof data !== "string" || !data) return fallbackSlug;
+  return data;
 }
 
 export async function getPublishedGamesPage({ page, perPage }: { page: number; perPage: number }): Promise<{ items: Game[]; total: number }> {

@@ -4,5 +4,14 @@ import { getRandomPublishedGameSlug } from "@/lib/db-games";
 export async function GET(request: Request) {
   const excludeSlug = new URL(request.url).searchParams.get("exclude")?.trim() || undefined;
   const slug = await getRandomPublishedGameSlug(excludeSlug);
-  redirect(slug ? `/oyun/${slug}` : "/");
+  const href = slug ? `/oyun/${slug}` : "/";
+
+  if (request.headers.get("accept")?.includes("application/json")) {
+    return Response.json(
+      { href },
+      { headers: { "Cache-Control": "private, no-store, max-age=0" } },
+    );
+  }
+
+  redirect(href);
 }
