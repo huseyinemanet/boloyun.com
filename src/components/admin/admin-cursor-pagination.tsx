@@ -1,5 +1,6 @@
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { encodeKeysetCursor, type KeysetCursor } from "@/lib/keyset-pagination";
+import { cn } from "@/lib/utils";
 
 export function AdminCursorPagination({
   basePath,
@@ -9,6 +10,7 @@ export function AdminCursorPagination({
   previousCursor,
   nextCursor,
   query,
+  plain = false,
 }: {
   basePath: string;
   itemCount: number;
@@ -17,9 +19,13 @@ export function AdminCursorPagination({
   previousCursor: KeysetCursor | null;
   nextCursor: KeysetCursor | null;
   query?: Record<string, string | undefined>;
+  plain?: boolean;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2 text-sm">
+    <div className={cn(
+      "flex flex-wrap items-center justify-between gap-3 text-sm",
+      plain ? "py-1" : "rounded-md border border-border bg-card px-3 py-2",
+    )}>
       <p className="shrink-0 text-muted-foreground">
         {itemCount > 0 ? (
           <>

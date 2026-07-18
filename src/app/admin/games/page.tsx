@@ -46,7 +46,7 @@ export default async function AdminGamesPage({ searchParams }: AdminGamesPagePro
 
       <AdminPageHeader title="Oyunlar" description="Yayındaki, taslak ve pasif oyunları buradan düzenleyebilirsin." />
 
-      <AdminCursorPagination basePath="/admin/games" itemCount={games.length} itemName="oyun" previousCursor={previousCursor} nextCursor={nextCursor} query={{ q: query || undefined }} />
+      <AdminCursorPagination basePath="/admin/games" itemCount={games.length} itemName="oyun" previousCursor={previousCursor} nextCursor={nextCursor} query={{ q: query || undefined }} plain />
       <section className="overflow-hidden rounded-md border border-border bg-card">
         <form action="/admin/games" className="flex gap-2 border-b border-border bg-muted/20 p-3">
           <Input
@@ -146,7 +146,7 @@ export default async function AdminGamesPage({ searchParams }: AdminGamesPagePro
           </TableBody>
         </Table>
       </section>
-      <AdminCursorPagination basePath="/admin/games" itemCount={games.length} itemName="oyun" previousCursor={previousCursor} nextCursor={nextCursor} query={{ q: query || undefined }} />
+      <AdminCursorPagination basePath="/admin/games" itemCount={games.length} itemName="oyun" previousCursor={previousCursor} nextCursor={nextCursor} query={{ q: query || undefined }} plain />
     </div>
   );
 }
