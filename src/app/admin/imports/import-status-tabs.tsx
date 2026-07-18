@@ -18,7 +18,12 @@ export function ImportStatusTabs({ active, counts }: { active: AdminImportFilter
   return (
     <Tabs value={active} onValueChange={(value) => router.push(`/admin/imports?status=${value}`)}>
       <TabsList className="max-w-full overflow-x-auto">
-        {tabs.map((tab) => <TabsTrigger key={tab.value} value={tab.value}>{tab.label}<Badge variant="secondary">{counts[tab.value].toLocaleString("tr-TR")}</Badge></TabsTrigger>)}
+        {tabs.map((tab) => (
+          <TabsTrigger key={tab.value} value={tab.value}>
+            {tab.label}
+            {counts[tab.value] > 0 ? <Badge variant="secondary">{counts[tab.value].toLocaleString("tr-TR")}</Badge> : null}
+          </TabsTrigger>
+        ))}
       </TabsList>
     </Tabs>
   );
