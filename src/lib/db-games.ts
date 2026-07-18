@@ -565,6 +565,105 @@ export type AdminGameListItem = Pick<Game, "id" | "title" | "slug" | "shortDescr
   updatedAt: string;
 };
 
+export async function getAdminGamesNumberedPage({ page, perPage, search = "" }: {
+  page: number;
+  perPage: number;
+  search?: string;
+}): Promise<{ items: AdminGameListItem[]; total: number }> {
+  const supabase = createSupabaseServiceClient();
+  const normalizedSearch = search.trim();
+  const from = (page - 1) * perPage;
+
+  if (!supabase) {
+    const loweredSearch = normalizedSearch.toLocaleLowerCase("tr");
+    const filtered = fallbackGames.filter((game) => !loweredSearch || game.title.toLocaleLowerCase("tr").includes(loweredSearch));
+    return {
+      items: filtered.slice(from, from + perPage).map((game, index) => ({ ...game, updatedAt: new Date(from + index).toISOString() })),
+      total: filtered.length,
+    };
+  }
+
+  const select = "id,title,slug,short_description,thumbnail_url,status,play_count,is_broken,thumbnail_sync_status,updated_at";
+  const searchPattern = normalizedSearch
+    ? `%${normalizedSearch.replaceAll("%", "\\%").replaceAll("_", "\\_")}%`
+    : null;
+
+  if (from === 0) {
+    let firstPageQuery = supabase
+      .from("games")
+      .select(select, { count: "exact" })
+      .order("updated_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(perPage);
+    if (searchPattern) firstPageQuery = firstPageQuery.ilike("title", searchPattern);
+
+    const { data, error, count } = await measuredQuery("games.admin.numbered-page.first", firstPageQuery);
+    if (error || !data) return { items: [], total: 0 };
+    return { items: data.map(mapAdminGameListRow), total: count ?? 0 };
+  }
+
+  let boundaryQuery = supabase
+    .from("games")
+    .select("id,updated_at", { count: "exact" })
+    .order("updated_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(from, from);
+  if (searchPattern) boundaryQuery = boundaryQuery.ilike("title", searchPattern);
+
+  const { data: boundaryRows, error: boundaryError, count } = await measuredQuery("games.admin.numbered-page.boundary", boundaryQuery);
+  if (boundaryError || !boundaryRows?.[0]) return { items: [], total: count ?? 0 };
+
+  const boundary = boundaryRows[0];
+  let itemsQuery = supabase
+    .from("games")
+    .select(select)
+    .order("updated_at", { ascending: false })
+    .order("id", { ascending: false })
+    .or(`updated_at.lt.${boundary.updated_at},and(updated_at.eq.${boundary.updated_at},id.lte.${boundary.id})`)
+    .limit(perPage);
+  if (searchPattern) itemsQuery = itemsQuery.ilike("title", searchPattern);
+
+  const { data, error } = await measuredQuery("games.admin.numbered-page.items", itemsQuery);
+  if (error || !data) return { items: [], total: 0 };
+
+  return {
+    items: data.map(mapAdminGameListRow),
+    total: count ?? 0,
+  };
+}
+
+function mapAdminGameListRow(row: {
+  id: string;
+  title: string;
+  slug: string;
+  short_description: string | null;
+  thumbnail_url: string | null;
+  status: string;
+  play_count: number | null;
+  is_broken: boolean | null;
+  thumbnail_sync_status: string | null;
+  updated_at: string;
+}): AdminGameListItem {
+  return {
+    id: row.id,
+    title: row.title,
+    slug: row.slug,
+    shortDescription: row.short_description ?? "",
+    thumbnailUrl: normalizeGameThumbnail(row.thumbnail_url, "/images/game-placeholder.svg"),
+    status: row.status as PublishStatus,
+    playCount: row.play_count ?? 0,
+    isBroken: Boolean(row.is_broken),
+    thumbnailSyncStatus: normalizeThumbnailSyncStatus(row.thumbnail_sync_status),
+    updatedAt: row.updated_at,
+  };
+}
+
+function normalizeThumbnailSyncStatus(value: string | null): AdminGameListItem["thumbnailSyncStatus"] {
+  return value === "pending" || value === "syncing" || value === "synced" || value === "failed" || value === "rolled_back"
+    ? value
+    : undefined;
+}
+
 export async function getAdminGamesPage({ cursor, direction, perPage, search = "" }: {
   cursor: KeysetCursor | null;
   direction: KeysetDirection;

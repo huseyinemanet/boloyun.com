@@ -8,15 +8,14 @@ import { IconMediaPlayFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMed
 import { IconOpenInNewWindowFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconOpenInNewWindowFillDuo18";
 import { IconPencilFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconPencilFillDuo18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
-import { AdminCursorPagination } from "@/components/admin/admin-cursor-pagination";
+import { AdminPagination, parseAdminPage } from "@/components/admin/admin-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getAdminGamesPage } from "@/lib/db-games";
+import { getAdminGamesNumberedPage } from "@/lib/db-games";
 import type { PublishStatus } from "@/types/game";
-import { decodeKeysetCursor, parseKeysetDirection } from "@/lib/keyset-pagination";
 import { adminPageMetadata } from "@/lib/seo/metadata";
 import { GameNoticeToast } from "./game-notice-toast";
 
@@ -26,8 +25,7 @@ const PER_PAGE = 50;
 
 type AdminGamesPageProps = {
   searchParams: Promise<{
-    cursor?: string;
-    direction?: string;
+    page?: string;
     notice?: string;
     q?: string;
   }>;
@@ -35,10 +33,10 @@ type AdminGamesPageProps = {
 
 export default async function AdminGamesPage({ searchParams }: AdminGamesPageProps) {
   const params = await searchParams;
-  const cursor = decodeKeysetCursor(params.cursor);
-  const direction = parseKeysetDirection(params.direction);
+  const page = parseAdminPage(params.page);
   const query = params.q?.trim().slice(0, 120) ?? "";
-  const { items: games, previousCursor, nextCursor } = await getAdminGamesPage({ cursor, direction, perPage: PER_PAGE, search: query });
+  const { items: games, total } = await getAdminGamesNumberedPage({ page, perPage: PER_PAGE, search: query });
+  const paginationQuery = query ? { q: query } : undefined;
 
   return (
     <div className="space-y-3">
@@ -46,7 +44,7 @@ export default async function AdminGamesPage({ searchParams }: AdminGamesPagePro
 
       <AdminPageHeader title="Oyunlar" description="Yayındaki, taslak ve pasif oyunları buradan düzenleyebilirsin." />
 
-      <AdminCursorPagination basePath="/admin/games" itemCount={games.length} itemName="oyun" previousCursor={previousCursor} nextCursor={nextCursor} query={{ q: query || undefined }} plain />
+      <AdminPagination currentPage={page} perPage={PER_PAGE} total={total} basePath="/admin/games" itemName="oyun" queryParams={paginationQuery} variant="plain" pageWindow={5} />
       <section className="overflow-hidden rounded-md border border-border bg-card">
         <form action="/admin/games" className="flex gap-2 border-b border-border bg-muted/20 p-3">
           <Input
@@ -146,7 +144,7 @@ export default async function AdminGamesPage({ searchParams }: AdminGamesPagePro
           </TableBody>
         </Table>
       </section>
-      <AdminCursorPagination basePath="/admin/games" itemCount={games.length} itemName="oyun" previousCursor={previousCursor} nextCursor={nextCursor} query={{ q: query || undefined }} plain />
+      <AdminPagination currentPage={page} perPage={PER_PAGE} total={total} basePath="/admin/games" itemName="oyun" queryParams={paginationQuery} variant="plain" pageWindow={5} />
     </div>
   );
 }

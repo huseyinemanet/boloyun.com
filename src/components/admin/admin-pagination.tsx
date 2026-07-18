@@ -17,6 +17,7 @@ export function AdminPagination({
   pathStyle = "query",
   queryParams,
   variant = "card",
+  pageWindow = 3,
 }: {
   currentPage: number;
   perPage: number;
@@ -26,11 +27,12 @@ export function AdminPagination({
   pathStyle?: "query" | "segment";
   queryParams?: Record<string, string>;
   variant?: "card" | "plain";
+  pageWindow?: number;
 }) {
   const totalPages = Math.max(1, Math.ceil(total / perPage));
   const from = total === 0 ? 0 : (currentPage - 1) * perPage + 1;
   const to = Math.min(total, currentPage * perPage);
-  const pages = getVisiblePages(currentPage, totalPages);
+  const pages = getAdminPaginationPages(currentPage, totalPages, pageWindow);
 
   return (
     <div className={`flex flex-wrap items-center justify-between gap-3 text-sm ${variant === "card" ? "rounded-md border border-border bg-card px-3 py-2" : ""}`}>
@@ -93,28 +95,31 @@ function hrefForPage(basePath: string, page: number, pathStyle: "query" | "segme
   return `${basePath}?${params.toString()}`;
 }
 
-function getVisiblePages(currentPage: number, totalPages: number): Array<number | "ellipsis"> {
-  if (totalPages <= 7) {
+export function getAdminPaginationPages(currentPage: number, totalPages: number, pageWindow: number): Array<number | "ellipsis"> {
+  const windowSize = Math.max(1, Math.floor(pageWindow));
+  if (totalPages <= windowSize + 2) {
     return Array.from({ length: totalPages }, (_, index) => index + 1);
   }
 
-  const pages: Array<number | "ellipsis"> = [1];
-  const start = Math.max(2, currentPage - 1);
-  const end = Math.min(totalPages - 1, currentPage + 1);
+  const halfWindow = Math.floor(windowSize / 2);
+  let start = Math.max(1, currentPage - halfWindow);
+  const end = Math.min(totalPages, start + windowSize - 1);
+  start = Math.max(1, end - windowSize + 1);
+  const pages: Array<number | "ellipsis"> = [];
 
-  if (start > 2) {
-    pages.push("ellipsis");
+  if (start > 1) {
+    pages.push(1);
+    if (start > 2) pages.push("ellipsis");
   }
 
   for (let page = start; page <= end; page += 1) {
     pages.push(page);
   }
 
-  if (end < totalPages - 1) {
-    pages.push("ellipsis");
+  if (end < totalPages) {
+    if (end < totalPages - 1) pages.push("ellipsis");
+    pages.push(totalPages);
   }
-
-  pages.push(totalPages);
   return pages;
 }
 
