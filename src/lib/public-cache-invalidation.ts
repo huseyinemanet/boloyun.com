@@ -47,6 +47,7 @@ export function invalidatePublicContent(change: PublicContentChange) {
     case "categories":
       revalidateTag("categories", "max");
       revalidateTag("public-shell", "max");
+      revalidatePath("/", "layout");
       revalidatePath("/kategoriler");
       if (change.categorySlug) revalidatePath(`/kategori/${change.categorySlug}`);
       return;

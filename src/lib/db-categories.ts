@@ -133,6 +133,7 @@ const getSidebarCategoriesCached = unstable_cache(async function getSidebarCateg
     .from("categories")
     .select("id,name,slug,icon_svg,icon_url,sidebar_sort_order")
     .eq("status", "active")
+    .eq("show_in_sidebar", true)
     .order("sidebar_sort_order", { ascending: true })
     .order("name", { ascending: true });
 

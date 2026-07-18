@@ -1,10 +1,10 @@
 import { SidebarCategoryLink } from "@/components/layout/sidebar-category-link";
 import { SidebarScroll } from "@/components/layout/sidebar-scroll";
-import { getSidebarCategories } from "@/lib/db-categories";
 import { SidebarActiveState } from "@/components/layout/sidebar-active-state";
+import type { PublicNavCategory } from "@/lib/db-public-shell";
 
-export async function Sidebar() {
-  const categories = await getSidebarCategories();
+export function Sidebar({ categories }: { categories: PublicNavCategory[] }) {
+  if (categories.length === 0) return null;
 
   return (
     <aside className="md:sticky md:top-20 md:h-[calc(100vh-6rem)]">
