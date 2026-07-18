@@ -16,7 +16,7 @@ import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Separator } from "@/components/ui/separator";
 import { getAdminOverviewData } from "@/lib/db-admin-overview";
@@ -72,7 +72,6 @@ export default async function AdminPage() {
       <Card size="sm">
         <CardHeader>
           <CardTitle>Dikkat Gerektirenler</CardTitle>
-          <CardDescription>İncelenmesi veya düzeltilmesi gereken kayıtlar.</CardDescription>
         </CardHeader>
         <CardContent>
           {attention.length ? (
