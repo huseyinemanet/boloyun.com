@@ -25,15 +25,10 @@ export type CategoryRow = {
   sidebar_sort_order?: number | null;
 };
 
-const turkishCategoryCollator = new Intl.Collator("tr-TR", {
-  sensitivity: "base",
-  numeric: true,
-});
-
 export async function getAdminCategories(): Promise<CategoryRow[]> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
-    return sortCategoriesByName(fallbackCategories.map((category: Category) => ({
+    return fallbackCategories.map((category: Category, index) => ({
       id: category.id,
       name: category.name,
       slug: category.slug,
@@ -43,12 +38,18 @@ export async function getAdminCategories(): Promise<CategoryRow[]> {
       status: "active",
       seo_title: category.name,
       seo_description: category.description,
-    })));
+      sidebar_sort_order: index,
+    }));
   }
 
-  const { data, error } = await supabase.from("categories").select("*").order("name", { ascending: true });
+  const { data, error } = await supabase
+    .from("categories")
+    .select("*")
+    .order("sidebar_sort_order", { ascending: true })
+    .order("name", { ascending: true })
+    .order("id", { ascending: true });
   if (error || !data) return [];
-  return sortCategoriesByName(data as CategoryRow[]);
+  return data as CategoryRow[];
 }
 
 export async function getCategoriesCount(): Promise<number> {
@@ -71,7 +72,7 @@ const publicCategorySelect = "id,name,slug,description,icon_svg,icon_url,status,
 const getPublicCategoriesCached = unstable_cache(async function getPublicCategories(limit?: number): Promise<CategoryRow[]> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
-    return sortCategoriesByName(fallbackCategories.map((category: Category) => ({
+    return fallbackCategories.map((category: Category, index) => ({
       id: category.id,
       name: category.name,
       slug: category.slug,
@@ -81,15 +82,17 @@ const getPublicCategoriesCached = unstable_cache(async function getPublicCategor
       status: "active",
       seo_title: category.name,
       seo_description: category.description,
-    })));
+      sidebar_sort_order: index,
+    }));
   }
 
   let query = supabase
     .from("categories")
     .select(publicCategorySelect)
     .eq("status", "active")
-    .order("sort_order", { ascending: true })
-    .order("name", { ascending: true });
+    .order("sidebar_sort_order", { ascending: true })
+    .order("name", { ascending: true })
+    .order("id", { ascending: true });
 
   if (typeof limit === "number" && Number.isFinite(limit) && limit > 0) {
     query = query.limit(Math.floor(limit));
@@ -98,7 +101,7 @@ const getPublicCategoriesCached = unstable_cache(async function getPublicCategor
   const { data, error } = await query;
 
   if (error || !data) return [];
-  return sortCategoriesByName(normalizePublicCategoryRows(data as CategoryRow[]));
+  return normalizePublicCategoryRows(data as CategoryRow[]);
 }, ["public-categories-v2"], { revalidate: 3600, tags: ["categories"] });
 export const getPublicCategories = cache(getPublicCategoriesCached);
 
@@ -109,7 +112,8 @@ export async function getAllActiveCategorySlugs(): Promise<Array<{ slug: string 
     .from("categories")
     .select("slug")
     .eq("status", "active")
-    .order("sort_order", { ascending: true });
+    .order("sidebar_sort_order", { ascending: true })
+    .order("name", { ascending: true });
   return error || !data ? [] : data.flatMap((row) => typeof row.slug === "string" ? [{ slug: row.slug }] : []);
 }
 
@@ -185,7 +189,7 @@ export async function upsertAdminCategory(formData: FormData) {
     throw new Error("Kategori adı ve slug gerekli.");
   }
 
-  const payload = {
+  const payload: Record<string, string | boolean | number> = {
     name,
     slug,
     description: String(formData.get("description") ?? ""),
@@ -198,9 +202,19 @@ export async function upsertAdminCategory(formData: FormData) {
     og_image_url: String(formData.get("og_image_url") ?? ""),
     is_indexable: formData.get("is_indexable") === "on",
     show_in_sidebar: formData.get("show_in_sidebar") === "on",
-    sidebar_sort_order: Math.max(0, Number(formData.get("sidebar_sort_order") ?? 0) || 0),
     updated_at: new Date().toISOString(),
   };
+
+  if (!id) {
+    const { data: lastCategory, error: orderError } = await supabase
+      .from("categories")
+      .select("sidebar_sort_order")
+      .order("sidebar_sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (orderError) throw new Error(`Kategori sırası okunamadı: ${orderError.message}`);
+    payload.sidebar_sort_order = Number(lastCategory?.sidebar_sort_order ?? -1) + 1;
+  }
 
   const query = id
     ? supabase.from("categories").update(payload).eq("id", id)
@@ -208,6 +222,14 @@ export async function upsertAdminCategory(formData: FormData) {
 
   const { error } = await query;
   if (error) throw new Error(`Kategori kaydedilemedi: ${error.message}`);
+}
+
+export async function reorderAdminCategories(categoryIds: string[]) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) throw new Error("Supabase service client yok.");
+
+  const { error } = await supabase.rpc("reorder_categories", { category_ids: categoryIds });
+  if (error) throw new Error(`Kategori sırası kaydedilemedi: ${error.message}`);
 }
 
 function normalizePublicCategoryRows(rows: CategoryRow[]) {
@@ -222,10 +244,6 @@ function normalizePublicCategoryRows(rows: CategoryRow[]) {
   }
 
   return normalizedRows;
-}
-
-function sortCategoriesByName(rows: CategoryRow[]) {
-  return [...rows].sort((left, right) => turkishCategoryCollator.compare(left.name, right.name));
 }
 
 export function normalizePublicCategoryRow(row: CategoryRow): CategoryRow {
