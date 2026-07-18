@@ -1,10 +1,10 @@
 import "server-only";
 
-import { getAdminPopularGames } from "@/lib/db-games";
 import { isCdnConfigured, isEmailConfigured, isR2Configured } from "@/lib/system-status";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 import { activityLabel } from "@/lib/admin-activity-label";
 import { normalizeSiteAssetUrl } from "@/lib/site-assets";
+import { measuredQuery } from "@/lib/query-observability";
 
 type AuditRow = {
   id: string;
@@ -27,6 +27,36 @@ type AuditRow = {
   }> | null;
 };
 
+type AdminOverviewPopularGame = {
+  id: string;
+  title: string;
+  slug: string;
+  categoryName: string;
+  thumbnailUrl: string;
+  playCount: number;
+  favoriteCount: number;
+  likesCount: number;
+  dislikesCount: number;
+  ratingAvg: number;
+  ratingCount: number;
+  popularityScore: number;
+};
+
+type AdminOverviewSnapshot = {
+  totals?: Partial<{ games: number; categories: number; comments: number; users: number }>;
+  performance?: Partial<{ plays24Hours: number; plays7Days: number }>;
+  attention?: Partial<{
+    reviewImports: number;
+    needsFixImports: number;
+    failedImports: number;
+    brokenGames: number;
+    coverIssues: number;
+    pendingComments: number;
+  }>;
+  activities?: AuditRow[];
+  popularGames?: Array<Partial<AdminOverviewPopularGame> & Pick<AdminOverviewPopularGame, "id" | "title" | "slug">>;
+};
+
 export type AdminOverviewData = Awaited<ReturnType<typeof getAdminOverviewData>>;
 
 export async function getAdminOverviewData() {
@@ -37,59 +67,44 @@ export async function getAdminOverviewData() {
   const now = Date.now();
   const since24Hours = new Date(now - 24 * 60 * 60 * 1000).toISOString();
   const since7Days = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const queries = await Promise.all([
-    supabase.from("games").select("id", { count: "exact", head: true }).eq("status", "published"),
-    supabase.from("categories").select("id", { count: "exact", head: true }),
-    supabase.from("comments").select("id", { count: "exact", head: true }),
-    supabase.from("profiles").select("id", { count: "exact", head: true }),
-    supabase.from("game_plays").select("id", { count: "exact", head: true }).gte("last_played_at", since24Hours),
-    supabase.from("game_plays").select("id", { count: "exact", head: true }).gte("last_played_at", since7Days),
-    supabase.from("game_imports").select("id", { count: "exact", head: true }).in("import_status", ["scraped", "ai_generated", "pending_review"]),
-    supabase.from("game_imports").select("id", { count: "exact", head: true }).eq("import_status", "needs_fix"),
-    supabase.from("game_imports").select("id", { count: "exact", head: true }).eq("import_status", "failed"),
-    supabase.from("games").select("id", { count: "exact", head: true }).eq("is_broken", true),
-    supabase.from("games").select("id", { count: "exact", head: true }).in("thumbnail_sync_status", ["pending", "failed", "rolled_back"]),
-    supabase.from("comments").select("id", { count: "exact", head: true }).eq("status", "pending"),
-    supabase
-      .from("admin_audit_events")
-      .select("id, action, target_type, details, created_at, profiles(username, avatar_url, display_name, first_name, last_name)")
-      .order("created_at", { ascending: false })
-      .limit(5),
-    getAdminPopularGames(10),
-  ]);
-
-  const countResults = queries.slice(0, 12) as Array<{ count: number | null; error: { message: string } | null }>;
-  const databaseConnected = countResults.every((result) => !result.error);
-  if (!databaseConnected) {
-    console.error("[admin-overview] one or more count queries failed", countResults.flatMap((result) => result.error?.message ?? []));
+  const { data, error } = await measuredQuery("admin.overview.snapshot", supabase.rpc(
+    "get_admin_overview_snapshot",
+    {
+      p_since_24_hours: since24Hours,
+      p_since_7_days: since7Days,
+      p_popular_limit: 10,
+    },
+  ));
+  if (error || !data || typeof data !== "object" || Array.isArray(data)) {
+    console.error("[admin-overview] snapshot query failed", error?.message ?? "invalid payload");
+    return empty;
   }
 
-  const auditResult = queries[12] as { data: unknown; error: { message: string } | null };
-  if (auditResult.error) console.error("[admin-overview] audit query failed", auditResult.error.message);
+  const snapshot = data as AdminOverviewSnapshot;
 
   return {
     totals: {
-      games: value(countResults[0]),
-      categories: value(countResults[1]),
-      comments: value(countResults[2]),
-      users: value(countResults[3]),
+      games: numberValue(snapshot.totals?.games),
+      categories: numberValue(snapshot.totals?.categories),
+      comments: numberValue(snapshot.totals?.comments),
+      users: numberValue(snapshot.totals?.users),
     },
     performance: {
-      plays24Hours: value(countResults[4]),
-      plays7Days: value(countResults[5]),
+      plays24Hours: numberValue(snapshot.performance?.plays24Hours),
+      plays7Days: numberValue(snapshot.performance?.plays7Days),
     },
     attention: {
-      reviewImports: value(countResults[6]),
-      needsFixImports: value(countResults[7]),
-      failedImports: value(countResults[8]),
-      brokenGames: value(countResults[9]),
-      coverIssues: value(countResults[10]),
-      pendingComments: value(countResults[11]),
+      reviewImports: numberValue(snapshot.attention?.reviewImports),
+      needsFixImports: numberValue(snapshot.attention?.needsFixImports),
+      failedImports: numberValue(snapshot.attention?.failedImports),
+      brokenGames: numberValue(snapshot.attention?.brokenGames),
+      coverIssues: numberValue(snapshot.attention?.coverIssues),
+      pendingComments: numberValue(snapshot.attention?.pendingComments),
     },
-    activities: mapAuditRows((auditResult.data ?? []) as AuditRow[]),
-    popularGames: queries[13] as Awaited<ReturnType<typeof getAdminPopularGames>>,
+    activities: mapAuditRows(snapshot.activities ?? []),
+    popularGames: mapPopularGames(snapshot.popularGames ?? []),
     system: {
-      database: databaseConnected ? "Bağlı" as const : "Bağlantı yok" as const,
+      database: "Bağlı" as const,
       r2: isR2Configured() ? "Bağlı" as const : "Yapılandırılmadı" as const,
       cdn: isCdnConfigured() ? "Bağlı" as const : "Yapılandırılmadı" as const,
       email: isEmailConfigured() ? "Bağlı" as const : "Yapılandırılmadı" as const,
@@ -98,8 +113,26 @@ export async function getAdminOverviewData() {
   };
 }
 
-function value(result: { count: number | null }) {
-  return result.count ?? 0;
+function numberValue(value: unknown) {
+  const number = Number(value ?? 0);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function mapPopularGames(rows: AdminOverviewSnapshot["popularGames"]): AdminOverviewPopularGame[] {
+  return (rows ?? []).map((row) => ({
+    id: row.id,
+    title: row.title,
+    slug: row.slug,
+    categoryName: typeof row.categoryName === "string" ? row.categoryName : "",
+    thumbnailUrl: normalizeSiteAssetUrl(row.thumbnailUrl) ?? "/thumbnails/space.svg",
+    playCount: numberValue(row.playCount),
+    favoriteCount: numberValue(row.favoriteCount),
+    likesCount: numberValue(row.likesCount),
+    dislikesCount: numberValue(row.dislikesCount),
+    ratingAvg: numberValue(row.ratingAvg),
+    ratingCount: numberValue(row.ratingCount),
+    popularityScore: numberValue(row.popularityScore),
+  }));
 }
 
 function mapAuditRows(rows: AuditRow[]) {
@@ -160,7 +193,7 @@ function emptyOverview() {
     performance: { plays24Hours: 0, plays7Days: 0 },
     attention: { reviewImports: 0, needsFixImports: 0, failedImports: 0, brokenGames: 0, coverIssues: 0, pendingComments: 0 },
     activities: [] as Array<{ id: string; title: string; actor: string; actorAvatarUrl: string | null; target: string; createdAt: string }>,
-    popularGames: [] as Awaited<ReturnType<typeof getAdminPopularGames>>,
+    popularGames: [] as AdminOverviewPopularGame[],
     system: {
       database: "Bağlantı yok" as const,
       r2: isR2Configured() ? "Bağlı" as const : "Yapılandırılmadı" as const,
