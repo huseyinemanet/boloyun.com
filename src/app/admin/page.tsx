@@ -130,9 +130,9 @@ export default async function AdminPage() {
             {overview.activities.length ? overview.activities.map((activity, index) => (
               <div key={activity.id}>
                 {index > 0 ? <Separator /> : null}
-                <div className="flex items-start justify-between gap-3 py-2">
-                  <div className="flex items-start gap-2">
-                    <Avatar size="sm" className="mt-0.5">
+                <div className="flex items-center justify-between gap-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <Avatar size="sm">
                       {activity.actorAvatarUrl ? <AvatarImage src={activity.actorAvatarUrl} alt={activity.actor} /> : null}
                       <AvatarFallback>{actorInitials(activity.actor)}</AvatarFallback>
                     </Avatar>
