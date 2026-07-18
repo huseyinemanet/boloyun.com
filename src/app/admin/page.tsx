@@ -125,7 +125,7 @@ export default async function AdminPage() {
 
       <div className="grid gap-3 xl:grid-cols-2">
         <Card size="sm">
-          <CardHeader><CardTitle>Son İşlemler</CardTitle><CardDescription>Kaydedilen son beş yönetici işlemi.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Son İşlemler</CardTitle></CardHeader>
           <CardContent>
             {overview.activities.length ? overview.activities.map((activity, index) => (
               <div key={activity.id}>
