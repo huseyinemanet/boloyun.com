@@ -1,5 +1,6 @@
 import "server-only";
 
+import packageInfo from "../../package.json";
 import { isCdnConfigured, isEmailConfigured, isR2Configured } from "@/lib/system-status";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 import { activityLabel } from "@/lib/admin-activity-label";
@@ -55,6 +56,7 @@ type AdminOverviewSnapshot = {
   }>;
   activities?: AuditRow[];
   popularGames?: Array<Partial<AdminOverviewPopularGame> & Pick<AdminOverviewPopularGame, "id" | "title" | "slug">>;
+  runtime?: Partial<{ databaseVersion: string }>;
 };
 
 export type AdminOverviewData = Awaited<ReturnType<typeof getAdminOverviewData>>;
@@ -68,7 +70,7 @@ export async function getAdminOverviewData() {
   const since24Hours = new Date(now - 24 * 60 * 60 * 1000).toISOString();
   const since7Days = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await measuredQuery("admin.overview.snapshot", supabase.rpc(
-    "get_admin_overview_snapshot",
+    "get_admin_overview_snapshot_v2",
     {
       p_since_24_hours: since24Hours,
       p_since_7_days: since7Days,
@@ -109,7 +111,17 @@ export async function getAdminOverviewData() {
       cdn: isCdnConfigured() ? "Bağlı" as const : "Yapılandırılmadı" as const,
       email: isEmailConfigured() ? "Bağlı" as const : "Yapılandırılmadı" as const,
       version: process.env.DEPLOYMENT_VERSION?.slice(0, 7) || process.env.npm_package_version || "0.1.0",
+      runtime: runtimeInfo(snapshot.runtime?.databaseVersion),
     },
+  };
+}
+
+function runtimeInfo(databaseVersion?: string) {
+  return {
+    next: packageInfo.dependencies.next,
+    react: packageInfo.dependencies.react,
+    node: process.versions.node,
+    database: databaseVersion ? `PostgreSQL ${databaseVersion}` : "PostgreSQL",
   };
 }
 
@@ -200,6 +212,7 @@ function emptyOverview() {
       cdn: isCdnConfigured() ? "Bağlı" as const : "Yapılandırılmadı" as const,
       email: isEmailConfigured() ? "Bağlı" as const : "Yapılandırılmadı" as const,
       version: process.env.DEPLOYMENT_VERSION?.slice(0, 7) || process.env.npm_package_version || "0.1.0",
+      runtime: runtimeInfo(),
     },
   };
 }

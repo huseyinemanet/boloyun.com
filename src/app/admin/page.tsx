@@ -52,6 +52,12 @@ export default async function AdminPage() {
     ratingAvg: game.ratingAvg,
     popularityScore: game.popularityScore,
   }));
+  const runtimeDetails = [
+    { label: "Next.js", value: overview.system.runtime.next },
+    { label: "React", value: overview.system.runtime.react },
+    { label: "Node.js", value: overview.system.runtime.node },
+    { label: "Veritabanı", value: `${overview.system.runtime.database} · Supabase` },
+  ];
 
   return (
     <div className="space-y-4">
@@ -146,6 +152,17 @@ export default async function AdminPage() {
             <SystemRow label="CDN" status={overview.system.cdn} icon={IconGlobe2FillDuo18} />
             <Separator />
             <SystemRow label="E-posta servisi (Brevo)" status={overview.system.email} icon={IconEnvelopeFillDuo18} />
+            <div className="mt-3 border-t pt-3">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">Teknik altyapı</p>
+              <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                {runtimeDetails.map((detail) => (
+                  <div key={detail.label} className="flex items-center justify-between gap-2 rounded-md bg-muted/40 px-2.5 py-2">
+                    <dt className="text-xs text-muted-foreground">{detail.label}</dt>
+                    <dd className="text-xs font-medium tabular-nums">{detail.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
           </CardContent>
         </Card>
       </div>
