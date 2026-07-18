@@ -11,6 +11,7 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { GameImportStatus } from "@/import/db/game-imports";
 import { importStatusLabel } from "@/import/admin/import-status";
+import { formatFullDateTime, formatRelativeDateTime } from "@/lib/date-time";
 
 export type ImportTableRow = {
   id: string;
@@ -23,8 +24,9 @@ export type ImportTableRow = {
   updatedAt: string;
 };
 
-export function ImportsTable({ rows }: { rows: ImportTableRow[] }) {
+export function ImportsTable({ rows, now }: { rows: ImportTableRow[]; now: string }) {
   const [sorting, setSorting] = useState<SortingState>([]);
+  const referenceTime = useMemo(() => new Date(now), [now]);
   const columns = useMemo<ColumnDef<ImportTableRow>[]>(() => [
     {
       accessorKey: "title",
@@ -40,9 +42,9 @@ export function ImportsTable({ rows }: { rows: ImportTableRow[] }) {
       cell: ({ row }) => <a className="text-sm text-muted-foreground hover:underline" href={row.original.sourceUrl} target="_blank" rel="noreferrer">{row.original.sourceDomain || "Kaynak bağlantısı"}</a>,
     },
     { accessorKey: "status", header: "Durum", cell: ({ row }) => <Badge variant={statusVariant(row.original.status)}>{importStatusLabel(row.original.status)}</Badge> },
-    { accessorKey: "updatedAt", header: "Güncellendi", cell: ({ row }) => <time className="text-sm text-muted-foreground" dateTime={row.original.updatedAt}>{formatDate(row.original.updatedAt)}</time> },
+    { accessorKey: "updatedAt", header: "Güncellendi", cell: ({ row }) => <time className="text-sm text-muted-foreground" dateTime={row.original.updatedAt} title={formatFullDateTime(row.original.updatedAt)}>{formatRelativeDateTime(row.original.updatedAt, referenceTime)}</time> },
     { id: "actions", header: "İşlem", cell: ({ row }) => <Button asChild size="sm" variant="outline"><Link href={`/admin/imports/${row.original.id}`}>İncele</Link></Button> },
-  ], []);
+  ], [referenceTime]);
   // TanStack Table exposes mutable functions that React Compiler intentionally does not memoize.
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({ data: rows, columns, state: { sorting }, onSortingChange: setSorting, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(), getRowId: (row) => row.id });
@@ -61,8 +63,4 @@ function statusVariant(status: GameImportStatus): "default" | "secondary" | "des
   if (status === "failed" || status === "rejected") return "destructive";
   if (status === "pending_review" || status === "needs_fix") return "secondary";
   return "outline";
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("tr-TR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Istanbul" }).format(new Date(value));
 }

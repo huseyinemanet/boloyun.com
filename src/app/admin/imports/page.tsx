@@ -38,7 +38,7 @@ export default async function AdminImportsPage({ searchParams }: Props) {
     <AdminPageHeader title="İnceleme Kuyruğu" description="Taranan oyunları kontrol et, düzenle ve yayınla." actions={<Button asChild variant="outline"><Link href="/admin/crawler">Yeni Oyun Tara</Link></Button>} />
     <ImportStatusTabs active={filter} counts={counts} />
     <AdminCursorPagination basePath="/admin/imports" itemCount={rows.length} itemName="kayıt" previousCursor={page.previousCursor} nextCursor={page.nextCursor} query={{ status: filter }} />
-    <ImportsTable rows={rows} />
+    <ImportsTable rows={rows} now={new Date().toISOString()} />
     <AdminCursorPagination basePath="/admin/imports" itemCount={rows.length} itemName="kayıt" previousCursor={page.previousCursor} nextCursor={page.nextCursor} query={{ status: filter }} />
   </div>;
 }
