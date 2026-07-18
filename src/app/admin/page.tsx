@@ -146,7 +146,7 @@ export default async function AdminPage() {
         </Card>
 
         <Card size="sm">
-          <CardHeader className="gap-0.5"><CardTitle>Sistem Durumu</CardTitle><CardDescription>Temel servis bağlantıları.</CardDescription></CardHeader>
+          <CardHeader className="gap-0.5"><CardTitle>Sistem Durumu</CardTitle></CardHeader>
           <CardContent className="grid gap-0">
             <SystemRow label="Veritabanı" status={overview.system.database} icon={IconDatabaseFillDuo18} />
             <Separator />
