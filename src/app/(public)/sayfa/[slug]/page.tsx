@@ -4,6 +4,7 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { getPublishedStaticPage, readStaticPageDocument } from "@/lib/db-static-pages";
 import { breadcrumbJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
+import { staticPageInlineMarkupToHtml } from "@/lib/static-page-inline-format";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -372,7 +373,7 @@ export default async function StaticPage({ params }: Props) {
             <h2 className="text-lg font-semibold text-foreground">{section.heading}</h2>
             <div className="mt-3 space-y-3 text-sm leading-7 text-foreground">
               {section.paragraphs.map((paragraph) => (
-                <p key={paragraph}>{paragraph}</p>
+                <p key={paragraph} dangerouslySetInnerHTML={{ __html: staticPageInlineMarkupToHtml(paragraph) }} />
               ))}
             </div>
           </section>

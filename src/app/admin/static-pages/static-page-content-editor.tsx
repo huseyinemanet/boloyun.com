@@ -1,21 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
+  LinkIcon,
   PlusIcon,
   Trash2Icon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   parseStaticPageEditorContent,
   serializeStaticPageEditorContent,
   type StaticPageEditorSection,
 } from "@/lib/static-page-editor-content";
+import {
+  encodeStaticPageLinkUrl,
+  normalizeStaticPageLinkUrl,
+  staticPageInlineMarkupToHtml,
+} from "@/lib/static-page-inline-format";
 
 type StaticPageContentEditorProps = {
   initialValue: string;
@@ -139,18 +144,15 @@ export function StaticPageContentEditor({ initialValue, error }: StaticPageConte
             <div className="mt-3 space-y-2">
               {section.paragraphs.map((paragraph, paragraphIndex) => (
                 <div key={paragraphIndex} className="group/paragraph flex items-start gap-2">
-                  <Textarea
+                  <RichTextParagraph
                     value={paragraph}
-                    onChange={(event) => updateSection(sectionIndex, (current) => ({
+                    onChange={(nextValue) => updateSection(sectionIndex, (current) => ({
                       ...current,
                       paragraphs: current.paragraphs.map((item, itemIndex) => (
-                        itemIndex === paragraphIndex ? event.target.value : item
+                        itemIndex === paragraphIndex ? nextValue : item
                       )),
                     }))}
-                    rows={2}
-                    placeholder="Paragraf metni"
-                    aria-label={`${sectionIndex + 1}. bölüm, ${paragraphIndex + 1}. paragraf`}
-                    className="min-h-16 resize-y border-0 bg-muted/25 px-3 py-2 text-sm leading-7 shadow-none focus-visible:bg-background focus-visible:ring-1"
+                    label={`${sectionIndex + 1}. bölüm, ${paragraphIndex + 1}. paragraf`}
                   />
                   <Button
                     type="button"
@@ -193,4 +195,138 @@ export function StaticPageContentEditor({ initialValue, error }: StaticPageConte
       ) : null}
     </Field>
   );
+}
+
+function RichTextParagraph({ value, label, onChange }: { value: string; label: string; onChange: (value: string) => void }) {
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const initializedRef = useRef(false);
+  const currentValueRef = useRef(value);
+  const initialValueRef = useRef(value);
+
+  const setEditorRef = useCallback((node: HTMLDivElement | null) => {
+    editorRef.current = node;
+    if (node && !initializedRef.current) {
+      node.innerHTML = staticPageInlineMarkupToHtml(initialValueRef.current);
+      initializedRef.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor || value === currentValueRef.current) return;
+    currentValueRef.current = value;
+    editor.innerHTML = staticPageInlineMarkupToHtml(value);
+  }, [value]);
+
+  function commitValue() {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const nextValue = serializeRichText(editor).trim();
+    currentValueRef.current = nextValue;
+    onChange(nextValue);
+  }
+
+  function runCommand(command: "bold" | "italic" | "underline") {
+    editorRef.current?.focus();
+    document.execCommand("styleWithCSS", false, "false");
+    document.execCommand(command, false);
+    commitValue();
+  }
+
+  function addLink() {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const selection = window.getSelection();
+    const selectedRange = selection?.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
+    if (!selectedRange || selectedRange.collapsed || !editor.contains(selectedRange.commonAncestorContainer)) {
+      window.alert("Önce bağlantı verilecek metni seçin.");
+      return;
+    }
+    const url = window.prompt("Bağlantı adresi (https://…)");
+    if (url === null) return;
+    const normalizedUrl = normalizeStaticPageLinkUrl(url);
+    if (!normalizedUrl) {
+      window.alert("Geçerli bir http veya https bağlantısı girin.");
+      return;
+    }
+    selection?.removeAllRanges();
+    selection?.addRange(selectedRange);
+    document.execCommand("createLink", false, normalizedUrl);
+    commitValue();
+  }
+
+  return (
+    <div className="min-w-0 flex-1 overflow-hidden rounded-md border border-border bg-muted/25 focus-within:border-ring focus-within:bg-background focus-within:ring-1 focus-within:ring-ring/40">
+      <div role="toolbar" aria-label={`${label} biçimlendirme araçları`} className="flex items-center gap-0.5 border-b border-border bg-muted/50 px-1 py-1">
+        <FormatButton label="Kalın" onMouseDown={() => runCommand("bold")}><strong>B</strong></FormatButton>
+        <FormatButton label="İtalik" onMouseDown={() => runCommand("italic")}><em>I</em></FormatButton>
+        <FormatButton label="Altı çizili" onMouseDown={() => runCommand("underline")}><u>U</u></FormatButton>
+        <FormatButton label="Bağlantı ver" onMouseDown={addLink}><LinkIcon /></FormatButton>
+      </div>
+      <div
+        ref={setEditorRef}
+        contentEditable
+        suppressContentEditableWarning
+        role="textbox"
+        aria-label={label}
+        aria-multiline="false"
+        data-placeholder="Paragraf metni"
+        onBlur={commitValue}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.preventDefault();
+        }}
+        onPaste={(event) => {
+          event.preventDefault();
+          document.execCommand("insertText", false, event.clipboardData.getData("text/plain"));
+        }}
+        className="min-h-16 px-3 py-2 text-sm leading-7 outline-none empty:before:pointer-events-none empty:before:text-muted-foreground empty:before:content-[attr(data-placeholder)] [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2"
+      />
+    </div>
+  );
+}
+
+function FormatButton({ label, onMouseDown, children }: { label: string; onMouseDown: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onMouseDown={(event) => {
+        event.preventDefault();
+        onMouseDown();
+      }}
+      className="grid size-7 place-items-center rounded text-xs text-foreground hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&_svg]:size-3.5"
+    >
+      {children}
+    </button>
+  );
+}
+
+function serializeRichText(root: HTMLElement) {
+  return Array.from(root.childNodes).map(serializeRichNode).join("");
+}
+
+function serializeRichNode(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
+  if (!(node instanceof HTMLElement)) return "";
+
+  const content = Array.from(node.childNodes).map(serializeRichNode).join("");
+  switch (node.tagName) {
+    case "B":
+    case "STRONG":
+      return `[[b]]${content}[[/b]]`;
+    case "I":
+    case "EM":
+      return `[[i]]${content}[[/i]]`;
+    case "U":
+      return `[[u]]${content}[[/u]]`;
+    case "A": {
+      const encodedUrl = encodeStaticPageLinkUrl(node.getAttribute("href") ?? "");
+      return encodedUrl ? `[[a:${encodedUrl}]]${content}[[/a]]` : content;
+    }
+    case "BR":
+      return " ";
+    default:
+      return content;
+  }
 }
