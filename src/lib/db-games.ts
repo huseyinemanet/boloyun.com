@@ -248,6 +248,41 @@ const getPublishedGamesCached = unstable_cache(async function getPublishedGames(
 }, ["published-game-cards-v2"], { revalidate: 3600, tags: ["games"] });
 export const getPublishedGames = cache(getPublishedGamesCached);
 
+const getPopularPublishedGamesCached = unstable_cache(async function getPopularPublishedGames(limit = 12): Promise<Game[]> {
+  const safeLimit = Math.min(Math.max(limit, 1), 60);
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) {
+    if (!allowPublicDemoData()) {
+      throw publicDataUnavailable("Popüler oyunlar", "Supabase yapılandırması eksik");
+    }
+    return fallbackGames
+      .filter((game) => game.status === "published")
+      .toSorted((left, right) => right.playCount - left.playCount)
+      .slice(0, safeLimit);
+  }
+
+  const { data, error } = await measuredQuery("games.published.popular", supabase
+    .from("games")
+    .select(publicGameCardSelect)
+    .eq("status", "published")
+    .order("play_count", { ascending: false })
+    .order("updated_at", { ascending: false })
+    .limit(safeLimit));
+
+  if (error) {
+    if (!allowPublicDemoData()) {
+      throw publicDataUnavailable("Popüler oyunlar", error.message);
+    }
+    return fallbackGames
+      .filter((game) => game.status === "published")
+      .toSorted((left, right) => right.playCount - left.playCount)
+      .slice(0, safeLimit);
+  }
+
+  return (data as unknown as GameRow[] | null)?.map(mapGameRow) ?? [];
+}, ["popular-published-game-cards-v1"], { revalidate: 3600, tags: ["games"] });
+export const getPopularPublishedGames = cache(getPopularPublishedGamesCached);
+
 export async function getPrebuildGameSlugs(): Promise<Array<{ slug: string }>> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return fallbackGames.slice(0, 300).map(({ slug }) => ({ slug }));
