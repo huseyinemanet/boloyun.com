@@ -28,3 +28,11 @@ test("her admin sayfası veri çalıştırmadan önce doğrudan requireAdmin ça
     );
   }
 });
+
+test("Supabase proxy src tabanlı Next.js uygulamasının doğru giriş noktasındadır", () => {
+  const proxyPath = path.join(process.cwd(), "src/proxy.ts");
+  const source = readFileSync(proxyPath, "utf8");
+
+  assert.match(source, /export async function proxy\(/);
+  assert.match(source, /matcher:\s*\[[\s\S]*?"\/admin\/:path\*"[\s\S]*?"\/profil\/:path\*"[\s\S]*?\]/);
+});
