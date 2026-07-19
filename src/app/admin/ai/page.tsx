@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { privatePageMetadata } from "@/lib/seo/metadata";
 import { getAiDashboardData } from "@/lib/ai/db-ai";
+import { requireAdmin } from "@/lib/auth";
 import { AutomationProgressPanel } from "./automation-progress-panel";
 import { AiDebugConsole } from "./ai-debug-console";
 import { RealtimeActivityPanel } from "./realtime-activity-panel";
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AiCenterPage() {
+  await requireAdmin();
   const { stats, jobs, activity, activityTotal, automation } = await getAiDashboardData();
 
   return (

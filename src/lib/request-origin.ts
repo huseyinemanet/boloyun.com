@@ -5,33 +5,39 @@ export async function getRequestOrigin() {
 }
 
 export function getRequestOriginFromHeaders(headerStore: Pick<Headers, "get">) {
-  const origin = headerStore.get("origin");
-  const forwardedHost = firstHeaderValue(headerStore.get("x-forwarded-host"));
-  const host = forwardedHost || firstHeaderValue(headerStore.get("host"));
+  const configuredOrigin = configuredSiteOrigin();
+  if (process.env.NODE_ENV === "production" || process.env.SITE_URL) return configuredOrigin;
 
-  if (host === "0.0.0.0:3000" || host === "0.0.0.0") {
-    return process.env.SITE_URL || "https://boloyun.com";
-  }
-  if (host?.startsWith("localhost") || host?.startsWith("127.0.0.1")) {
-    return `http://${host}`;
-  }
-
-  if (host === "boloyun.com" || host === "www.boloyun.com") {
-    return `https://${host}`;
-  }
-
-  if (origin) return origin;
-
-  const proto = headerStore.get("x-forwarded-proto") || "https";
-  if (host) return `${proto}://${host}`;
-
-  return process.env.SITE_URL || "http://localhost:3000";
+  const host = firstHeaderValue(headerStore.get("host"));
+  if (host?.startsWith("localhost") || host?.startsWith("127.0.0.1")) return `http://${host}`;
+  return configuredOrigin;
 }
 
-export function publicUrlFromRequest(request: Request, path: string) {
-  return new URL(path, getRequestOriginFromHeaders(request.headers));
+export function publicUrlFromRequest(_request: Request, path: string) {
+  return new URL(path, configuredSiteOrigin());
+}
+
+export function hasTrustedMutationOriginFromHeaders(headerStore: Pick<Headers, "get">) {
+  const origin = headerStore.get("origin");
+  if (!origin) return false;
+  try {
+    return new URL(origin).origin === getRequestOriginFromHeaders(headerStore);
+  } catch {
+    return false;
+  }
 }
 
 function firstHeaderValue(value: string | null) {
   return value?.split(",")[0]?.trim() || null;
+}
+
+function configuredSiteOrigin() {
+  const candidate = process.env.SITE_URL || "https://boloyun.com";
+  try {
+    const url = new URL(candidate);
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) return "https://boloyun.com";
+    return url.origin;
+  } catch {
+    return "https://boloyun.com";
+  }
 }

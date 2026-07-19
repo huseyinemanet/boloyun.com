@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { IconUserPlusFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconUserPlusFillDuo18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { requireAdmin } from "@/lib/auth";
 import { AdminPagination, parseAdminPage } from "@/components/admin/admin-pagination";
 import { Button } from "@/components/ui/button";
 import { getAdminUserCounts, getAdminUsersPage, type AdminUserFilter } from "@/lib/db-users";
@@ -19,6 +20,7 @@ const validFilters: AdminUserFilter[] = ["all", "admin", "member", "blocked"];
 const PER_PAGE = 50;
 
 export default async function AdminUsersPage({ searchParams }: Props) {
+  await requireAdmin();
   const { role, page: pageValue, notice } = await searchParams;
   const activeFilter = validFilters.includes(role as AdminUserFilter) ? (role as AdminUserFilter) : "all";
   const page = parseAdminPage(pageValue);

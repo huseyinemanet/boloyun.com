@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ProviderConfigForm } from "@/app/admin/ai/provider-config-form";
+import { requireAdmin } from "@/lib/auth";
 import { listProviderConfigs } from "@/lib/ai/db-ai";
 import { privatePageMetadata } from "@/lib/seo/metadata";
 
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AiSettingsPage() {
+  await requireAdmin();
   const configs = await listProviderConfigs();
   const deepSeekConfig = configs.find((config) => config.provider === "deepseek") ?? configs[0];
 

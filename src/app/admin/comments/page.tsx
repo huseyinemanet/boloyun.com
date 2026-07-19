@@ -1,4 +1,5 @@
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { requireAdmin } from "@/lib/auth";
 import { getAdminCommentCounts, getAdminComments, type AdminCommentFilter } from "@/lib/db-comments";
 import { adminPageMetadata } from "@/lib/seo/metadata";
 import { CommentsTable } from "./comments-table";
@@ -13,6 +14,7 @@ type Props = {
 const validFilters: AdminCommentFilter[] = ["all", "pending", "approved", "spam", "trash"];
 
 export default async function AdminCommentsPage({ searchParams }: Props) {
+  await requireAdmin();
   const { status } = await searchParams;
   const activeFilter = validFilters.includes(status as AdminCommentFilter) ? (status as AdminCommentFilter) : "all";
   const [allComments, counts] = await Promise.all([getAdminComments(500), getAdminCommentCounts()]);

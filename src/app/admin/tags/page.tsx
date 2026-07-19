@@ -5,6 +5,7 @@ import { IconCodeActionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCo
 import { IconGamepadFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGamepadFillDuo18";
 import { IconTag2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconTag2FillDuo18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { requireAdmin } from "@/lib/auth";
 import { AdminPagination, parseAdminPage } from "@/components/admin/admin-pagination";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -20,6 +21,7 @@ const PER_PAGE = 50;
 type Props = { searchParams: Promise<{ page?: string; q?: string; edit?: string }> };
 
 export default async function AdminTagsPage({ searchParams }: Props) {
+  await requireAdmin();
   const params = await searchParams;
   const page = parseAdminPage(params.page);
   const query = params.q?.trim() ?? "";

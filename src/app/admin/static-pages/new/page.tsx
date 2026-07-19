@@ -1,11 +1,14 @@
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { requireAdmin } from "@/lib/auth";
 import type { StaticPageRow } from "@/lib/db-static-pages";
 import { adminPageMetadata } from "@/lib/seo/metadata";
 import { StaticPageForm } from "../static-page-form";
 
+export const dynamic = "force-dynamic";
 export const metadata = adminPageMetadata("Yeni Sayfa Ekle");
 
-export default function NewStaticPage() {
+export default async function NewStaticPage() {
+  await requireAdmin();
   const page: StaticPageRow = {
     id: "",
     title: "",

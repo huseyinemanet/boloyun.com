@@ -16,13 +16,23 @@ test("VPS container origin'i public site URL'ine düşer", () => {
   }
 });
 
-test("proxy header'ları public origin üretir", () => {
+test("istemci proxy ve origin header'ları public origin'i değiştiremez", () => {
+  const previousSiteUrl = process.env.SITE_URL;
+  process.env.SITE_URL = "https://boloyun.com";
   const headers = new Headers({
-    "x-forwarded-host": "www.boloyun.com",
-    "x-forwarded-proto": "https",
+    origin: "https://attacker.example",
+    host: "attacker.example",
+    "x-forwarded-host": "attacker.example",
+    "x-forwarded-proto": "http",
   });
 
-  assert.equal(getRequestOriginFromHeaders(headers), "https://www.boloyun.com");
+  try {
+    assert.equal(getRequestOriginFromHeaders(headers), "https://boloyun.com");
+    assert.equal(publicUrlFromRequest(new Request("https://attacker.example/", { headers }), "/auth/callback").origin, "https://boloyun.com");
+  } finally {
+    if (previousSiteUrl === undefined) Reflect.deleteProperty(process.env, "SITE_URL");
+    else process.env.SITE_URL = previousSiteUrl;
+  }
 });
 
 test("localhost geliştirme origin'i http kalır", () => {

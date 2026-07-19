@@ -13,6 +13,7 @@ import { IconCircleCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconC
 import { IconUsersFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconUsersFillDuo18";
 import { IconWindowCodeFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconWindowCodeFillDuo18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { requireAdmin } from "@/lib/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ export const dynamic = "force-dynamic";
 export const metadata = adminPageMetadata("Genel Bakış");
 
 export default async function AdminPage() {
+  await requireAdmin();
   const overview = await getAdminOverviewData();
   const attention = [
     { label: "İnceleme bekleyen import", value: overview.attention.reviewImports, href: "/admin/imports?status=review" },

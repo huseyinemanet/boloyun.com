@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { requireAdmin } from "@/lib/auth";
 import { getHomepageSectionsAdmin } from "@/lib/db-homepage-sections";
 import { getSettingsSection } from "@/lib/db-settings";
 import { adminPageMetadata } from "@/lib/seo/metadata";
@@ -34,6 +35,7 @@ export function generateStaticParams() {
 }
 
 export default async function AdminSettingsSectionPage({ params }: { params: Promise<{ section: string }> }) {
+  await requireAdmin();
   const { section: rawSection } = await params;
   if (!SETTINGS_SECTIONS.includes(rawSection as SettingsSection)) notFound();
   const section = rawSection as SettingsSection;

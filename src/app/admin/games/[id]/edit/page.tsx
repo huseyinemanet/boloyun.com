@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { AdminCheckboxField } from "@/components/admin/admin-checkbox-field";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { requireAdmin } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,6 +23,7 @@ export const dynamic = "force-dynamic";
 export const metadata = adminPageMetadata("Oyunu Düzenle");
 
 export default async function EditGamePage({ params, searchParams }: Props) {
+  await requireAdmin();
   const { id } = await params;
   const { error } = await searchParams;
   const [game, taxonomy, categories] = await Promise.all([getAdminGameById(id), getAdminGameTaxonomy(id), getAdminCategories()]);
