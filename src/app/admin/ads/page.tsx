@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getAdminAdManagerData, type AdRow } from "@/lib/db-ads";
+import { requireAdmin } from "@/lib/auth";
 import { adminPageMetadata } from "@/lib/seo/metadata";
 import { AdForm, AdSlotForm } from "./ads-forms";
 import { AdsTable } from "./ads-table";
@@ -25,6 +26,7 @@ type AdminAdsPageProps = {
 };
 
 export default async function AdminAdsPage({ searchParams }: AdminAdsPageProps) {
+  await requireAdmin();
   const [{ slot: slotId, ad: adId }, data] = await Promise.all([searchParams, getAdminAdManagerData()]);
   const selectedSlot = data.slots.find((slot) => slot.id === slotId) ?? data.slots[0];
   const selectedAd = data.ads.find((ad) => ad.id === adId);

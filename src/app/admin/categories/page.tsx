@@ -1,4 +1,5 @@
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { requireAdmin } from "@/lib/auth";
 import { getAdminCategories } from "@/lib/db-categories";
 import { adminPageMetadata } from "@/lib/seo/metadata";
 import { CategoryManager } from "./category-manager";
@@ -13,6 +14,7 @@ type AdminCategoriesPageProps = {
 };
 
 export default async function AdminCategoriesPage({ searchParams }: AdminCategoriesPageProps) {
+  await requireAdmin();
   const [{ edit }, categories] = await Promise.all([searchParams, getAdminCategories()]);
 
   return (

@@ -8,6 +8,7 @@ import { IconMediaPlayFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMed
 import { IconOpenInNewWindowFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconOpenInNewWindowFillDuo18";
 import { IconPencilFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconPencilFillDuo18";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { requireAdmin } from "@/lib/auth";
 import { AdminPagination, parseAdminPage } from "@/components/admin/admin-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ type AdminGamesPageProps = {
 };
 
 export default async function AdminGamesPage({ searchParams }: AdminGamesPageProps) {
+  await requireAdmin();
   const params = await searchParams;
   const page = parseAdminPage(params.page);
   const query = params.q?.trim().slice(0, 120) ?? "";

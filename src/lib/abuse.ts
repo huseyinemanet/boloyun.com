@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHmac } from "crypto";
 import { headers } from "next/headers";
+import { getTrustedClientIpFromHeaders } from "@/lib/client-ip";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 
 export type RateLimitRule = {
@@ -20,9 +21,7 @@ export function assertHumanForm(formData: FormData, minimumFillMs = 700) {
 }
 
 export async function getClientIp() {
-  const values = await headers();
-  const candidate = values.get("cf-connecting-ip") || values.get("x-real-ip") || values.get("x-forwarded-for")?.split(",")[0] || "unknown";
-  return candidate.trim().slice(0, 128) || "unknown";
+  return getTrustedClientIpFromHeaders(await headers());
 }
 
 export function abuseSubject(value: string) {

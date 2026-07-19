@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { requireAdmin } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,6 +10,7 @@ import { getAdminUserByProfileId } from "@/lib/db-users";
 import { adminPageMetadata } from "@/lib/seo/metadata";
 import { sendPasswordResetAction, updateUserAction } from "../../actions";
 
+export const dynamic = "force-dynamic";
 export const metadata = adminPageMetadata("Kullanıcıyı Düzenle");
 
 type Props = {
@@ -17,6 +19,7 @@ type Props = {
 };
 
 export default async function EditAdminUserPage({ params, searchParams }: Props) {
+  await requireAdmin();
   const { id } = await params;
   const { notice } = await searchParams;
   const user = await getAdminUserByProfileId(id);

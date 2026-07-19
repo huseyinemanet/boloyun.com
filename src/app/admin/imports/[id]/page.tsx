@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { requireAdmin } from "@/lib/auth";
 import { GamePlayer } from "@/components/player/game-player";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
@@ -25,6 +26,7 @@ export const metadata = adminPageMetadata("Import İncele");
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ notice?: string; error?: string }> };
 
 export default async function AdminImportDetailPage({ params, searchParams }: Props) {
+  await requireAdmin();
   const { id } = await params;
   const query = await searchParams;
   let item;

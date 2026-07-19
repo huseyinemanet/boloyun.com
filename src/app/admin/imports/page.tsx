@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AdminCursorPagination } from "@/components/admin/admin-cursor-pagination";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { requireAdmin } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { getAdminImportsPage, getAdminImportStats, parseAdminImportFilter } from "@/import/db/game-imports";
 import { decodeKeysetCursor, parseKeysetDirection } from "@/lib/keyset-pagination";
@@ -16,6 +17,7 @@ const PER_PAGE = 50;
 type Props = { searchParams: Promise<{ status?: string; cursor?: string; direction?: string; notice?: string; error?: string }> };
 
 export default async function AdminImportsPage({ searchParams }: Props) {
+  await requireAdmin();
   const params = await searchParams;
   const filter = parseAdminImportFilter(params.status);
   const [page, counts] = await Promise.all([

@@ -1,4 +1,5 @@
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { requireAdmin } from "@/lib/auth";
 import { adminPageMetadata } from "@/lib/seo/metadata";
 import { CrawlerRunner } from "./crawler-runner";
 
@@ -18,6 +19,7 @@ export const dynamic = "force-dynamic";
 export const metadata = adminPageMetadata("Yeni Oyun Tara");
 
 export default async function AdminCrawlerPage({ searchParams }: Props) {
+  await requireAdmin();
   const result = await searchParams;
   const hasResult = typeof result.inserted !== "undefined";
 
