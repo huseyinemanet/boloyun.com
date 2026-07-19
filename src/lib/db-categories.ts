@@ -235,16 +235,14 @@ export async function setAdminCategorySidebarVisibility(categoryId: string, visi
   const supabase = createSupabaseServiceClient();
   if (!supabase) throw new Error("Supabase service client yok.");
 
-  const { data, error } = await supabase
-    .from("categories")
-    .update({ show_in_sidebar: visible, updated_at: new Date().toISOString() })
-    .eq("id", categoryId)
-    .select("slug")
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("set_category_sidebar_visibility", {
+    target_category_id: categoryId,
+    target_visible: visible,
+  });
 
   if (error) throw new Error(`Kategori menü ayarı kaydedilemedi: ${error.message}`);
-  if (!data) throw new Error("Kategori bulunamadı.");
-  return String(data.slug);
+  if (typeof data !== "string" || !data) throw new Error("Kategori bulunamadı.");
+  return data;
 }
 
 function normalizePublicCategoryRows(rows: CategoryRow[]) {

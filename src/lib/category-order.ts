@@ -19,3 +19,16 @@ export function orderItemsById<T extends { id: string }>(items: T[], orderedIds:
     return item ? [item] : [];
   });
 }
+
+export function groupSidebarCategories<T extends { id: string; show_in_sidebar?: boolean | null }>(
+  items: T[],
+  recentlyEnabledId?: string,
+) {
+  const visible = items.filter((item) => item.show_in_sidebar && item.id !== recentlyEnabledId);
+  const recentlyEnabled = recentlyEnabledId
+    ? items.find((item) => item.id === recentlyEnabledId && item.show_in_sidebar)
+    : undefined;
+  const hidden = items.filter((item) => !item.show_in_sidebar);
+
+  return recentlyEnabled ? [...visible, recentlyEnabled, ...hidden] : [...visible, ...hidden];
+}

@@ -10,7 +10,7 @@ import { CategoryIcon } from "@/components/icons/category-icon";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { moveItem, moveItemById, orderItemsById } from "@/lib/category-order";
+import { groupSidebarCategories, moveItem, moveItemById, orderItemsById } from "@/lib/category-order";
 import { cn } from "@/lib/utils";
 import type { CategoryRow } from "@/lib/db-categories";
 import { CategoryForm } from "./category-form";
@@ -38,6 +38,7 @@ export function CategoryManager({ categories, initialEditingId }: CategoryManage
   }, [categories]);
 
   const editingCategory = items.find((category) => category.id === selectedId);
+  const savingVisibility = savingVisibilityIds.size > 0;
 
   function selectCategory(id?: string) {
     setSelectedId(id);
@@ -45,7 +46,7 @@ export function CategoryManager({ categories, initialEditingId }: CategoryManage
   }
 
   function handleDragStart(event: DragEvent<HTMLButtonElement>, id: string) {
-    if (savingOrder) {
+    if (savingOrder || savingVisibility) {
       event.preventDefault();
       return;
     }
@@ -90,7 +91,7 @@ export function CategoryManager({ categories, initialEditingId }: CategoryManage
   function handleKeyboardMove(event: KeyboardEvent<HTMLButtonElement>, id: string) {
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
     event.preventDefault();
-    if (savingOrder) return;
+    if (savingOrder || savingVisibility) return;
 
     const currentIndex = items.findIndex((category) => category.id === id);
     const targetIndex = event.key === "ArrowUp" ? currentIndex - 1 : currentIndex + 1;
@@ -110,12 +111,15 @@ export function CategoryManager({ categories, initialEditingId }: CategoryManage
   }
 
   async function persistOrder(orderedIds: string[], previousIds: string[]) {
+    const groupedItems = groupSidebarCategories(orderItemsById(items, orderedIds));
+    const groupedIds = groupedItems.map((category) => category.id);
+    setItems(groupedItems);
     setSavingOrder(true);
     try {
       const response = await fetch("/api/admin/categories/reorder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ categoryIds: orderedIds }),
+        body: JSON.stringify({ categoryIds: groupedIds }),
       });
       const result = await response.json().catch(() => ({})) as { message?: string };
       if (!response.ok) throw new Error(result.message || "Kategori sırası kaydedilemedi.");
@@ -130,8 +134,12 @@ export function CategoryManager({ categories, initialEditingId }: CategoryManage
   }
 
   async function setSidebarVisibility(category: CategoryRow, visible: boolean) {
-    const previousValue = Boolean(category.show_in_sidebar);
-    setItems((current) => current.map((item) => item.id === category.id ? { ...item, show_in_sidebar: visible } : item));
+    const previousItems = items;
+    const nextItems = groupSidebarCategories(
+      items.map((item) => item.id === category.id ? { ...item, show_in_sidebar: visible } : item),
+      visible ? category.id : undefined,
+    );
+    setItems(nextItems);
     setSavingVisibilityIds((current) => new Set(current).add(category.id));
 
     try {
@@ -145,7 +153,7 @@ export function CategoryManager({ categories, initialEditingId }: CategoryManage
       toast.success(result.message || "Kategori menü ayarı kaydedildi.");
       router.refresh();
     } catch (error) {
-      setItems((current) => current.map((item) => item.id === category.id ? { ...item, show_in_sidebar: previousValue } : item));
+      setItems(previousItems);
       toast.error(error instanceof Error ? error.message : "Kategori menü ayarı kaydedilemedi.");
     } finally {
       setSavingVisibilityIds((current) => {
@@ -223,8 +231,8 @@ export function CategoryManager({ categories, initialEditingId }: CategoryManage
                 <TableCell>
                   <button
                     type="button"
-                    draggable={!savingOrder}
-                    disabled={savingOrder}
+                    draggable={!savingOrder && !savingVisibility}
+                    disabled={savingOrder || savingVisibility}
                     onDragStart={(event) => handleDragStart(event, category.id)}
                     onDragEnd={handleDragEnd}
                     onKeyDown={(event) => handleKeyboardMove(event, category.id)}
@@ -247,7 +255,7 @@ export function CategoryManager({ categories, initialEditingId }: CategoryManage
                   <div className="flex justify-center">
                     <Switch
                       checked={Boolean(category.show_in_sidebar)}
-                      disabled={savingVisibilityIds.has(category.id)}
+                      disabled={savingOrder || savingVisibility}
                       onCheckedChange={(checked) => void setSidebarVisibility(category, checked)}
                       aria-label={`${category.name} kategorisini sol menüde göster`}
                     />
