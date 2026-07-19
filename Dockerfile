@@ -24,7 +24,8 @@ ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ENV SITE_URL=$SITE_URL
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
-RUN --mount=type=secret,id=supabase_service_role_key,env=SUPABASE_SERVICE_ROLE_KEY pnpm build
+RUN --mount=type=secret,id=supabase_service_role_key,required=true \
+    SUPABASE_SERVICE_ROLE_KEY="$(cat /run/secrets/supabase_service_role_key)" pnpm build
 
 FROM node:22-bookworm-slim AS runner
 ENV NODE_ENV=production

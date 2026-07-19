@@ -9,7 +9,8 @@ test("service role secret Docker katmanına veya build arg'a yazılmaz", () => {
 
   assert.doesNotMatch(dockerfile, /^(ARG|ENV) SUPABASE_SERVICE_ROLE_KEY/m);
   assert.doesNotMatch(workflow, /--build-arg SUPABASE_SERVICE_ROLE_KEY/);
-  assert.match(dockerfile, /--mount=type=secret,id=supabase_service_role_key,env=SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(dockerfile, /--mount=type=secret,id=supabase_service_role_key,required=true/);
+  assert.match(dockerfile, /SUPABASE_SERVICE_ROLE_KEY="\$\(cat \/run\/secrets\/supabase_service_role_key\)" pnpm build/);
   assert.match(workflow, /--secret id=supabase_service_role_key,env=SUPABASE_SERVICE_ROLE_KEY/);
 });
 
