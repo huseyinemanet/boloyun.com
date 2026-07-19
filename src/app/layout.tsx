@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-page-custom-font -- Figtree must load directly from Google Fonts at runtime. */
 import type { Metadata } from "next";
 import { Header } from "@/components/layout/header";
 import { getPublicSettings } from "@/lib/db-settings";
@@ -32,6 +33,14 @@ export default async function RootLayout({
 
   return (
     <html lang="tr" className="dark font-sans" style={{ colorScheme: "dark" }}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap"
+        />
+      </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
         <ClickSoundProvider settings={audio}>
           <ViewerStateProvider>
