@@ -11,7 +11,6 @@ export function GameCard({ game, eager = false }: { game: Game; eager?: boolean 
             src={game.thumbnailUrl}
             alt=""
             fill
-            unoptimized
             loading={eager ? "eager" : "lazy"}
             fetchPriority={eager ? "high" : "auto"}
             sizes="(max-width: 768px) 50vw, 220px"
