@@ -13,5 +13,7 @@ test("production Nginx istemci tarafından taşınan güven başlıklarını yen
   assert.match(config, /proxy_set_header X-Forwarded-Proto https;/);
   assert.match(config, /proxy_set_header CF-Connecting-IP "";/);
   assert.match(config, /Strict-Transport-Security "max-age=31536000" always;/);
+  assert.match(config, /listen 443 ssl default_server;/);
+  assert.match(config, /server_name _;[\s\S]*?return 444;/);
   assert.doesNotMatch(config, /\$proxy_add_x_forwarded_for/);
 });
