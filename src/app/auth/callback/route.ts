@@ -5,11 +5,18 @@ import { migrateCurrentSessionFavorites } from "@/lib/auth-favorites";
 import { safeLocalPath } from "@/lib/security/navigation";
 import { ensureProfileForAuthUser } from "@/lib/auth-profiles";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
+import {
+  createPasswordRecoveryCookieValue,
+  hasValidPasswordRecoveryIntent,
+  PASSWORD_RECOVERY_COOKIE,
+  PASSWORD_RECOVERY_MAX_AGE_SECONDS,
+} from "@/lib/auth-recovery";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const next = safeLocalPath(requestUrl.searchParams.get("next"));
+  const recoveryIntent = requestUrl.searchParams.get("recovery");
   const callbackError = requestUrl.searchParams.get("error");
 
   if (callbackError) {
@@ -28,6 +35,10 @@ export async function GET(request: NextRequest) {
 
   const { data } = await routeClient.supabase.auth.getUser();
   if (!data.user?.id) return routeClient.applyTo(redirectTo(request, "/giris?error=callback"));
+  if (next === "/sifre-yenile" && !hasValidPasswordRecoveryIntent(recoveryIntent, data.user.email ?? "")) {
+    await routeClient.supabase.auth.signOut();
+    return routeClient.applyTo(redirectTo(request, "/sifremi-unuttum?error=expired"));
+  }
   try {
     await ensureProfileForAuthUser(data.user);
     const service = createSupabaseServiceClient();
@@ -43,7 +54,7 @@ export async function GET(request: NextRequest) {
   }
 
   const response = redirectTo(request, next);
-  if (next === "/sifre-yenile") setRecoveryCookie(response, request);
+  if (next === "/sifre-yenile") setRecoveryCookie(response, request, data.user.id);
   return routeClient.applyTo(response);
 }
 
@@ -51,12 +62,12 @@ function redirectTo(request: NextRequest, path: string) {
   return NextResponse.redirect(publicUrlFromRequest(request, path), 303);
 }
 
-function setRecoveryCookie(response: NextResponse, request: NextRequest) {
-  response.cookies.set("password_recovery_pending", "1", {
+function setRecoveryCookie(response: NextResponse, request: NextRequest, userId: string) {
+  response.cookies.set(PASSWORD_RECOVERY_COOKIE, createPasswordRecoveryCookieValue(userId), {
     httpOnly: true,
     sameSite: "lax",
     secure: request.nextUrl.protocol === "https:",
     path: "/",
-    maxAge: 15 * 60,
+    maxAge: PASSWORD_RECOVERY_MAX_AGE_SECONDS,
   });
 }

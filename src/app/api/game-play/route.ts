@@ -2,15 +2,17 @@ import { randomUUID } from "crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth";
-import { consumeRateLimits } from "@/lib/abuse";
+import { consumeRateLimits, getClientIp } from "@/lib/abuse";
 import { cacheHeaders } from "@/lib/cache-policy";
 import { recordGamePlay } from "@/lib/db-game-plays";
+import { hasTrustedMutationOrigin } from "@/lib/request-security";
 
 const gameSessionCookie = "mini_game_session";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  if (!hasTrustedMutationOrigin(request)) return response({ error: "Geçersiz istek kaynağı." }, 403);
   let body: unknown;
   try {
     body = await request.json();
@@ -38,8 +40,9 @@ export async function POST(request: Request) {
 
   const rate = await consumeRateLimits([
     { action: "game-play-session", subject: sessionId, limit: 120, windowSeconds: 3600 },
+    { action: "game-play-ip", subject: await getClientIp(), limit: 240, windowSeconds: 3600 },
   ]);
-  if (!rate.allowed) return response({ accepted: false }, 202);
+  if (!rate.allowed) return response({ accepted: false }, 429, rate.retryAfterSeconds);
 
   const hasAuthCookie = cookieStore.getAll().some(({ name }) => (
     /^sb-.+-auth-token(?:\.\d+)?$/.test(name) || name.startsWith("supabase-auth-token")
@@ -50,8 +53,10 @@ export async function POST(request: Request) {
   return response({ accepted: true }, 202);
 }
 
-function response(value: unknown, status: number) {
-  return NextResponse.json(value, { status, headers: cacheHeaders("privateNoStore") });
+function response(value: unknown, status: number, retryAfterSeconds?: number) {
+  const headers = new Headers(cacheHeaders("privateNoStore"));
+  if (retryAfterSeconds) headers.set("Retry-After", String(retryAfterSeconds));
+  return NextResponse.json(value, { status, headers });
 }
 
 function isUuid(value: unknown): value is string {

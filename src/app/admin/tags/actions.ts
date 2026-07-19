@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
+import { recordAdminAudit } from "@/lib/admin-audit";
 import { requireAdmin } from "@/lib/auth";
 import { saveAdminTag } from "@/lib/db-tags";
 
@@ -15,7 +16,7 @@ export type TagFormState = {
 };
 
 export async function saveTagAction(_previousState: TagFormState, formData: FormData): Promise<TagFormState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const slug = String(formData.get("slug") ?? "").trim();
@@ -37,6 +38,13 @@ export async function saveTagAction(_previousState: TagFormState, formData: Form
 
   try {
     await saveAdminTag(formData);
+    await recordAdminAudit({
+      actorProfileId: admin.id,
+      action: id ? "tag.update" : "tag.create",
+      targetType: "tag",
+      targetIds: id ? [id] : [],
+      details: { name, slug },
+    }).catch(logAuditError);
   } catch (error) {
     console.error("Etiket kaydedilemedi.", error);
     return {
@@ -56,6 +64,10 @@ export async function saveTagAction(_previousState: TagFormState, formData: Form
     message: id ? "Etiket güncellendi." : "Etiket eklendi.",
     fieldErrors: {},
   };
+}
+
+function logAuditError(error: unknown) {
+  console.error("[admin-audit] etiket kaydı yazılamadı", error);
 }
 
 function isValidUrl(value: string) {

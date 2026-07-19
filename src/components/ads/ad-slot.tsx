@@ -2,6 +2,7 @@ import { unstable_rethrow } from "next/navigation";
 import { getPublicAdForSlot, type PublicAd } from "@/lib/db-ads";
 import { getPublicSettings } from "@/lib/db-settings";
 import { publicAdSlotClassName } from "@/components/ads/ad-slot-style";
+import { SandboxedAd } from "@/components/ads/sandboxed-ad";
 
 export async function AdSlot({ slotKey }: { slotKey: string }) {
   const data = await getSafeAdSlotData(slotKey);
@@ -34,10 +35,8 @@ function toLogError(error: unknown) {
 
 function StaticPublicAdSlot({ ad }: { ad: PublicAd }) {
   return (
-    <div
-      className={publicAdSlotClassName(ad)}
-      aria-label={ad.name}
-      dangerouslySetInnerHTML={{ __html: ad.ad_code }}
-    />
+    <div className={publicAdSlotClassName(ad)} aria-label={ad.name}>
+      <SandboxedAd ad={ad} />
+    </div>
   );
 }

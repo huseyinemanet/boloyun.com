@@ -89,7 +89,7 @@ export function GamePlayer({
   }
 
   if (!sourceAllowed) {
-    return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center rounded-md border border-warning/30 bg-warning/10 p-6 text-center`}><p className="font-bold text-warning">Bu oyunun kaynağı güvenlik izin listesinde değil.</p></div>;
+    return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center rounded-md border border-warning/30 bg-warning/10 p-6 text-center`}><p className="font-bold text-warning">Bu oyunun kaynağı güvenli veya izinli değil.</p></div>;
   }
 
   if (preRollActive) {
@@ -136,7 +136,7 @@ export function GamePlayer({
   if (game.gameType === "swf") {
     return (
       <div ref={containerRef} className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} overflow-hidden rounded-md bg-black`}>
-        <Script src="https://unpkg.com/@ruffle-rs/ruffle@0.3.0" strategy="lazyOnload" />
+        <Script src="/ruffle/ruffle.js" strategy="lazyOnload" />
         <object data={source} type="application/x-shockwave-flash" className="h-full w-full">
           <param name="movie" value={source} />
         </object>

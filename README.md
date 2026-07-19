@@ -397,6 +397,8 @@ SUPABASE_SERVICE_ROLE_KEY
 
 Bot koruma, obje deposu/CDN, AI sağlayıcısı ve diğer runtime secret'ları sunucuda `/opt/boloyun/.env.production` içinde tutulur. GitHub Actions image'i build eder, VPS'ye yükler ve deploy scriptini çalıştırır.
 
+`SUPABASE_SERVICE_ROLE_KEY` image katmanına yazılmaz; build sırasında yalnız BuildKit secret mount ile geçici olarak erişilir ve production runtime değeri VPS `.env.production` dosyasından okunur.
+
 Deploy sonrası temel doğrulama:
 
 ```bash

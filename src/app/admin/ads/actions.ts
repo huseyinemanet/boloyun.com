@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { recordAdminAudit } from "@/lib/admin-audit";
 import { requireAdmin } from "@/lib/auth";
 import { upsertAdminAd, upsertAdminAdSlot } from "@/lib/db-ads";
 import { invalidatePublicContent } from "@/lib/public-cache-invalidation";
@@ -28,8 +29,9 @@ export type AdFormState = {
 };
 
 export async function saveAdSlotAction(_previousState: AdSlotFormState, formData: FormData): Promise<AdSlotFormState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
+  const id = String(formData.get("id") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   const key = String(formData.get("key") ?? "").trim();
   const fieldErrors: AdSlotFormState["fieldErrors"] = {};
@@ -47,6 +49,13 @@ export async function saveAdSlotAction(_previousState: AdSlotFormState, formData
 
   try {
     await upsertAdminAdSlot(formData);
+    await recordAdminAudit({
+      actorProfileId: admin.id,
+      action: id ? "ad_slot.update" : "ad_slot.create",
+      targetType: "ad_slot",
+      targetIds: id ? [id] : [],
+      details: { key, name },
+    }).catch(logAuditError);
   } catch (error) {
     console.error("Reklam slotu kaydedilemedi.", error);
     return {
@@ -66,7 +75,7 @@ export async function saveAdSlotAction(_previousState: AdSlotFormState, formData
 }
 
 export async function saveAdAction(_previousState: AdFormState, formData: FormData): Promise<AdFormState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const id = String(formData.get("id") ?? "").trim();
   const slotId = String(formData.get("slot_id") ?? "").trim();
@@ -94,6 +103,13 @@ export async function saveAdAction(_previousState: AdFormState, formData: FormDa
 
   try {
     await upsertAdminAd(formData);
+    await recordAdminAudit({
+      actorProfileId: admin.id,
+      action: id ? "ad.update" : "ad.create",
+      targetType: "ad",
+      targetIds: id ? [id] : [],
+      details: { name, slotId },
+    }).catch(logAuditError);
   } catch (error) {
     console.error("Reklam kaydedilemedi.", error);
     return {
@@ -110,4 +126,8 @@ export async function saveAdAction(_previousState: AdFormState, formData: FormDa
     message: id ? "Reklam güncellendi." : "Reklam eklendi.",
     fieldErrors: {},
   };
+}
+
+function logAuditError(error: unknown) {
+  console.error("[admin-audit] reklam kaydı yazılamadı", error);
 }

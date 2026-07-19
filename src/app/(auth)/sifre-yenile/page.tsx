@@ -1,7 +1,9 @@
+import { cookies } from "next/headers";
 import { SoundLink } from "@/components/audio/sound-link";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { hasValidPasswordRecoveryCookie, PASSWORD_RECOVERY_COOKIE } from "@/lib/auth-recovery";
 import { AuthCard, AuthMessage } from "../auth-card";
 import { ValidatedAuthForm, ValidatedInput } from "../validated-auth-form";
 
@@ -13,13 +15,16 @@ export default async function UpdatePasswordPage({ searchParams }: Props) {
   const { error } = await searchParams;
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase?.auth.getUser() ?? { data: { user: null } };
+  const user = data.user;
+  const recoveryCookie = (await cookies()).get(PASSWORD_RECOVERY_COOKIE)?.value;
+  const canUpdatePassword = Boolean(user?.id && hasValidPasswordRecoveryCookie(recoveryCookie, user.id));
 
   return (
     <AuthCard title="Yeni Şifre Belirle" description="Hesabın için en az 8 karakterli yeni bir şifre seç.">
       {error ? <AuthMessage id="password-form-error" type="error">{getPasswordError(error)}</AuthMessage> : null}
-      {data.user ? (
+      {canUpdatePassword && user ? (
           <ValidatedAuthForm action="/auth/update-password" className="mt-4">
-            <input type="email" name="username" autoComplete="username" value={data.user.email ?? ""} readOnly className="sr-only" tabIndex={-1} aria-hidden="true" />
+            <input type="email" name="username" autoComplete="username" value={user.email ?? ""} readOnly className="sr-only" tabIndex={-1} aria-hidden="true" />
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="new-password">Yeni şifre</FieldLabel>

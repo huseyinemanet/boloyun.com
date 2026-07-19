@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { processTranslationJob } from "@/lib/ai/db-ai";
+import { hasTrustedMutationOrigin } from "@/lib/request-security";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 export async function POST(request: Request) {
-  await requireAdmin();
+  if (!hasTrustedMutationOrigin(request)) return NextResponse.json({ error: "Geçersiz istek kaynağı." }, { status: 403 });
+  const admin = await requireAdmin();
   const body = await request.json().catch(() => null) as { jobId?: unknown; limit?: unknown } | null;
   const jobId = typeof body?.jobId === "string" ? body.jobId : "";
   if (!jobId) return NextResponse.json({ error: "Çeviri işi eksik." }, { status: 400 });
@@ -14,6 +17,13 @@ export async function POST(request: Request) {
   try {
     console.log("[ai-translation] api.process.start", { jobId, limit });
     const job = await processTranslationJob(jobId, { limit });
+    await recordAdminAudit({
+      actorProfileId: admin.id,
+      action: "ai.translation_job_process",
+      targetType: "ai_translation_job",
+      targetIds: [jobId],
+      details: { limit },
+    }).catch((auditError) => console.error("[admin-audit] AI işleme kaydı yazılamadı", auditError));
     const payload = {
       status: "success",
       message: `Adım tamamlandı: ${job.completedCount}/${job.totalCount}, hata ${job.failedCount}.`,
