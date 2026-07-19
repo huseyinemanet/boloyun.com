@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
-import { getPublishedGames, getPublishedGamesByCategorySlug, getPublishedGamesByIds, mapGameRow, type GameRow } from "@/lib/db-games";
+import { getPopularPublishedGames, getPublishedGames, getPublishedGamesByCategorySlug, getPublishedGamesByIds, mapGameRow, type GameRow } from "@/lib/db-games";
 import { allowPublicDemoData, publicDataUnavailable } from "@/lib/public-data-guard";
 import type { Game } from "@/types/game";
 
@@ -71,7 +71,7 @@ export async function saveHomepageSections(input: HomepageSectionInput[]) {
   if (error) throw new Error(`Ana sayfa bölümleri kaydedilemedi: ${error.message}`);
 }
 
-const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicHomepageSnapshotCached(): Promise<{ sections: Array<{ section: HomepageSectionInput; games: Game[] }>; latestGames: Game[] }> {
+const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicHomepageSnapshotCached(): Promise<{ sections: Array<{ section: HomepageSectionInput; games: Game[] }>; latestGames: Game[]; popularGames: Game[] }> {
   const supabase = createSupabaseServiceClient();
   if (!supabase && !allowPublicDemoData()) {
     throw publicDataUnavailable("Ana sayfa", "Supabase yapılandırması eksik");
@@ -94,6 +94,7 @@ const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicH
       return {
         sections,
         latestGames: (Array.isArray(snapshot.latest_games) ? snapshot.latest_games : []).map(mapGameRow),
+        popularGames: sections.length ? [] : await getPopularPublishedGames(12),
       };
     }
   }
@@ -108,8 +109,9 @@ const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicH
       games: await resolveSectionGames({ ...section, limitCount: Math.min(section.limitCount, 12) }, sharedGames),
     }))),
     latestGames: sharedGames.length ? sharedGames : await getPublishedGames(60),
+    popularGames: publicSections.length ? [] : await getPopularPublishedGames(12),
   };
-}, ["public-homepage-snapshot-v1"], { revalidate: 3600, tags: ["homepage-sections", "games", "categories", "tags"] });
+}, ["public-homepage-snapshot-v2"], { revalidate: 3600, tags: ["homepage-sections", "games", "categories", "tags"] });
 
 export async function getPublicHomepageSnapshot() {
   return getPublicHomepageSnapshotCached();
