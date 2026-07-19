@@ -15,7 +15,6 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --font-figtree: "Figtree", ui-sans-serif, system-ui, sans-serif;
   --card: oklch(1 0 0);
   --muted: oklch(0.967 0.001 286.375);
   --border: oklch(0.92 0.004 286.32);

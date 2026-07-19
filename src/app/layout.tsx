@@ -1,5 +1,5 @@
-/* eslint-disable @next/next/no-page-custom-font -- Figtree must load directly from Google Fonts at runtime. */
 import type { Metadata } from "next";
+import { Figtree } from "next/font/google";
 import { Header } from "@/components/layout/header";
 import { getPublicSettings } from "@/lib/db-settings";
 import { ConsentScripts } from "@/components/integrations/consent-scripts";
@@ -7,6 +7,12 @@ import { ClickSoundProvider } from "@/components/audio/click-sound-provider";
 import { NavigationRuntime } from "@/components/navigation/navigation-runtime";
 import { ViewerStateProvider } from "@/components/auth/viewer-state-provider";
 import "./globals.css";
+
+const figtree = Figtree({
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+  variable: "--font-figtree",
+});
 
 export async function generateMetadata(): Promise<Metadata> {
   const { general, seo } = await getPublicSettings();
@@ -32,15 +38,7 @@ export default async function RootLayout({
   const { audio, integrations } = await getPublicSettings();
 
   return (
-    <html lang="tr" className="dark font-sans" style={{ colorScheme: "dark" }}>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap"
-        />
-      </head>
+    <html lang="tr" className={`${figtree.variable} dark font-sans`} style={{ colorScheme: "dark" }}>
       <body className="min-h-screen bg-background text-foreground antialiased">
         <ClickSoundProvider settings={audio}>
           <ViewerStateProvider>
