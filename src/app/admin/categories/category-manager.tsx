@@ -2,14 +2,13 @@
 
 import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
-import { IconCodeActionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCodeActionFillDuo18";
 import { IconGridCircleListFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGridCircleListFillDuo18";
 import { IconGripDotsVerticalFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGripDotsVerticalFillDuo18";
-import { IconLinkFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconLinkFillDuo18";
 import { IconTextTitleCaseFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconTextTitleCaseFillDuo18";
 import { toast } from "sonner";
 import { CategoryIcon } from "@/components/icons/category-icon";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { moveItem, moveItemById, orderItemsById } from "@/lib/category-order";
 import { cn } from "@/lib/utils";
@@ -28,6 +27,7 @@ export function CategoryManager({ categories, initialEditingId }: CategoryManage
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [savingOrder, setSavingOrder] = useState(false);
+  const [savingVisibilityIds, setSavingVisibilityIds] = useState<Set<string>>(() => new Set());
   const draggedIdRef = useRef<string | null>(null);
   const overIdRef = useRef<string | null>(null);
   const dragStartOrderRef = useRef<string[]>([]);
@@ -129,6 +129,33 @@ export function CategoryManager({ categories, initialEditingId }: CategoryManage
     }
   }
 
+  async function setSidebarVisibility(category: CategoryRow, visible: boolean) {
+    const previousValue = Boolean(category.show_in_sidebar);
+    setItems((current) => current.map((item) => item.id === category.id ? { ...item, show_in_sidebar: visible } : item));
+    setSavingVisibilityIds((current) => new Set(current).add(category.id));
+
+    try {
+      const response = await fetch(`/api/admin/categories/${category.id}/sidebar`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visible }),
+      });
+      const result = await response.json().catch(() => ({})) as { message?: string };
+      if (!response.ok) throw new Error(result.message || "Kategori menü ayarı kaydedilemedi.");
+      toast.success(result.message || "Kategori menü ayarı kaydedildi.");
+      router.refresh();
+    } catch (error) {
+      setItems((current) => current.map((item) => item.id === category.id ? { ...item, show_in_sidebar: previousValue } : item));
+      toast.error(error instanceof Error ? error.message : "Kategori menü ayarı kaydedilemedi.");
+    } finally {
+      setSavingVisibilityIds((current) => {
+        const next = new Set(current);
+        next.delete(category.id);
+        return next;
+      });
+    }
+  }
+
   return (
     <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
       <section className="h-fit rounded-md border border-border bg-card p-4">
@@ -159,7 +186,7 @@ export function CategoryManager({ categories, initialEditingId }: CategoryManage
           {savingOrder ? <p className="text-xs font-semibold text-muted-foreground">Sıra kaydediliyor…</p> : null}
         </div>
 
-        <Table className="min-w-[720px] table-fixed">
+        <Table className="min-w-[520px] table-fixed">
           <TableHeader className="bg-muted/40">
             <TableRow>
               <TableHead className="w-12">
@@ -177,17 +204,7 @@ export function CategoryManager({ categories, initialEditingId }: CategoryManage
                   <IconTextTitleCaseFillDuo18 className="size-5" />
                 </span>
               </TableHead>
-              <TableHead className="w-48">
-                <span className="inline-flex items-center justify-center" title="Slug" aria-label="Slug">
-                  <IconLinkFillDuo18 className="size-5" />
-                </span>
-              </TableHead>
-              <TableHead className="w-24 text-center">Menü</TableHead>
-              <TableHead className="w-28 text-right">
-                <span className="inline-flex items-center justify-center" title="Aksiyon" aria-label="Aksiyon">
-                  <IconCodeActionFillDuo18 className="size-5" />
-                </span>
-              </TableHead>
+              <TableHead className="w-28 text-center">Sol menü</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -226,22 +243,21 @@ export function CategoryManager({ categories, initialEditingId }: CategoryManage
                   </button>
                   <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{category.description || "Açıklama yok"}</p>
                 </TableCell>
-                <TableCell className="truncate text-muted-foreground">{category.slug}</TableCell>
-                <TableCell className="text-center text-xs font-semibold">
-                  {category.show_in_sidebar ? "Açık" : "—"}
-                </TableCell>
                 <TableCell>
-                  <div className="flex justify-end">
-                    <Button type="button" size="sm" variant="outline" className="font-semibold" onClick={() => selectCategory(category.id)}>
-                      Düzenle
-                    </Button>
+                  <div className="flex justify-center">
+                    <Switch
+                      checked={Boolean(category.show_in_sidebar)}
+                      disabled={savingVisibilityIds.has(category.id)}
+                      onCheckedChange={(checked) => void setSidebarVisibility(category, checked)}
+                      aria-label={`${category.name} kategorisini sol menüde göster`}
+                    />
                   </div>
                 </TableCell>
               </TableRow>
             ))}
             {items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-28 text-center font-medium text-muted-foreground">
+                <TableCell colSpan={4} className="h-28 text-center font-medium text-muted-foreground">
                   Henüz kategori yok.
                 </TableCell>
               </TableRow>

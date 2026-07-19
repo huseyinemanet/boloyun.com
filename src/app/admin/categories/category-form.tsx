@@ -57,7 +57,6 @@ export function CategoryForm({ category }: { category?: CategoryRow }) {
         </Select>
       </label>
       <TextArea label="Açıklama" name="description" defaultValue={category?.description ?? ""} rows={3} />
-      <AdminCheckboxField name="show_in_sidebar" label="Sol menüde göster" defaultChecked={category?.show_in_sidebar ?? false} />
       <TextArea label="Icon SVG" name="icon_svg" defaultValue={category?.icon_svg ?? ""} rows={3} />
       <Field label="Icon URL" name="icon_url" defaultValue={category?.icon_url ?? ""} />
       <Field label="SEO title" name="seo_title" defaultValue={category?.seo_title ?? ""} />

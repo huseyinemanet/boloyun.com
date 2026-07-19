@@ -201,7 +201,6 @@ export async function upsertAdminCategory(formData: FormData) {
     seo_description: String(formData.get("seo_description") ?? ""),
     og_image_url: String(formData.get("og_image_url") ?? ""),
     is_indexable: formData.get("is_indexable") === "on",
-    show_in_sidebar: formData.get("show_in_sidebar") === "on",
     updated_at: new Date().toISOString(),
   };
 
@@ -230,6 +229,22 @@ export async function reorderAdminCategories(categoryIds: string[]) {
 
   const { error } = await supabase.rpc("reorder_categories", { category_ids: categoryIds });
   if (error) throw new Error(`Kategori sırası kaydedilemedi: ${error.message}`);
+}
+
+export async function setAdminCategorySidebarVisibility(categoryId: string, visible: boolean) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) throw new Error("Supabase service client yok.");
+
+  const { data, error } = await supabase
+    .from("categories")
+    .update({ show_in_sidebar: visible, updated_at: new Date().toISOString() })
+    .eq("id", categoryId)
+    .select("slug")
+    .maybeSingle();
+
+  if (error) throw new Error(`Kategori menü ayarı kaydedilemedi: ${error.message}`);
+  if (!data) throw new Error("Kategori bulunamadı.");
+  return String(data.slug);
 }
 
 function normalizePublicCategoryRows(rows: CategoryRow[]) {
