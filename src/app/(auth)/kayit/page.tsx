@@ -24,7 +24,7 @@ export default async function RegisterPage({ searchParams }: Props) {
   const errorDescription = error ? "register-form-error" : undefined;
   const hasUsernameError = error === "username" || error === "form" || error === "create";
   const hasEmailError = error === "email" || error === "form" || error === "create";
-  const hasPasswordError = error === "email" || error === "form";
+  const hasPasswordError = error === "password" || error === "email" || error === "form";
   const hasAgeError = error === "age" || error === "form";
   const hasTermsError = error === "terms" || error === "form";
 
@@ -83,6 +83,7 @@ export default async function RegisterPage({ searchParams }: Props) {
 
 function getRegisterError(error: string) {
   if (error === "config") return "Üyelik sistemi henüz yapılandırılmamış.";
+  if (error === "password") return "Şifre en az 8 karakter olmalı.";
   if (error === "terms") return "Kayıt olmak için kullanım şartlarını kabul etmelisin.";
   if (error === "username") return "Kullanıcı adı 3-29 karakter olmalı; harf, sayı, tire veya alt çizgi içerebilir.";
   if (error === "closed") return "Yeni üyelikler şu anda kapalı.";

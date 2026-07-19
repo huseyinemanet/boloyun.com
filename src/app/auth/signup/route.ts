@@ -8,6 +8,7 @@ import { getRequestOrigin, publicUrlFromRequest } from "@/lib/request-origin";
 import { hasTrustedMutationOrigin } from "@/lib/request-security";
 import { createSupabaseRouteClient } from "@/lib/supabase/server";
 import { verifyRiskChallenge } from "@/lib/turnstile";
+import { meetsAuthPasswordMinimum } from "@/lib/auth-password-policy";
 
 export async function POST(request: NextRequest) {
   if (!hasTrustedMutationOrigin(request)) return redirectTo(request, "/kayit?error=form");
@@ -35,6 +36,7 @@ export async function POST(request: NextRequest) {
   const marketingAccepted = formData.get("marketing_emails_accepted") === "on";
   const birthYear = Number(formData.get("birth_year") || 0) || null;
 
+  if (!meetsAuthPasswordMinimum(password)) return redirectTo(request, "/kayit?error=password");
   if (!termsAccepted) return redirectTo(request, "/kayit?error=terms");
   let usernamePattern: RegExp;
   try { usernamePattern = new RegExp(community.usernamePattern); } catch { usernamePattern = /^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/; }
