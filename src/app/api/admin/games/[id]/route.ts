@@ -3,6 +3,7 @@ import { getCurrentProfile } from "@/lib/auth";
 import { updateAdminGameFromForm } from "@/lib/admin-game-update";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { publicUrlFromRequest } from "@/lib/request-origin";
+import { hasTrustedMutationOrigin } from "@/lib/request-security";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -10,6 +11,7 @@ type RouteContext = {
 
 export async function POST(request: Request, { params }: RouteContext) {
   const { id } = await params;
+  if (!hasTrustedMutationOrigin(request)) return NextResponse.json({ error: "Geçersiz istek kaynağı." }, { status: 403 });
   const profile = await getCurrentProfile();
   if (profile?.role !== "admin" || profile.status !== "active") {
     return NextResponse.redirect(publicUrlFromRequest(request, `/giris?next=/admin/games/${id}/edit`), 303);

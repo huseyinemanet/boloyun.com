@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { getTranslationAutomation, getTranslationStats, saveTranslationAutomation } from "@/lib/ai/db-ai";
+import { hasTrustedMutationOrigin } from "@/lib/request-security";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  await requireAdmin();
+  if (!hasTrustedMutationOrigin(request)) return NextResponse.json({ error: "Geçersiz istek kaynağı." }, { status: 403 });
+  const admin = await requireAdmin();
 
   const body = await request.json().catch(() => null) as { enabled?: unknown } | null;
   if (typeof body?.enabled !== "boolean") {
@@ -20,6 +23,13 @@ export async function POST(request: Request) {
       perRunLimit: current.perRunLimit,
       retryFailed: current.retryFailed,
     });
+    await recordAdminAudit({
+      actorProfileId: admin.id,
+      action: "ai.automation_update",
+      targetType: "ai_translation_automation",
+      targetIds: ["default"],
+      details: { enabled: body.enabled },
+    }).catch((auditError) => console.error("[admin-audit] AI otomasyon kaydı yazılamadı", auditError));
     const [automation, stats] = await Promise.all([
       getTranslationAutomation(),
       getTranslationStats(),

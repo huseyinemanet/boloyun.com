@@ -1,5 +1,6 @@
 import type { User } from "@supabase/supabase-js";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
+import { createPasswordRecoveryIntent } from "@/lib/auth-recovery";
 import type { UserRole, UserStatus } from "@/lib/auth";
 
 export type AdminUserFilter = "all" | "admin" | "member" | "blocked";
@@ -268,8 +269,9 @@ export async function sendAdminPasswordReset(email: string) {
   const supabase = createSupabaseServiceClient();
   if (!supabase) throw new Error("Supabase service client yok.");
 
+  const recoveryIntent = createPasswordRecoveryIntent(email);
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.SITE_URL || "http://localhost:3000"}/auth/callback?next=/sifre-yenile`,
+    redirectTo: `${process.env.SITE_URL || "http://localhost:3000"}/auth/callback?next=/sifre-yenile&recovery=${encodeURIComponent(recoveryIntent)}`,
   });
 
   if (error) throw new Error(`Şifre sıfırlama e-postası gönderilemedi: ${error.message}`);

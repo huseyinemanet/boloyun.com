@@ -2,15 +2,18 @@ import { randomUUID } from "crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth";
+import { consumeRateLimits, getClientIp } from "@/lib/abuse";
 import { cacheHeaders } from "@/lib/cache-policy";
 import { upsertGameVote, type GameVote } from "@/lib/db-game-reactions";
 import { setProfileFavorite, setSessionFavorite } from "@/lib/db-session-favorites";
+import { hasTrustedMutationOrigin } from "@/lib/request-security";
 
 const gameSessionCookie = "mini_game_session";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  if (!hasTrustedMutationOrigin(request)) return actionResponse({ error: "Geçersiz istek kaynağı." }, 403);
   let body: unknown;
   try {
     body = await request.json();
@@ -23,6 +26,11 @@ export async function POST(request: Request) {
   if (!isUuid(gameId)) return actionResponse({ error: "Oyun bilgisi eksik." }, 400);
 
   const { sessionId, hasAuthCookie } = await getOrCreateGameSession();
+  const rate = await consumeRateLimits([
+    { action: "game-action-ip", subject: await getClientIp(), limit: 120, windowSeconds: 3600 },
+    { action: "game-action-session", subject: sessionId, limit: 60, windowSeconds: 3600 },
+  ]);
+  if (!rate.allowed) return actionResponse({ error: "Çok fazla istek gönderildi." }, 429, rate.retryAfterSeconds);
   const profile = hasAuthCookie ? await getCurrentProfile() : null;
 
   if (input.action === "favorite") {
@@ -48,8 +56,10 @@ export async function POST(request: Request) {
   return actionResponse({ error: "Geçersiz işlem." }, 400);
 }
 
-function actionResponse(value: unknown, status = 200) {
-  return NextResponse.json(value, { status, headers: cacheHeaders("privateNoStore") });
+function actionResponse(value: unknown, status = 200, retryAfterSeconds?: number) {
+  const headers = new Headers(cacheHeaders("privateNoStore"));
+  if (retryAfterSeconds) headers.set("Retry-After", String(retryAfterSeconds));
+  return NextResponse.json(value, { status, headers });
 }
 
 async function getOrCreateGameSession() {

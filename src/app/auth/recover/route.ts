@@ -4,6 +4,7 @@ import { getRequestOrigin, publicUrlFromRequest } from "@/lib/request-origin";
 import { hasTrustedMutationOrigin } from "@/lib/request-security";
 import { createSupabaseRouteClient } from "@/lib/supabase/server";
 import { verifyRiskChallenge } from "@/lib/turnstile";
+import { createPasswordRecoveryIntent } from "@/lib/auth-recovery";
 
 export async function POST(request: NextRequest) {
   if (!hasTrustedMutationOrigin(request)) return redirectTo(request, "/sifremi-unuttum?error=form");
@@ -27,8 +28,9 @@ export async function POST(request: NextRequest) {
 
   const routeClient = await createSupabaseRouteClient();
   if (!routeClient.supabase) return redirectTo(request, "/sifremi-unuttum?error=config");
+  const recoveryIntent = createPasswordRecoveryIntent(email);
   const { error } = await routeClient.supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${await getRequestOrigin()}/auth/callback?next=/sifre-yenile`,
+    redirectTo: `${await getRequestOrigin()}/auth/callback?next=/sifre-yenile&recovery=${encodeURIComponent(recoveryIntent)}`,
   });
 
   if (error) {

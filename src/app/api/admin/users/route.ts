@@ -4,8 +4,10 @@ import { requireAdmin } from "@/lib/auth";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { createAdminUser } from "@/lib/db-users";
 import { normalizeAdminUserCreateValues, validateAdminUserCreateValues } from "@/lib/admin-user-create-validation";
+import { hasTrustedMutationOrigin } from "@/lib/request-security";
 
 export async function POST(request: Request) {
+  if (!hasTrustedMutationOrigin(request)) return NextResponse.json({ message: "Geçersiz istek kaynağı." }, { status: 403 });
   const admin = await requireAdmin();
   const body = await request.json().catch(() => ({}));
   const input = body && typeof body === "object" && !Array.isArray(body) ? body as Record<string, unknown> : {};

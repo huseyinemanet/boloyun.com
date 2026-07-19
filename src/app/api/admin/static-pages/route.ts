@@ -7,9 +7,12 @@ import {
   normalizeAdminStaticPageValues,
   validateAdminStaticPageValues,
 } from "@/lib/admin-static-page-validation";
+import { hasTrustedMutationOrigin } from "@/lib/request-security";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 export async function POST(request: Request) {
-  await requireAdmin();
+  if (!hasTrustedMutationOrigin(request)) return NextResponse.json({ message: "Geçersiz istek kaynağı." }, { status: 403 });
+  const admin = await requireAdmin();
   const body = await request.json().catch(() => ({}));
   const input = body && typeof body === "object" && !Array.isArray(body) ? body as Record<string, unknown> : {};
   const values = normalizeAdminStaticPageValues(input);
@@ -24,6 +27,13 @@ export async function POST(request: Request) {
 
   try {
     await saveAdminStaticPage(adminStaticPageValuesToFormData(values));
+    await recordAdminAudit({
+      actorProfileId: admin.id,
+      action: values.id ? "static_page.update" : "static_page.create",
+      targetType: "static_page",
+      targetIds: values.id ? [values.id] : [],
+      details: { slug: values.slug, title: values.title, status: values.status },
+    }).catch((auditError) => console.error("[admin-audit] statik sayfa kaydı yazılamadı", auditError));
     revalidatePath("/admin/static-pages");
     revalidateTag("static-pages", "max");
     if (values.slug) revalidatePath(`/sayfa/${values.slug}`);

@@ -14,6 +14,9 @@ importers:
       '@aws-sdk/client-s3':
         specifier: 3.1085.0
         version: 3.1085.0
+      '@ruffle-rs/ruffle':
+        specifier: 0.3.0
+        version: 0.3.0
       '@supabase/ssr':
         specifier: ^0.12.0
         version: 0.12.0(@supabase/supabase-js@2.110.1)
@@ -1509,6 +1512,9 @@ packages:
 
   '@rtsao/scc@1.1.0':
     resolution: {integrity: sha512-zt6OdqaDoOnJ1ZYsCYGt9YmWzDXl4vQdKTyJev62gFhRGKdx7mcT54V9KIjg+d2wi9EXsPvAPKe7i7WjfVWB8g==}
+
+  '@ruffle-rs/ruffle@0.3.0':
+    resolution: {integrity: sha512-rGjP1SJWDr3esxBr1DUa9twvVwvO9XQDZctyWN0wveDPYIu9rd8K742U+7XA9PFife3Wx3gbSRfFaQtiy0ywpA==}
 
   '@sec-ant/readable-stream@0.4.1':
     resolution: {integrity: sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg==}
@@ -5491,6 +5497,8 @@ snapshots:
   '@radix-ui/rect@1.1.2': {}
 
   '@rtsao/scc@1.1.0': {}
+
+  '@ruffle-rs/ruffle@0.3.0': {}
 
   '@sec-ant/readable-stream@0.4.1': {}
 

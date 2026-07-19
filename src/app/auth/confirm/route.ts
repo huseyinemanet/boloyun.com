@@ -3,6 +3,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { publicUrlFromRequest } from "@/lib/request-origin";
 import { createSupabaseRouteClient } from "@/lib/supabase/server";
 import { safeLocalPath } from "@/lib/security/navigation";
+import { createPasswordRecoveryCookieValue, PASSWORD_RECOVERY_COOKIE, PASSWORD_RECOVERY_MAX_AGE_SECONDS } from "@/lib/auth-recovery";
 
 const allowedTypes = new Set<EmailOtpType>(["signup", "recovery", "email", "email_change"]);
 
@@ -20,12 +21,14 @@ export async function GET(request: NextRequest) {
 
   const response = redirectTo(request, next);
   if (rawType === "recovery") {
-    response.cookies.set("password_recovery_pending", "1", {
+    const { data } = await routeClient.supabase.auth.getUser();
+    if (!data.user?.id) return routeClient.applyTo(redirectTo(request, "/sifremi-unuttum?error=expired"));
+    response.cookies.set(PASSWORD_RECOVERY_COOKIE, createPasswordRecoveryCookieValue(data.user.id), {
       httpOnly: true,
       sameSite: "lax",
       secure: request.nextUrl.protocol === "https:",
       path: "/",
-      maxAge: 15 * 60,
+      maxAge: PASSWORD_RECOVERY_MAX_AGE_SECONDS,
     });
   }
   return routeClient.applyTo(response);

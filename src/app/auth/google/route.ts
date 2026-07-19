@@ -1,10 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getRequestOrigin, publicUrlFromRequest } from "@/lib/request-origin";
-import { safeLocalPath } from "@/lib/security/navigation";
+import { safeOAuthPath } from "@/lib/security/navigation";
 import { createSupabaseRouteClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
-  const next = safeLocalPath(request.nextUrl.searchParams.get("next"));
+  const next = safeOAuthPath(request.nextUrl.searchParams.get("next"));
   const routeClient = await createSupabaseRouteClient();
   if (!routeClient.supabase) return redirectTo(request, "/giris?error=config");
 

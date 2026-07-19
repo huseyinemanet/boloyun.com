@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { getTranslationStats, runTranslationAutomationTick } from "@/lib/ai/db-ai";
+import { hasTrustedMutationOrigin } from "@/lib/request-security";
+import { hasValidBearerSecret } from "@/lib/security/secret-comparison";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 export async function POST(request: Request) {
-  const auth = request.headers.get("authorization") ?? "";
   const secret = process.env.AI_TRANSLATION_CRON_SECRET;
-  const isCron = Boolean(secret && auth === `Bearer ${secret}`);
-  if (!isCron) await requireAdmin();
+  const isCron = hasValidBearerSecret(request.headers.get("authorization"), secret);
+  let adminId: string | null = null;
+  if (!isCron) {
+    if (!hasTrustedMutationOrigin(request)) return NextResponse.json({ error: "Geçersiz istek kaynağı." }, { status: 403 });
+    adminId = (await requireAdmin()).id;
+  }
 
   const body = await request.json().catch(() => null) as { source?: unknown; limit?: unknown } | null;
   const source = isCron ? "cron" : typeof body?.source === "string" ? body.source : "admin";
@@ -17,6 +23,15 @@ export async function POST(request: Request) {
   try {
     console.log("[ai-translation] automation.api.start", { source, requestedLimit });
     const result = await runTranslationAutomationTick(source, { limit: requestedLimit });
+    if (adminId) {
+      await recordAdminAudit({
+        actorProfileId: adminId,
+        action: "ai.automation_run",
+        targetType: "ai_translation_automation",
+        targetIds: ["default"],
+        details: { source, status: result.status, requestedLimit: requestedLimit ?? null },
+      }).catch((auditError) => console.error("[admin-audit] AI otomasyon kaydı yazılamadı", auditError));
+    }
     const stats = await getTranslationStats();
     console.log("[ai-translation] automation.api.done", result);
     return NextResponse.json({

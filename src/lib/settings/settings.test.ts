@@ -36,6 +36,19 @@ test("iframe wildcard allowlist covers root and subdomains only", () => {
   assert.equal(isGameSourceAllowed("https://example.com/game", security), false);
 });
 
+test("domain allowlist kapalı olsa bile oyun kaynağı güvenli HTTPS URL olmalıdır", () => {
+  const security = { ...DEFAULT_SETTINGS.security, enforceIframeAllowlist: false };
+  assert.equal(isGameSourceAllowed("https://games.example/play", security), true);
+  for (const unsafe of [
+    "http://games.example/play",
+    "javascript:alert(1)",
+    "data:text/html,<script>alert(1)</script>",
+    "https://user:password@games.example/play",
+    "not a url",
+    "",
+  ]) assert.equal(isGameSourceAllowed(unsafe, security), false, unsafe);
+});
+
 test("image signatures must match the declared MIME type", () => {
   assert.equal(matchesImageSignature(Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), "image/png"), true);
   assert.equal(matchesImageSignature(Uint8Array.from([0xff, 0xd8, 0xff]), "image/png"), false);
