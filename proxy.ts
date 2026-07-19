@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isActiveAdminProfile } from "@/lib/security/admin-access";
 
 function redirectWithAuthCookies(request: NextRequest, source: NextResponse, destination: string) {
   const response = NextResponse.redirect(new URL(destination, request.url));
@@ -48,7 +49,7 @@ export async function proxy(request: NextRequest) {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (profile?.role !== "admin" || profile.status !== "active") {
+    if (!isActiveAdminProfile(profile)) {
       return redirectWithAuthCookies(request, response, "/giris?next=/admin");
     }
   }
