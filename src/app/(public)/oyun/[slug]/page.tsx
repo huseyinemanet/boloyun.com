@@ -159,7 +159,7 @@ export default async function GameDetailPage({ params }: Props) {
 
       <TaxonomyChips categories={categories} tags={tags} />
 
-      <section className="rounded-md border border-border bg-card p-4">
+      <section>
         <h2 className="mb-3 text-lg font-semibold">Benzer Oyunlar</h2>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {similarGames.slice(0, 4).map((similar) => (
