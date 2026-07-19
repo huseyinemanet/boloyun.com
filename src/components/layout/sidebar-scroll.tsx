@@ -93,7 +93,7 @@ export function SidebarScroll({ children, categories }: { children: ReactNode; c
           <nav
             ref={navRef}
             onScroll={updateFadeEdges}
-            className="hidden h-full overflow-y-auto overflow-x-hidden md:block"
+            className="hidden h-full overflow-y-auto overflow-x-hidden [scrollbar-width:none] md:block [&::-webkit-scrollbar]:hidden"
             aria-label="Oyun kategorileri"
           >
             {children}
