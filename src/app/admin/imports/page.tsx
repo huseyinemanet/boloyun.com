@@ -1,8 +1,6 @@
-import Link from "next/link";
 import { AdminCursorPagination } from "@/components/admin/admin-cursor-pagination";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { requireAdmin } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
 import { getAdminImportsPage, getAdminImportStats, parseAdminImportFilter } from "@/import/db/game-imports";
 import { decodeKeysetCursor, parseKeysetDirection } from "@/lib/keyset-pagination";
 import { adminPageMetadata } from "@/lib/seo/metadata";
@@ -37,7 +35,7 @@ export default async function AdminImportsPage({ searchParams }: Props) {
 
   return <div className="space-y-3">
     <ImportNoticeToast notice={params.notice} error={params.error} />
-    <AdminPageHeader title="İnceleme Kuyruğu" description="Taranan oyunları kontrol et, düzenle ve yayınla." actions={<Button asChild variant="outline"><Link href="/admin/crawler">Yeni Oyun Tara</Link></Button>} />
+    <AdminPageHeader title="İnceleme Kuyruğu" description="Taranan oyunları kontrol et, düzenle ve yayınla." />
     <ImportStatusTabs active={filter} counts={counts} />
     <AdminCursorPagination basePath="/admin/imports" itemCount={rows.length} itemName="kayıt" previousCursor={page.previousCursor} nextCursor={page.nextCursor} query={{ status: filter }} />
     <ImportsTable rows={rows} now={new Date().toISOString()} />

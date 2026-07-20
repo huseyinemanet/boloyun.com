@@ -17,7 +17,7 @@ export function ImportStatusTabs({ active, counts }: { active: AdminImportFilter
   const router = useRouter();
   return (
     <Tabs value={active} onValueChange={(value) => router.push(`/admin/imports?status=${value}`)}>
-      <TabsList className="max-w-full overflow-x-auto">
+      <TabsList className="max-w-full overflow-x-auto overflow-y-hidden">
         {tabs.map((tab) => (
           <TabsTrigger key={tab.value} value={tab.value}>
             {tab.label}
