@@ -23,7 +23,7 @@ export default async function AiCenterPage() {
       <AiDebugConsole jobs={jobs} activity={activity} />
       <AdminPageHeader
         title="AI Merkezi"
-        description="Toplu AI çeviriyi aç, batch olarak çalıştır ve loglardan takip et."
+        description="Oyun çevirilerini başlat, ilerlemeyi takip et ve sonuçları kontrol et."
       />
 
       <AutomationProgressPanel automation={automation} stats={stats} />
