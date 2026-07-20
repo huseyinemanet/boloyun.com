@@ -30,7 +30,11 @@ export async function LazyComments({ gameId, slug }: { gameId: string; slug: str
         <CommentStatusNotice />
       </Suspense>
       <CommentAuthGate gameId={gameId} slug={slug} />
-      <CommentsTabs topComments={topComments} latestComments={latestComments} />
+      <CommentsTabs
+        topComments={topComments}
+        latestComments={latestComments}
+        referenceTime={new Date().toISOString()}
+      />
     </section>
   );
 }
