@@ -27,7 +27,7 @@ export function ProfileAvatarSummary({ avatarUrl, displayName, username, uploadE
               alt={displayName}
               width={80}
               height={80}
-              unoptimized
+              priority
               className={cn("size-20 rounded-md object-cover transition-opacity", pending && "opacity-60")}
             />
           ) : (

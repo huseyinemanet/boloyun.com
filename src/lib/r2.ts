@@ -51,6 +51,8 @@ export async function uploadSiteAsset(file: File, kind: "logo" | "favicon" | "co
   if (dimensions.width > limit.width || dimensions.height > limit.height) throw new Error(`Görsel en fazla ${limit.width}×${limit.height} piksel olabilir.`);
   if (isAnimatedImage(bytes, file.type)) throw new Error("Animasyonlu görseller desteklenmiyor.");
   let outputBytes: Uint8Array;
+  let outputWidth = dimensions.width;
+  let outputHeight = dimensions.height;
   try {
     const image = sharp(bytes, { animated: false, failOn: "error", limitInputPixels: limit.pixels });
     const metadata = await image.metadata();
@@ -58,7 +60,14 @@ export async function uploadSiteAsset(file: File, kind: "logo" | "favicon" | "co
       throw new Error("Görsel boyut bilgisi tutarsız.");
     }
     if ((metadata.pages ?? 1) > 1) throw new Error("Animasyonlu görseller desteklenmiyor.");
-    outputBytes = new Uint8Array(await image.rotate().webp({ quality: kind === "favicon" ? 90 : 82 }).toBuffer());
+    const transformer = image.rotate();
+    if (kind === "avatar") {
+      transformer.resize({ width: 320, height: 320, fit: "cover", withoutEnlargement: true });
+    }
+    const { data, info } = await transformer.webp({ quality: kind === "favicon" ? 90 : 82 }).toBuffer({ resolveWithObject: true });
+    outputBytes = new Uint8Array(data);
+    outputWidth = info.width;
+    outputHeight = info.height;
   } catch (error) {
     if (error instanceof Error && (error.message.includes("boyut") || error.message.includes("Animasyonlu"))) throw error;
     throw new Error("Görsel güvenli biçimde yeniden kodlanamadı.");
@@ -73,8 +82,8 @@ export async function uploadSiteAsset(file: File, kind: "logo" | "favicon" | "co
     key,
     sha256,
     bytes: outputBytes.byteLength,
-    width: dimensions.width,
-    height: dimensions.height,
+    width: outputWidth,
+    height: outputHeight,
     mimeType: "image/webp" as const,
   };
 }
