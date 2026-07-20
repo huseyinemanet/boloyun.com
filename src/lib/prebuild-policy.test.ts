@@ -3,8 +3,8 @@ import test from "node:test";
 import { mergePrebuildSlugs, PUBLIC_PREBUILD_LIMITS } from "./prebuild-policy";
 
 test("public prebuild limits keep deploy-time rendering bounded", () => {
-  assert.equal(PUBLIC_PREBUILD_LIMITS.games, 48);
-  assert.equal(PUBLIC_PREBUILD_LIMITS.categories, 24);
+  assert.equal(PUBLIC_PREBUILD_LIMITS.games, 24);
+  assert.equal(PUBLIC_PREBUILD_LIMITS.categories, 12);
   assert.ok(PUBLIC_PREBUILD_LIMITS.popularGames + PUBLIC_PREBUILD_LIMITS.latestGames >= PUBLIC_PREBUILD_LIMITS.games);
 });
 

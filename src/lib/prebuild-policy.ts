@@ -1,10 +1,10 @@
 // Keep deploy-time rendering focused on high-traffic discovery paths. Other
 // public routes are generated on demand and retained by the existing ISR cache.
 export const PUBLIC_PREBUILD_LIMITS = {
-  categories: 24,
-  games: 48,
-  latestGames: 24,
-  popularGames: 36,
+  categories: 12,
+  games: 24,
+  latestGames: 12,
+  popularGames: 18,
 } as const;
 
 type SlugRow = { slug?: unknown };
