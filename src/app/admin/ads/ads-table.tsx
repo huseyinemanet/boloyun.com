@@ -97,6 +97,7 @@ export function AdsTable({ ads, slots }: { ads: AdRow[]; slots: AdSlotRow[] }) {
 
   const statusFilter = String(table.getColumn("status")?.getFilterValue() ?? "all");
   const filteredCount = table.getFilteredRowModel().rows.length;
+  const emptyMessage = ads.length === 0 ? "Henüz reklam eklenmedi." : "Filtrelerle eşleşen reklam bulunamadı.";
 
   return (
     <div className="space-y-3 p-3">
@@ -144,7 +145,7 @@ export function AdsTable({ ads, slots }: { ads: AdRow[]; slots: AdSlotRow[] }) {
       </div>
 
       <div className="flex items-center justify-end text-sm font-semibold text-muted-foreground">
-        {filteredCount.toLocaleString("tr-TR")} kayıt
+        {filteredCount > 0 ? `${filteredCount.toLocaleString("tr-TR")} reklam` : emptyMessage}
       </div>
 
       <div className="overflow-hidden rounded-md border border-border">
@@ -172,7 +173,7 @@ export function AdsTable({ ads, slots }: { ads: AdRow[]; slots: AdSlotRow[] }) {
             )) : (
               <TableRow>
                 <TableCell colSpan={table.getVisibleLeafColumns().length} className="h-28 text-center font-medium text-muted-foreground">
-                  {ads.length === 0 ? "Henüz reklam yok." : "Filtrelerle eşleşen reklam bulunamadı."}
+                  {emptyMessage}
                 </TableCell>
               </TableRow>
             )}
@@ -182,15 +183,17 @@ export function AdsTable({ ads, slots }: { ads: AdRow[]; slots: AdSlotRow[] }) {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Toplam {filteredCount.toLocaleString("tr-TR")} kayıt
+          {filteredCount > 0 ? `Toplam ${filteredCount.toLocaleString("tr-TR")} reklam` : emptyMessage}
         </p>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">
-            Sayfa {table.getState().pagination.pageIndex + 1} / {Math.max(table.getPageCount(), 1)}
-          </span>
-          <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>Önceki</Button>
-          <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>Sonraki</Button>
-        </div>
+        {table.getPageCount() > 1 ? (
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">
+              Sayfa {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
+            </span>
+            <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>Önceki</Button>
+            <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>Sonraki</Button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

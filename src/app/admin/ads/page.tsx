@@ -46,7 +46,7 @@ export default async function AdminAdsPage({ searchParams }: AdminAdsPageProps) 
             </div>
             <Button asChild variant="outline" size="lg" className="font-semibold">
               <Link href={newAdHref}>
-                <IconPromotionFillDuo18 className="size-4" />
+                <PlusIcon className="size-4" aria-hidden="true" />
                 Yeni reklam
               </Link>
             </Button>
@@ -150,7 +150,9 @@ export default async function AdminAdsPage({ searchParams }: AdminAdsPageProps) 
       <section className="overflow-hidden rounded-md border border-border bg-card">
         <div className="border-b border-border bg-muted/40 p-3">
           <h2 className="font-bold">Reklam listesi</h2>
-          <p className="mt-1 text-xs text-muted-foreground">{data.ads.length} reklam</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {data.ads.length > 0 ? `${data.ads.length.toLocaleString("tr-TR")} reklam` : "Henüz reklam eklenmedi."}
+          </p>
         </div>
         <AdsTable ads={data.ads} slots={data.slots} />
       </section>
