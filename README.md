@@ -65,6 +65,11 @@ Kullanıcı
   -> 127.0.0.1:3001
   -> boloyun-app
   -> Supabase / obje deposu / harici servisler
+
+Arka plan işleri
+  -> boloyun-worker
+  -> crawler_jobs kuyruğu
+  -> scrape / AI / inceleme kuyruğu
 ```
 
 Deploy akışı:
@@ -90,6 +95,9 @@ Sunucudaki uygulama dosyaları:
 ```
 
 Uygulama SMF forumundan ayrı Docker Compose projesi ve ayrı local port üzerinde çalışır.
+Crawler ve AI toplu işleri public web sürecinde çalışmaz. Aynı production image'ını kullanan, dışarı port açmayan ve kaynakları sınırlandırılmış `boloyun-worker` servisi bu işleri Supabase üzerindeki kalıcı kuyruktan küçük partiler hâlinde alır.
+
+Worker kurulumu, sağlık kontrolleri ve ilk production geçişi için [arka plan worker rehberine](docs/background-worker.md) bakın.
 
 ## Proje Yapısı
 

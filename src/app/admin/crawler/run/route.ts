@@ -1,317 +1,67 @@
-import { revalidatePath } from "next/cache";
-import {
-  getDiscoveredImportsBySourceUrls,
-  insertNewDiscoveredImports,
-  markImportFailed,
-  markImportPendingReview,
-  markImportScraped,
-  type GameImportQueueItem,
-} from "@/import/db/game-imports";
-import { generateGameContent } from "@/import/ai/generate-game-content";
-import { scrapeGame } from "@/import/scrape/scrape-game";
-import { discoverGameUrls } from "@/import/sitemap/discover";
+import { NextResponse } from "next/server";
+import { recordAdminAudit } from "@/lib/admin-audit";
 import { getCurrentProfile } from "@/lib/auth";
 import { hasTrustedMutationOrigin } from "@/lib/request-security";
-import { recordAdminAudit } from "@/lib/admin-audit";
+import { parseCrawlerJobInput } from "@/import/crawler/config";
+import { enqueueCrawlerJob, getActiveCrawlerJob, getCrawlerJob, getLatestCrawlerJob } from "@/import/crawler/jobs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-type CrawlerStats = {
-  requested: number;
-  limit: number;
-  discovered: number;
-  duplicateChecked: number;
-  inserted: number;
-  skipped: number;
-  pendingDiscovered: number;
-  scrapeLimit: number;
-  scraped: number;
-  aiGenerated: number;
-  pendingReview: number;
-  failed: number;
-};
+export async function GET(request: Request) {
+  const profile = await getCurrentProfile();
+  if (!profile) return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
+  if (profile.role !== "admin" || profile.status !== "active") return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 });
 
-const MAX_DISCOVER_LIMIT = 5_000;
-const MAX_SCRAPE_LIMIT = 500;
+  const jobId = new URL(request.url).searchParams.get("jobId");
+  const job = jobId ? await getCrawlerJob(jobId) : await getLatestCrawlerJob();
+  if (jobId && !job) return NextResponse.json({ error: "Crawler işi bulunamadı." }, { status: 404 });
+  return NextResponse.json({ job }, { headers: { "Cache-Control": "no-store" } });
+}
 
 export async function POST(request: Request) {
   const profile = await getCurrentProfile();
-  if (!profile) return Response.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
-  if (profile.role !== "admin" || profile.status !== "active") return Response.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 });
-  if (!hasTrustedMutationOrigin(request)) return Response.json({ error: "Geçersiz istek kaynağı." }, { status: 403 });
-  let parsedBody: unknown;
-  try { parsedBody = await request.json(); } catch { return Response.json({ error: "Geçersiz JSON gövdesi." }, { status: 400 }); }
-  const body = isRecord(parsedBody) ? parsedBody : {};
-  const sitemapUrl = String(body.sitemapUrl || "https://www.miniplay.com/sitemap.xml").trim();
-  const requested = parsePositiveInt(body.discoverLimit, 100);
-  const limit = clamp(requested, 1, MAX_DISCOVER_LIMIT);
-  const requestedScrapeLimit = parseScrapeLimit(body.scrapeLimit);
-  const scrapeLimit = requestedScrapeLimit === "all" ? "all" : clamp(requestedScrapeLimit, 0, MAX_SCRAPE_LIMIT);
-  const shouldScrape = Boolean(body.scrapeNow);
+  if (!profile) return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
+  if (profile.role !== "admin" || profile.status !== "active") return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 });
+  if (!hasTrustedMutationOrigin(request)) return NextResponse.json({ error: "Geçersiz istek kaynağı." }, { status: 403 });
 
-  const encoder = new TextEncoder();
-  const operationAbort = new AbortController();
-  request.signal.addEventListener("abort", () => operationAbort.abort(), { once: true });
-  const stream = new ReadableStream({
-    start(controller) {
-      const send = (event: CrawlerEvent) => {
-        if (!operationAbort.signal.aborted) controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
-      };
+  const parsedBody = await request.json().catch(() => null);
+  if (!isRecord(parsedBody)) return NextResponse.json({ error: "Geçersiz JSON gövdesi." }, { status: 400 });
 
-      void runCrawler({
-        sitemapUrl,
-        shouldScrape,
-        scrapeLimit,
-        stats: {
-          requested,
-          limit,
-          discovered: 0,
-          duplicateChecked: 0,
-          inserted: 0,
-          skipped: 0,
-          pendingDiscovered: 0,
-          scrapeLimit: shouldScrape && scrapeLimit !== "all" ? scrapeLimit : 0,
-          scraped: 0,
-          aiGenerated: 0,
-          pendingReview: 0,
-          failed: 0,
-        },
-        send,
-        signal: operationAbort.signal,
-        actorProfileId: profile.id,
-      }).finally(() => { if (!operationAbort.signal.aborted) controller.close(); });
-    },
-    cancel() { operationAbort.abort(); },
-  });
+  let input: ReturnType<typeof parseCrawlerJobInput>;
+  try {
+    input = parseCrawlerJobInput(parsedBody, profile.id);
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Geçersiz crawler ayarı." }, { status: 400 });
+  }
 
-  return new Response(stream, {
-    headers: {
-      "Cache-Control": "no-store",
-      "Content-Type": "application/x-ndjson; charset=utf-8",
-    },
-  });
+  try {
+    const activeJob = await getActiveCrawlerJob();
+    if (activeJob) {
+      return NextResponse.json({ error: "Devam eden crawler işi tamamlanmadan yeni bir iş başlatılamaz.", job: activeJob }, { status: 409 });
+    }
+
+    const job = await enqueueCrawlerJob(input);
+    await recordAdminAudit({
+      actorProfileId: profile.id,
+      action: "crawler.enqueue",
+      targetType: "crawler_job",
+      targetIds: [job.id],
+      details: {
+        sourceUrl: job.sitemapUrl,
+        discoverLimit: job.discoverLimit,
+        scrapeLimit: job.requestedScrapeLimit,
+        scrapeNow: job.scrapeNow,
+      },
+    }).catch((error) => console.error("[crawler] enqueue audit failed", error));
+    return NextResponse.json({ job }, { status: 202 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Crawler işi kuyruğa alınamadı.";
+    console.error("[crawler] enqueue failed", { error: message });
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-type CrawlerEvent =
-  | {
-      type: "progress";
-      phase: "discover" | "duplicates" | "insert" | "pending" | "scrape" | "ai" | "complete";
-      message: string;
-      stats: CrawlerStats;
-    }
-  | {
-      type: "done";
-      ok: boolean;
-      message: string;
-      stats: CrawlerStats;
-    };
-
-async function runCrawler({
-  sitemapUrl,
-  shouldScrape,
-  scrapeLimit,
-  stats,
-  send,
-  signal,
-  actorProfileId,
-}: {
-  sitemapUrl: string;
-  shouldScrape: boolean;
-  scrapeLimit: number | "all";
-  stats: CrawlerStats;
-  send: (event: CrawlerEvent) => void;
-  signal: AbortSignal;
-  actorProfileId: string;
-}) {
-  try {
-    send({
-      type: "progress",
-      phase: "discover",
-      message: `Sitemap okunuyor. İstenen: ${stats.requested.toLocaleString("tr-TR")}, uygulanacak limit: ${stats.limit.toLocaleString("tr-TR")}.`,
-      stats,
-    });
-
-    const discovered = await discoverGameUrls(sitemapUrl, stats.limit, (progress) => {
-      stats.discovered = progress.discovered;
-      send({
-        type: "progress",
-        phase: "discover",
-        message: `${progress.discovered.toLocaleString("tr-TR")} oyun URL'i bulundu. Sırada ${progress.queuedSitemaps.toLocaleString("tr-TR")} sitemap var.`,
-        stats,
-      });
-    }, signal);
-
-    stats.discovered = discovered.length;
-    send({
-      type: "progress",
-      phase: "duplicates",
-      message: "Mevcut kayıtlar kontrol ediliyor.",
-      stats,
-    });
-
-    const insertResult = await insertNewDiscoveredImports(discovered, (progress) => {
-      if (progress.phase === "duplicates") {
-        stats.duplicateChecked = progress.checked ?? stats.duplicateChecked;
-        send({
-          type: "progress",
-          phase: "duplicates",
-          message: `${stats.duplicateChecked.toLocaleString("tr-TR")} / ${(progress.total ?? discovered.length).toLocaleString("tr-TR")} URL duplicate kontrolünden geçti.`,
-          stats,
-        });
-        return;
-      }
-
-      stats.inserted = progress.inserted ?? stats.inserted;
-      stats.skipped = progress.skipped ?? stats.skipped;
-      send({
-        type: "progress",
-        phase: "insert",
-        message: `${stats.inserted.toLocaleString("tr-TR")} yeni URL eklendi, ${stats.skipped.toLocaleString("tr-TR")} URL zaten vardı.`,
-        stats,
-      });
-    });
-
-    stats.inserted = insertResult.insertedCount;
-    stats.skipped = insertResult.skippedCount;
-
-    let pendingDiscovered: GameImportQueueItem[] = [];
-    if (shouldScrape) {
-      const remainingLimit = scrapeLimit === "all" ? discovered.length : Math.max(0, scrapeLimit - insertResult.inserted.length);
-      pendingDiscovered = await getDiscoveredImportsBySourceUrls(
-        discovered.map((item) => item.sourceUrl),
-        remainingLimit,
-        (progress) => {
-          stats.pendingDiscovered = progress.found;
-          send({
-            type: "progress",
-            phase: "pending",
-            message: `${progress.found.toLocaleString("tr-TR")} mevcut discovered kayıt işleme kuyruğuna alındı. Kontrol: ${progress.checked.toLocaleString("tr-TR")} / ${progress.total.toLocaleString("tr-TR")}.`,
-            stats,
-          });
-        },
-      );
-    }
-
-    const availableScrapeTargets = uniqueById([...insertResult.inserted, ...pendingDiscovered]);
-    const effectiveScrapeLimit = scrapeLimit === "all" ? availableScrapeTargets.length : scrapeLimit;
-    stats.scrapeLimit = shouldScrape ? effectiveScrapeLimit : 0;
-    const scrapeTargets = shouldScrape ? availableScrapeTargets.slice(0, effectiveScrapeLimit) : [];
-    if (scrapeTargets.length === 0) {
-      send({
-        type: "progress",
-        phase: "complete",
-        message: shouldScrape ? "İşlenecek yeni kayıt yok." : "Otomatik işleme kapalı, keşif tamamlandı.",
-        stats,
-      });
-    }
-
-    for (const [index, item] of scrapeTargets.entries()) {
-      if (signal.aborted) throw new Error("Crawler işlemi iptal edildi.");
-      send({
-        type: "progress",
-        phase: "scrape",
-        message: `${index + 1} / ${scrapeTargets.length} oyun bilgisi çekiliyor: ${item.source_url}`,
-        stats,
-      });
-
-      try {
-        const parsed = await scrapeGame(item.source_url, "miniplay", signal);
-        await markImportScraped(item.id, parsed);
-        stats.scraped += 1;
-        send({
-          type: "progress",
-          phase: "ai",
-          message: `${index + 1} / ${scrapeTargets.length} AI içeriği hazırlanıyor: ${parsed.originalTitle}`,
-          stats,
-        });
-
-        const generated = await generateGameContent(parsed);
-        await markImportPendingReview(item.id, parsed, generated);
-        stats.aiGenerated += 1;
-        stats.pendingReview += 1;
-        send({
-          type: "progress",
-          phase: "ai",
-          message: `${parsed.originalTitle} içeriği hazırlandı.`,
-          stats,
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Bilinmeyen hata";
-        try {
-          await markImportFailed(item.id, message);
-        } catch (markError) {
-          console.error("[crawler] failed_item_mark_failed_error", {
-            importId: item.id,
-            sourceUrl: item.source_url,
-            originalError: message,
-            markError: markError instanceof Error ? markError.message : String(markError),
-          });
-        }
-        stats.failed += 1;
-        send({
-          type: "progress",
-          phase: "scrape",
-          message: `Hata kaydedildi, sonraki oyuna geçiliyor: ${message}`,
-          stats,
-        });
-      }
-    }
-
-    try {
-      revalidatePath("/admin");
-      revalidatePath("/admin/crawler");
-      revalidatePath("/admin/imports");
-    } catch (error) {
-      console.error("[crawler] revalidate_failed", { error: error instanceof Error ? error.message : String(error) });
-    }
-
-    await recordAdminAudit({
-      actorProfileId,
-      action: "crawler.run",
-      targetType: "crawler",
-      details: { sourceUrl: sitemapUrl, discovered: stats.discovered, pendingReview: stats.pendingReview, failed: stats.failed },
-    }).catch((error) => console.error("[crawler] audit failed", error));
-
-    send({
-      type: "done",
-      ok: true,
-      message: `Tamamlandı. ${stats.discovered.toLocaleString("tr-TR")} URL tarandı, ${stats.pendingReview.toLocaleString("tr-TR")} oyun içeriği hazırlandı.`,
-      stats,
-    });
-  } catch (error) {
-    if (signal.aborted) return;
-    send({
-      type: "done",
-      ok: false,
-      message: error instanceof Error ? error.message : "Crawler çalışırken bilinmeyen bir hata oluştu.",
-      stats,
-    });
-  }
-}
-
-function parsePositiveInt(value: unknown, fallback: number) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) return fallback;
-  return Math.floor(parsed);
-}
-
-function parseScrapeLimit(value: unknown) {
-  if (value === "all" || value === "" || value === null || typeof value === "undefined") {
-    return "all" as const;
-  }
-
-  return parsePositiveInt(value, MAX_SCRAPE_LIMIT);
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(value, max));
-}
-
-function uniqueById<T extends { id: string }>(items: T[]) {
-  return [...new Map(items.map((item) => [item.id, item])).values()];
 }

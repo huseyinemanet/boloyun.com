@@ -12,6 +12,9 @@ services:
       HOSTNAME: 0.0.0.0
       PORT: "3000"
       NEXT_TELEMETRY_DISABLED: "1"
+      BOL_OYUN_PROCESS_ROLE: web
+      BACKGROUND_WORKER_ENABLED: "false"
+      AI_AUTOMATION_WORKER_ENABLED: "false"
     ports:
       - "127.0.0.1:3001:3000"
     volumes:
@@ -29,11 +32,50 @@ services:
     cpus: 1.25
     stop_grace_period: 30s
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/robots.txt').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health',{headers:{authorization:'Bearer '+process.env.INTERNAL_HEALTH_CHECK_TOKEN}}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 6
       start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  worker:
+    image: boloyun:${IMAGE_TAG:?IMAGE_TAG is required}
+    container_name: boloyun-worker
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env.production
+    environment:
+      HOSTNAME: 0.0.0.0
+      PORT: "3002"
+      NEXT_TELEMETRY_DISABLED: "1"
+      BOL_OYUN_PROCESS_ROLE: worker
+      BACKGROUND_WORKER_ENABLED: "true"
+      BACKGROUND_WORKER_IDLE_INTERVAL_MS: "15000"
+      AI_AUTOMATION_WORKER_ENABLED: "true"
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 384m
+    mem_reservation: 192m
+    cpus: 0.35
+    stop_grace_period: 60s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3002/api/health',{headers:{authorization:'Bearer '+process.env.INTERNAL_HEALTH_CHECK_TOKEN}}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
     logging:
       driver: json-file
       options:
