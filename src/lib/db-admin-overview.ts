@@ -166,6 +166,7 @@ function targetLabel(targetType: string) {
   const labels: Record<string, string> = {
     game_import: "Import kaydı",
     game: "Oyun",
+    category: "Kategori",
     comment: "Yorum",
     comments: "Yorumlar",
     profile: "Kullanıcı",
