@@ -124,7 +124,7 @@ function FavoriteButton({ gameId, isFavorite, onToggle, onNotice }: { gameId: st
         type="button"
         disabled
         variant="outline"
-        size="icon"
+        size="icon-sm"
         className="cursor-not-allowed text-muted-foreground opacity-60"
         aria-label="Favorilere ekle"
         title="Favorilere ekle"
@@ -138,7 +138,7 @@ function FavoriteButton({ gameId, isFavorite, onToggle, onNotice }: { gameId: st
     <Button
       type="button"
       variant="secondary"
-      size="icon"
+      size="icon-sm"
       className={cn(isFavorite ? "border-destructive/40 bg-destructive/10 text-destructive ring-1 ring-destructive/20" : "")}
       aria-label={isFavorite ? "Favorilerden çıkar" : "Favorilere ekle"}
       aria-pressed={isFavorite}
@@ -215,7 +215,8 @@ function VoteButton({
     <Button
       type="button"
       variant="secondary"
-      className={cn("h-9 gap-1.5 px-2.5", active ? "border-primary bg-primary/10 text-primary ring-1 ring-primary" : "")}
+      size="sm"
+      className={cn(active ? "border-primary bg-primary/10 text-primary ring-1 ring-primary" : "")}
       aria-label={ariaLabel}
       aria-pressed={active}
       aria-busy={pending}

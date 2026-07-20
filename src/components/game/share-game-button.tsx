@@ -26,7 +26,7 @@ export function ShareGameButton({ title }: { title: string }) {
   }
   return (
     <>
-      <Button type="button" variant="secondary" size="icon" onClick={share} aria-label="Oyunu paylaş" title="Oyunu paylaş"><Share2Icon /></Button>
+      <Button type="button" variant="secondary" size="icon-sm" onClick={share} aria-label="Oyunu paylaş" title="Oyunu paylaş"><Share2Icon /></Button>
       <span className="sr-only" aria-live="polite">{message}</span>
     </>
   );

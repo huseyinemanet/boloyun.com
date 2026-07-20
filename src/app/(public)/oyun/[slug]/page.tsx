@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Image from "next/image";
+import { IconStarFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconStarFillDuo18";
+import { IconStarUserFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconStarUserFillDuo18";
 import { SoundLink } from "@/components/audio/sound-link";
 import { notFound } from "next/navigation";
 import { AdSlot } from "@/components/ads/ad-slot";
@@ -118,8 +121,8 @@ export default async function GameDetailPage({ params }: Props) {
 
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-border py-3">
               {settings.games.showPlayCount ? <PlayCountMetric initialPlayCount={game.playCount} eventName={playEventName} /> : null}
-              <Metric label="Puan" value={`${game.ratingAvg.toFixed(1)} / 5`} />
-              <Metric label="Oy" value={`${game.ratingCount.toLocaleString("tr-TR")} değerlendirme`} />
+              <Metric icon={<IconStarFillDuo18 />} label="Puan" value={`${game.ratingAvg.toFixed(1)} / 5`} />
+              <Metric icon={<IconStarUserFillDuo18 />} label="Oy" value={`${game.ratingCount.toLocaleString("tr-TR")} değerlendirme`} />
             </div>
 
           </div>
@@ -207,9 +210,10 @@ function Breadcrumbs({ gameTitle, categories }: { gameTitle: string; categories:
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-baseline gap-1.5">
+    <div className="flex items-center gap-1.5">
+      <span className="text-primary [&_svg]:size-4" aria-hidden="true">{icon}</span>
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
       <span className="text-sm font-semibold text-foreground">{value}</span>
     </div>
