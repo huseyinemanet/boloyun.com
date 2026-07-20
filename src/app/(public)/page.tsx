@@ -59,7 +59,7 @@ export default async function Home() {
       {deduplicatedSections.length ? deduplicatedSections.map(({ section, games }, index) => <div key={section.id ?? `${section.sectionType}-${index}`} className={section.visibility === "desktop" ? "hidden md:block" : section.visibility === "mobile" ? "md:hidden" : ""}><GameSection title={section.title} games={games} eagerCount={index === 0 ? 4 : 0} />{index > 0 && index % 2 === 1 ? <div className="mt-5"><AdSlot slotKey="homepage_between_sections" /></div> : null}</div>) : <>
         <div id="yeni-oyunlar" className="scroll-mt-24"><GameSection title="Yeni Oyunlar" games={homepage.latestGames.slice(0, 12)} eagerCount={4} /></div>
         <div id="populer-oyunlar" className="scroll-mt-24"><GameSection title="Popüler Oyunlar" games={homepage.popularGames} /></div>
-        <div id="trend-oyunlar" className="scroll-mt-24"><GameSection title="Trend Oyunlar" games={homepage.latestGames.slice(24, 36)} /></div>
+        <div id="trend-oyunlar" className="scroll-mt-24"><GameSection title="Trend Oyunlar" games={homepage.trendingGames} /></div>
       </>}
       <GameSection title="Tüm Oyunlar" games={allGames} />
     </div>

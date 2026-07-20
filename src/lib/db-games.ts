@@ -163,6 +163,8 @@ type PublicGameSearchRpc = {
   total?: number | string | null;
 };
 
+type TrendingPublishedGamesRpc = GameRow[];
+
 type AdminPopularGameCategoryRow = {
   game_id: string;
   categories: { name: string | null } | { name: string | null }[] | null;
@@ -282,6 +284,41 @@ const getPopularPublishedGamesCached = unstable_cache(async function getPopularP
   return (data as unknown as GameRow[] | null)?.map(mapGameRow) ?? [];
 }, ["popular-published-game-cards-v1"], { revalidate: 3600, tags: ["games"] });
 export const getPopularPublishedGames = cache(getPopularPublishedGamesCached);
+
+const getTrendingPublishedGamesCached = unstable_cache(async function getTrendingPublishedGames(limit = 12): Promise<Game[]> {
+  const safeLimit = Math.min(Math.max(limit, 1), 60);
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) {
+    if (!allowPublicDemoData()) {
+      throw publicDataUnavailable("Trend oyunlar", "Supabase yapılandırması eksik");
+    }
+    return fallbackGames
+      .filter((game) => game.status === "published")
+      .toSorted((left, right) =>
+        (right.likesCount + right.playCount / 20) - (left.likesCount + left.playCount / 20)
+      )
+      .slice(0, safeLimit);
+  }
+
+  const { data, error } = await measuredQuery("games.published.trending", supabase.rpc("get_trending_published_games", {
+    p_limit: safeLimit,
+  }));
+
+  if (error) {
+    if (!allowPublicDemoData()) {
+      throw publicDataUnavailable("Trend oyunlar", error.message);
+    }
+    return fallbackGames
+      .filter((game) => game.status === "published")
+      .toSorted((left, right) =>
+        (right.likesCount + right.playCount / 20) - (left.likesCount + left.playCount / 20)
+      )
+      .slice(0, safeLimit);
+  }
+
+  return (Array.isArray(data) ? (data as TrendingPublishedGamesRpc) : []).map(mapGameRow);
+}, ["trending-published-game-cards-v1"], { revalidate: 3600, tags: ["games"] });
+export const getTrendingPublishedGames = cache(getTrendingPublishedGamesCached);
 
 export async function getPrebuildGameSlugs(): Promise<Array<{ slug: string }>> {
   const supabase = createSupabaseServiceClient();
