@@ -19,6 +19,7 @@ import { getAdminGamesNumberedPage } from "@/lib/db-games";
 import type { PublishStatus } from "@/types/game";
 import { adminPageMetadata } from "@/lib/seo/metadata";
 import { GameNoticeToast } from "./game-notice-toast";
+import { getOpenGameReportCount } from "@/lib/db-game-reports";
 
 export const dynamic = "force-dynamic";
 export const metadata = adminPageMetadata("Oyunlar");
@@ -37,14 +38,28 @@ export default async function AdminGamesPage({ searchParams }: AdminGamesPagePro
   const params = await searchParams;
   const page = parseAdminPage(params.page);
   const query = params.q?.trim().slice(0, 120) ?? "";
-  const { items: games, total } = await getAdminGamesNumberedPage({ page, perPage: PER_PAGE, search: query });
+  const [{ items: games, total }, openReportCount] = await Promise.all([
+    getAdminGamesNumberedPage({ page, perPage: PER_PAGE, search: query }),
+    getOpenGameReportCount(),
+  ]);
   const paginationQuery = query ? { q: query } : undefined;
 
   return (
     <div className="space-y-3">
       <GameNoticeToast notice={params.notice} />
 
-      <AdminPageHeader title="Oyunlar" description="Yayındaki, taslak ve pasif oyunları buradan düzenleyebilirsin." />
+      <AdminPageHeader
+        title="Oyunlar"
+        description="Yayındaki, taslak ve pasif oyunları buradan düzenleyebilirsin."
+        actions={(
+          <Button asChild variant="outline">
+            <Link href="/admin/games/reports">
+              Oyun Bildirimleri
+              {openReportCount > 0 ? <Badge variant="destructive">{openReportCount.toLocaleString("tr-TR")}</Badge> : null}
+            </Link>
+          </Button>
+        )}
+      />
 
       <AdminPagination currentPage={page} perPage={PER_PAGE} total={total} basePath="/admin/games" itemName="oyun" queryParams={paginationQuery} variant="plain" pageWindow={5} />
       <section className="overflow-hidden rounded-md border border-border bg-card">

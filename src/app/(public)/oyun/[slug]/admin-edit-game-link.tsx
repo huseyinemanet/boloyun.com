@@ -12,7 +12,7 @@ export function AdminEditGameLink({ gameId, title }: { gameId: string; title: st
   if (!isAdmin) return null;
 
   return (
-    <Button asChild variant="outline" size="sm" className="h-8 gap-1.5">
+    <Button asChild variant="outline" size="sm">
       <Link href={`/admin/games/${gameId}/edit`} prefetch={false} aria-label={`${title} oyununu admin panelinde düzenle`}>
         <IconPencilFillDuo18 className="size-4" aria-hidden="true" />
         Düzenle

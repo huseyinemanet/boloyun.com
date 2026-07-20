@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { LoaderCircleIcon } from "lucide-react";
+import { toast } from "sonner";
 import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
 import { IconThumbsDownFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsDownFillDuo18";
 import { IconThumbsUpFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsUpFillDuo18";
@@ -124,7 +125,7 @@ function FavoriteButton({ gameId, isFavorite, onToggle, onNotice }: { gameId: st
         type="button"
         disabled
         variant="outline"
-        size="icon"
+        size="icon-sm"
         className="cursor-not-allowed text-muted-foreground opacity-60"
         aria-label="Favorilere ekle"
         title="Favorilere ekle"
@@ -138,7 +139,7 @@ function FavoriteButton({ gameId, isFavorite, onToggle, onNotice }: { gameId: st
     <Button
       type="button"
       variant="secondary"
-      size="icon"
+      size="icon-sm"
       className={cn(isFavorite ? "border-destructive/40 bg-destructive/10 text-destructive ring-1 ring-destructive/20" : "")}
       aria-label={isFavorite ? "Favorilerden çıkar" : "Favorilere ekle"}
       aria-pressed={isFavorite}
@@ -151,9 +152,13 @@ function FavoriteButton({ gameId, isFavorite, onToggle, onNotice }: { gameId: st
         setPending(true);
         try {
           await onToggle();
-          onNotice(isFavorite ? "Favorilerden çıkarıldı." : "Favorilere eklendi.");
+          const message = isFavorite ? "Favorilerden çıkarıldı." : "Favorilere eklendi.";
+          onNotice(message);
+          toast.success(message);
         } catch (error) {
-          onNotice(error instanceof Error ? error.message : "Favori işlemi tamamlanamadı.");
+          const message = error instanceof Error ? error.message : "Favori işlemi tamamlanamadı.";
+          onNotice(message);
+          toast.error(message);
         } finally {
           setPending(false);
         }
@@ -215,7 +220,8 @@ function VoteButton({
     <Button
       type="button"
       variant="secondary"
-      className={cn("h-9 gap-1.5 px-2.5", active ? "border-primary bg-primary/10 text-primary ring-1 ring-primary" : "")}
+      size="sm"
+      className={cn(active ? "border-primary bg-primary/10 text-primary ring-1 ring-primary" : "")}
       aria-label={ariaLabel}
       aria-pressed={active}
       aria-busy={pending}
@@ -227,9 +233,13 @@ function VoteButton({
         setPending(true);
         try {
           await onClick();
-          onNotice(active ? `${title} tercihin güncellendi.` : `${title} olarak işaretlendi.`);
+          const message = active ? `${title} tercihin güncellendi.` : `${title} olarak işaretlendi.`;
+          onNotice(message);
+          toast.success(message);
         } catch (error) {
-          onNotice(error instanceof Error ? error.message : "Oy işlemi tamamlanamadı.");
+          const message = error instanceof Error ? error.message : "Oy işlemi tamamlanamadı.";
+          onNotice(message);
+          toast.error(message);
         } finally {
           setPending(false);
         }

@@ -156,7 +156,7 @@ export function GamePlayer({
       sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups allow-forms"
       className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} w-full rounded-md border-0 bg-black`}
     />
-    {timedOut ? <div className="absolute inset-x-3 bottom-3 rounded-md bg-black/80 p-3 text-center text-sm font-bold text-white">Oyun beklenenden uzun sürede yükleniyor. Kaynağı yeniden deneyebilir veya bozuk oyun olarak bildirebilirsin.</div> : null}
+    {timedOut ? <div className="absolute inset-x-3 bottom-3 rounded-md bg-black/80 p-3 text-center text-sm font-bold text-white">Oyun beklenenden uzun sürede yükleniyor. Kaynağı yeniden deneyebilir veya aşağıdaki “Oyunu Bildir” seçeneğini kullanabilirsin.</div> : null}
     {allowFullscreen ? <Button type="button" size="sm" variant="secondary" className="absolute right-3 top-3" onClick={() => { playClickSound(); void containerRef.current?.requestFullscreen(); }}>Tam Ekran</Button> : null}
     </div>
   );

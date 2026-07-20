@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { auditGameSeo, isTagIndexable } from "@/lib/seo/audit";
-import { videoGameJsonLd } from "@/lib/seo/jsonld";
+import { breadcrumbJsonLd, videoGameJsonLd } from "@/lib/seo/jsonld";
 import { absoluteUrl, buildMetadata } from "@/lib/seo/metadata";
 
 const completeGame = {
@@ -52,4 +52,19 @@ test("VideoGame JSON-LD only exposes real developer and rating", () => {
   const withRating = videoGameJsonLd({ name: "Oyun", description: "Açıklama", image: "/logo.svg", path: "/oyun/oyun", genres: ["Aksiyon"], developer: "Stüdyo", ratingAvg: 4.2, ratingCount: 8 });
   assert.equal("author" in withRating, true);
   assert.equal("aggregateRating" in withRating, true);
+});
+
+test("breadcrumb JSON-LD exposes ordered absolute URLs for rich results", () => {
+  const schema = breadcrumbJsonLd([
+    { name: "Ana Sayfa", path: "/" },
+    { name: "3D Oyunlar", path: "/kategori/3d-oyunlar" },
+    { name: "CS Portable", path: "/oyun/cs-portable" },
+  ]);
+
+  assert.equal(schema["@type"], "BreadcrumbList");
+  assert.deepEqual(schema.itemListElement, [
+    { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: absoluteUrl("/") },
+    { "@type": "ListItem", position: 2, name: "3D Oyunlar", item: absoluteUrl("/kategori/3d-oyunlar") },
+    { "@type": "ListItem", position: 3, name: "CS Portable", item: absoluteUrl("/oyun/cs-portable") },
+  ]);
 });

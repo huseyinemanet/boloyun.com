@@ -5,11 +5,10 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { itemListJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getPublicSettings } from "@/lib/db-settings";
-import { getPublicHomepageSnapshot } from "@/lib/db-homepage-sections";
+import { getPublicHomepageSnapshot, HOMEPAGE_FEATURED_GAME_LIMIT } from "@/lib/db-homepage-sections";
 
 export const revalidate = 3600;
 const HOME_ALL_GAMES_LIMIT = 20;
-const HOME_SECTION_LIMIT = 12;
 
 export async function generateMetadata(): Promise<Metadata> {
   const { general, seo } = await getPublicSettings();
@@ -36,7 +35,7 @@ export default async function Home() {
       if (seenGameIds.has(game.id)) return false;
       seenGameIds.add(game.id);
       return true;
-    }).slice(0, HOME_SECTION_LIMIT);
+    }).slice(0, HOMEPAGE_FEATURED_GAME_LIMIT);
     return { section, games: uniqueGames };
   }).filter(({ games }) => games.length > 0);
   const allGames = homepage.latestGames.filter((game) => !seenGameIds.has(game.id)).slice(0, HOME_ALL_GAMES_LIMIT);
@@ -57,9 +56,9 @@ export default async function Home() {
       <AdSlot slotKey="homepage_top_banner" />
 
       {deduplicatedSections.length ? deduplicatedSections.map(({ section, games }, index) => <div key={section.id ?? `${section.sectionType}-${index}`} className={section.visibility === "desktop" ? "hidden md:block" : section.visibility === "mobile" ? "md:hidden" : ""}><GameSection title={section.title} games={games} eagerCount={index === 0 ? 4 : 0} />{index > 0 && index % 2 === 1 ? <div className="mt-5"><AdSlot slotKey="homepage_between_sections" /></div> : null}</div>) : <>
-        <div id="yeni-oyunlar" className="scroll-mt-24"><GameSection title="Yeni Oyunlar" games={homepage.latestGames.slice(0, 12)} eagerCount={4} /></div>
+        <div id="yeni-oyunlar" className="scroll-mt-24"><GameSection title="Yeni Oyunlar" games={homepage.latestGames.slice(0, HOMEPAGE_FEATURED_GAME_LIMIT)} eagerCount={4} /></div>
         <div id="populer-oyunlar" className="scroll-mt-24"><GameSection title="Popüler Oyunlar" games={homepage.popularGames} /></div>
-        <div id="trend-oyunlar" className="scroll-mt-24"><GameSection title="Trend Oyunlar" games={homepage.latestGames.slice(24, 36)} /></div>
+        <div id="trend-oyunlar" className="scroll-mt-24"><GameSection title="Trend Oyunlar" games={homepage.trendingGames} /></div>
       </>}
       <GameSection title="Tüm Oyunlar" games={allGames} />
     </div>
