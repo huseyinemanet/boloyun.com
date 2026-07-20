@@ -2,9 +2,9 @@ import Link from "next/link";
 import { IconCloudFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCloudFillDuo18";
 import { IconDatabaseFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconDatabaseFillDuo18";
 import { IconEnvelopeFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconEnvelopeFillDuo18";
+import { IconFolderFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconFolderFillDuo18";
 import { IconGamepadFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGamepadFillDuo18";
 import { IconGlobe2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGlobe2FillDuo18";
-import { IconGridCircleListFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGridCircleListFillDuo18";
 import { IconMediaPlayFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMediaPlayFillDuo18";
 import { IconMsgs2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMsgs2FillDuo18";
 import { IconNodes4FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconNodes4FillDuo18";
@@ -41,7 +41,7 @@ export default async function AdminPage() {
   ].filter((item) => item.value > 0);
   const totals = [
     { label: "Toplam Oyun", value: overview.totals.games, icon: IconGamepadFillDuo18 },
-    { label: "Toplam Kategori", value: overview.totals.categories, icon: IconGridCircleListFillDuo18 },
+    { label: "Toplam Kategori", value: overview.totals.categories, icon: IconFolderFillDuo18 },
     { label: "Toplam Yorum", value: overview.totals.comments, icon: IconMsgs2FillDuo18 },
     { label: "Toplam Kullanıcı", value: overview.totals.users, icon: IconUsersFillDuo18 },
   ];
@@ -130,7 +130,7 @@ export default async function AdminPage() {
           <CardContent>
             {overview.activities.length ? overview.activities.map((activity, index) => (
               <div key={activity.id}>
-                {index > 0 ? <Separator /> : null}
+                {index > 0 ? <Separator className="ml-8 w-[calc(100%-2rem)]" /> : null}
                 <div className="flex items-center justify-between gap-3 py-2">
                   <div className="flex items-center gap-2">
                     <Avatar size="sm">
@@ -150,18 +150,18 @@ export default async function AdminPage() {
           <CardHeader className="gap-0.5"><CardTitle>Sistem Durumu</CardTitle></CardHeader>
           <CardContent className="grid gap-0">
             <SystemRow label="Veritabanı" status={overview.system.database} icon={IconDatabaseFillDuo18} />
-            <Separator />
+            <Separator className="ml-6 w-[calc(100%-1.5rem)]" />
             <SystemRow label="Cloudflare R2" status={overview.system.r2} icon={IconCloudFillDuo18} />
-            <Separator />
+            <Separator className="ml-6 w-[calc(100%-1.5rem)]" />
             <SystemRow label="CDN" status={overview.system.cdn} icon={IconGlobe2FillDuo18} />
-            <Separator />
+            <Separator className="ml-6 w-[calc(100%-1.5rem)]" />
             <SystemRow label="E-posta servisi (Brevo)" status={overview.system.email} icon={IconEnvelopeFillDuo18} />
-            <div className="mt-2 border-t pt-2">
-              <p className="py-1 text-xs font-medium text-muted-foreground">Teknik altyapı</p>
+            <div className="pt-2">
+              <Separator className="ml-6 w-[calc(100%-1.5rem)]" />
               <dl>
                 {runtimeDetails.map((detail, index) => (
                   <div key={detail.label}>
-                    {index > 0 ? <Separator /> : null}
+                    {index > 0 ? <Separator className="ml-6 w-[calc(100%-1.5rem)]" /> : null}
                     <TechnicalRow label={detail.label} value={detail.value} icon={detail.icon} />
                   </div>
                 ))}
