@@ -306,7 +306,10 @@ const getTrendingPublishedGamesCached = unstable_cache(async function getTrendin
 
   if (error) {
     if (!allowPublicDemoData()) {
-      throw publicDataUnavailable("Trend oyunlar", error.message);
+      console.warn("Trend oyunlar sorgusu başarısız; gerçek popüler oyunlar yedeği kullanılıyor.", {
+        error: error.message,
+      });
+      return getPopularPublishedGames(safeLimit);
     }
     return fallbackGames
       .filter((game) => game.status === "published")
