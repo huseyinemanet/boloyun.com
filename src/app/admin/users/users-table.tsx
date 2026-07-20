@@ -119,7 +119,7 @@ export function UsersTable({ users, counts, activeFilter }: { users: AdminUser[]
             type="search"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Kullanıcı ara"
+            placeholder="Kullanıcı ara..."
             className="h-10 min-w-0 flex-1 font-normal"
           />
           <Button type="button" variant="outline" className="h-10 px-3 text-sm font-bold">Ara</Button>

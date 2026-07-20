@@ -17,7 +17,7 @@ type Props = {
 };
 
 const validFilters: AdminUserFilter[] = ["all", "admin", "member", "blocked"];
-const PER_PAGE = 50;
+const PER_PAGE = 20;
 
 export default async function AdminUsersPage({ searchParams }: Props) {
   await requireAdmin();

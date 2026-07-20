@@ -39,51 +39,58 @@ export function AdminPagination({
       <p className="shrink-0 text-muted-foreground">
         {total === 0 ? (
           <>Henüz {itemName} yok.</>
-        ) : (
+        ) : totalPages === 1 ? (
           <>
             <span className="font-bold text-foreground">{total.toLocaleString("tr-TR")} {itemName}</span>
-            {" içinden "}{from.toLocaleString("tr-TR")}–{to.toLocaleString("tr-TR")} arası gösteriliyor
+            {" gösteriliyor"}
+          </>
+        ) : (
+          <>
+            <span className="font-bold text-foreground">Toplam {total.toLocaleString("tr-TR")} {itemName}</span>
+            {" · Gösterilen: "}{from.toLocaleString("tr-TR")}–{to.toLocaleString("tr-TR")}
           </>
         )}
       </p>
 
-      <Pagination className="mx-0 w-auto justify-end">
-        <PaginationContent>
-          <PaginationItem>
-            {currentPage <= 1 ? (
-              <span className="inline-flex h-8 items-center justify-center gap-1 rounded-md px-2.5 text-sm font-bold text-muted-foreground opacity-45 sm:pr-3">
-                <span aria-hidden="true">‹</span>
-                <span className="hidden sm:block">Önceki</span>
-              </span>
-            ) : (
-              <PaginationPrevious href={hrefForPage(basePath, currentPage - 1, pathStyle, queryParams)} text="Önceki" />
-            )}
-          </PaginationItem>
-
-          {pages.map((page, index) => (
-            <PaginationItem key={`${page}-${index}`}>
-              {page === "ellipsis" ? (
-                <PaginationEllipsis />
+      {totalPages > 1 ? (
+        <Pagination className="mx-0 w-auto justify-end">
+          <PaginationContent>
+            <PaginationItem>
+              {currentPage <= 1 ? (
+                <span className="inline-flex h-8 items-center justify-center gap-1 rounded-md px-2.5 text-sm font-bold text-muted-foreground opacity-45 sm:pr-3">
+                  <span aria-hidden="true">‹</span>
+                  <span className="hidden sm:block">Önceki</span>
+                </span>
               ) : (
-                <PaginationLink href={hrefForPage(basePath, page, pathStyle, queryParams)} isActive={page === currentPage}>
-                  {page.toLocaleString("tr-TR")}
-                </PaginationLink>
+                <PaginationPrevious href={hrefForPage(basePath, currentPage - 1, pathStyle, queryParams)} text="Önceki" />
               )}
             </PaginationItem>
-          ))}
 
-          <PaginationItem>
-            {currentPage >= totalPages ? (
-              <span className="inline-flex h-8 items-center justify-center gap-1 rounded-md px-2.5 text-sm font-bold text-muted-foreground opacity-45 sm:pl-3">
-                <span className="hidden sm:block">Sonraki</span>
-                <span aria-hidden="true">›</span>
-              </span>
-            ) : (
-              <PaginationNext href={hrefForPage(basePath, currentPage + 1, pathStyle, queryParams)} text="Sonraki" />
-            )}
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+            {pages.map((page, index) => (
+              <PaginationItem key={`${page}-${index}`}>
+                {page === "ellipsis" ? (
+                  <PaginationEllipsis />
+                ) : (
+                  <PaginationLink href={hrefForPage(basePath, page, pathStyle, queryParams)} isActive={page === currentPage}>
+                    {page.toLocaleString("tr-TR")}
+                  </PaginationLink>
+                )}
+              </PaginationItem>
+            ))}
+
+            <PaginationItem>
+              {currentPage >= totalPages ? (
+                <span className="inline-flex h-8 items-center justify-center gap-1 rounded-md px-2.5 text-sm font-bold text-muted-foreground opacity-45 sm:pl-3">
+                  <span className="hidden sm:block">Sonraki</span>
+                  <span aria-hidden="true">›</span>
+                </span>
+              ) : (
+                <PaginationNext href={hrefForPage(basePath, currentPage + 1, pathStyle, queryParams)} text="Sonraki" />
+              )}
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      ) : null}
     </div>
   );
 }
