@@ -21,6 +21,7 @@ import { renderSeoTemplate } from "@/lib/settings/validation";
 import { LazyGameActions } from "./lazy-game-actions";
 import { LazyComments } from "./lazy-comments";
 import { LazyGamePlayer } from "./lazy-game-player";
+import { GameReportDialog } from "@/components/player/game-report-dialog";
 
 export const revalidate = 3600;
 
@@ -146,6 +147,7 @@ export default async function GameDetailPage({ params }: Props) {
             preRoll={settings.ads.preRollEnabled ? <AdSlot slotKey="game_preroll" /> : undefined}
             preRollSkipSeconds={settings.ads.preRollSkipSeconds}
           />
+          <GameReportDialog gameId={game.id} gameTitle={game.title} />
         </div>
       </section>
 
