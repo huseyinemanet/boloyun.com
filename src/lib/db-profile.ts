@@ -6,7 +6,6 @@ export type ProfileGameItem = {
   title: string;
   slug: string;
   thumbnailUrl: string;
-  date: string;
 };
 
 export type ProfileCommentItem = {
@@ -15,6 +14,7 @@ export type ProfileCommentItem = {
   status: string;
   gameTitle: string;
   gameSlug: string;
+  gameThumbnailUrl: string;
   createdAt: string;
 };
 
@@ -33,7 +33,7 @@ type CommentRow = {
   body: string;
   status: string | null;
   created_at: string | null;
-  games?: Pick<GameRow, "title" | "slug"> | Array<Pick<GameRow, "title" | "slug">> | null;
+  games?: Pick<GameRow, "title" | "slug" | "thumbnail_url"> | Array<Pick<GameRow, "title" | "slug" | "thumbnail_url">> | null;
 };
 
 type GameRow = {
@@ -54,7 +54,7 @@ export async function getProfileFavorites(profileId: string, limit = 12): Promis
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  return ((data ?? []) as FavoriteRow[]).flatMap((row) => mapGameItem(row.games, row.created_at));
+  return uniqueGames(((data ?? []) as FavoriteRow[]).flatMap((row) => mapGameItem(row.games)));
 }
 
 export async function getProfileRecentGames(profileId: string, limit = 12): Promise<ProfileGameItem[]> {
@@ -66,9 +66,9 @@ export async function getProfileRecentGames(profileId: string, limit = 12): Prom
     .select("last_played_at, games(id, title, slug, thumbnail_url)")
     .eq("user_id", profileId)
     .order("last_played_at", { ascending: false })
-    .limit(limit);
+    .limit(Math.max(limit * 4, 48));
 
-  return ((data ?? []) as PlayRow[]).flatMap((row) => mapGameItem(row.games, row.last_played_at));
+  return uniqueGames(((data ?? []) as PlayRow[]).flatMap((row) => mapGameItem(row.games))).slice(0, limit);
 }
 
 export async function getProfileComments(profileId: string, limit = 10): Promise<ProfileCommentItem[]> {
@@ -77,7 +77,7 @@ export async function getProfileComments(profileId: string, limit = 10): Promise
 
   const { data } = await supabase
     .from("comments")
-    .select("id, body, status, created_at, games(title, slug)")
+    .select("id, body, status, created_at, games(title, slug, thumbnail_url)")
     .eq("user_id", profileId)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -90,12 +90,13 @@ export async function getProfileComments(profileId: string, limit = 10): Promise
       status: row.status ?? "pending",
       gameTitle: game?.title ?? "Oyun",
       gameSlug: game?.slug ?? "",
+      gameThumbnailUrl: normalizeSiteAssetUrl(game?.thumbnail_url) || "/thumbnails/puzzle.svg",
       createdAt: row.created_at ?? new Date().toISOString(),
     };
   });
 }
 
-function mapGameItem(gameValue: FavoriteRow["games"], date: string | null): ProfileGameItem[] {
+function mapGameItem(gameValue: FavoriteRow["games"]): ProfileGameItem[] {
   const game = Array.isArray(gameValue) ? gameValue[0] : gameValue;
   if (!game) return [];
   return [{
@@ -103,6 +104,14 @@ function mapGameItem(gameValue: FavoriteRow["games"], date: string | null): Prof
     title: game.title,
     slug: game.slug,
     thumbnailUrl: normalizeSiteAssetUrl(game.thumbnail_url) || "/thumbnails/puzzle.svg",
-    date: date ?? new Date().toISOString(),
   }];
+}
+
+function uniqueGames(games: ProfileGameItem[]): ProfileGameItem[] {
+  const seenIds = new Set<string>();
+  return games.filter((game) => {
+    if (seenIds.has(game.id)) return false;
+    seenIds.add(game.id);
+    return true;
+  });
 }
