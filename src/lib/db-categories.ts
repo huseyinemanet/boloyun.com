@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
+import { mergePrebuildSlugs, PUBLIC_PREBUILD_LIMITS } from "@/lib/prebuild-policy";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 import { categories as fallbackCategories } from "@/lib/data";
 import { slugify } from "@/lib/slug/slugify";
@@ -105,16 +106,19 @@ const getPublicCategoriesCached = unstable_cache(async function getPublicCategor
 }, ["public-categories-v2"], { revalidate: 3600, tags: ["categories"] });
 export const getPublicCategories = cache(getPublicCategoriesCached);
 
-export async function getAllActiveCategorySlugs(): Promise<Array<{ slug: string }>> {
+export async function getPrebuildCategorySlugs(): Promise<Array<{ slug: string }>> {
   const supabase = createSupabaseServiceClient();
-  if (!supabase) return fallbackCategories.map(({ slug }) => ({ slug }));
+  if (!supabase) {
+    return mergePrebuildSlugs([fallbackCategories], PUBLIC_PREBUILD_LIMITS.categories);
+  }
   const { data, error } = await supabase
     .from("categories")
     .select("slug")
     .eq("status", "active")
     .order("sidebar_sort_order", { ascending: true })
-    .order("name", { ascending: true });
-  return error || !data ? [] : data.flatMap((row) => typeof row.slug === "string" ? [{ slug: row.slug }] : []);
+    .order("name", { ascending: true })
+    .limit(PUBLIC_PREBUILD_LIMITS.categories);
+  return error || !data ? [] : mergePrebuildSlugs([data], PUBLIC_PREBUILD_LIMITS.categories);
 }
 
 const getSidebarCategoriesCached = unstable_cache(async function getSidebarCategoriesCached(): Promise<PublicNavCategory[]> {

@@ -30,6 +30,7 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd } from "@/lib/seo/jsonld";
 
 export const revalidate = 3600;
+export const dynamicParams = true;
 
 type Props = {
   params: Promise<{ slug: string }>;

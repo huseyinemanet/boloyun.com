@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
+import { mergePrebuildSlugs, PUBLIC_PREBUILD_LIMITS } from "@/lib/prebuild-policy";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 import { games as fallbackGames } from "@/lib/data";
 import { allowPublicDemoData, publicDataUnavailable } from "@/lib/public-data-guard";
@@ -325,17 +326,13 @@ export const getTrendingPublishedGames = cache(getTrendingPublishedGamesCached);
 
 export async function getPrebuildGameSlugs(): Promise<Array<{ slug: string }>> {
   const supabase = createSupabaseServiceClient();
-  if (!supabase) return fallbackGames.slice(0, 300).map(({ slug }) => ({ slug }));
+  if (!supabase) return mergePrebuildSlugs([fallbackGames], PUBLIC_PREBUILD_LIMITS.games);
 
   const [popular, latest] = await Promise.all([
-    supabase.from("games").select("slug").eq("status", "published").order("play_count", { ascending: false }).limit(200),
-    supabase.from("games").select("slug").eq("status", "published").order("created_at", { ascending: false }).limit(100),
+    supabase.from("games").select("slug").eq("status", "published").order("play_count", { ascending: false }).limit(PUBLIC_PREBUILD_LIMITS.popularGames),
+    supabase.from("games").select("slug").eq("status", "published").order("created_at", { ascending: false }).limit(PUBLIC_PREBUILD_LIMITS.latestGames),
   ]);
-  const slugs = new Set<string>();
-  for (const row of [...(popular.data ?? []), ...(latest.data ?? [])]) {
-    if (typeof row.slug === "string") slugs.add(row.slug);
-  }
-  return Array.from(slugs, (slug) => ({ slug }));
+  return mergePrebuildSlugs([popular.data ?? [], latest.data ?? []], PUBLIC_PREBUILD_LIMITS.games);
 }
 
 export async function getAdminPopularGames(limit = 8): Promise<AdminPopularGame[]> {
