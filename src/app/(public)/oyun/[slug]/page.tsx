@@ -181,8 +181,8 @@ export default async function GameDetailPage({ params }: Props) {
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">Benzer Oyunlar</h2>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {similarGames.slice(0, 4).map((similar) => (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {similarGames.slice(0, 5).map((similar) => (
             <GameCard key={similar.id} game={similar} />
           ))}
         </div>
