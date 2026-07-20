@@ -4,6 +4,9 @@ import { getPopularPublishedGames, getPublishedGames, getPublishedGamesByCategor
 import { allowPublicDemoData, publicDataUnavailable } from "@/lib/public-data-guard";
 import type { Game } from "@/types/game";
 
+export const HOMEPAGE_FEATURED_GAME_LIMIT = 20;
+const HOMEPAGE_FEATURED_CANDIDATE_LIMIT = 60;
+
 export type HomepageSectionInput = {
   id: string | null;
   title: string;
@@ -78,16 +81,18 @@ const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicH
   }
   if (supabase) {
     const { data, error } = await supabase.rpc("get_public_homepage", {
-      p_section_limit: 12,
+      p_section_limit: HOMEPAGE_FEATURED_GAME_LIMIT,
       p_all_limit: 60,
     });
     if (!error && data && typeof data === "object") {
       const snapshot = data as PublicHomepageRpc;
       const sectionRows = Array.isArray(snapshot.sections) ? snapshot.sections : [];
+      const latestGames = (Array.isArray(snapshot.latest_games) ? snapshot.latest_games : []).map(mapGameRow);
+      const needsPopularGames = sectionRows.length === 0 || sectionRows.some((row) => row.section_type === "popular_games");
       const needsTrendingGames = sectionRows.length === 0 || sectionRows.some((row) => row.section_type === "trending_games");
       const [popularGames, trendingGames] = await Promise.all([
-        sectionRows.length ? Promise.resolve([]) : getPopularPublishedGames(12),
-        needsTrendingGames ? getTrendingPublishedGames(12) : Promise.resolve([]),
+        needsPopularGames ? getPopularPublishedGames(HOMEPAGE_FEATURED_CANDIDATE_LIMIT) : Promise.resolve([]),
+        needsTrendingGames ? getTrendingPublishedGames(HOMEPAGE_FEATURED_CANDIDATE_LIMIT) : Promise.resolve([]),
       ]);
       const sections = sectionRows.map((row) => ({
         section: mapSection({
@@ -95,15 +100,19 @@ const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicH
           manual_game_ids: [],
           status: "active",
         }),
-        games: row.section_type === "trending_games"
-          ? trendingGames.slice(0, Math.min(row.limit_count ?? 12, 12))
-          : (Array.isArray(row.games) ? row.games : []).map(mapGameRow),
+        games: row.section_type === "latest_games"
+          ? latestGames
+          : row.section_type === "popular_games"
+            ? popularGames
+            : row.section_type === "trending_games"
+              ? trendingGames
+              : (Array.isArray(row.games) ? row.games : []).map(mapGameRow),
       }));
       return {
         sections,
-        latestGames: (Array.isArray(snapshot.latest_games) ? snapshot.latest_games : []).map(mapGameRow),
-        popularGames,
-        trendingGames: sections.length ? [] : trendingGames,
+        latestGames,
+        popularGames: sections.length ? [] : popularGames.slice(0, HOMEPAGE_FEATURED_GAME_LIMIT),
+        trendingGames: sections.length ? [] : trendingGames.slice(0, HOMEPAGE_FEATURED_GAME_LIMIT),
       };
     }
   }
@@ -114,12 +123,12 @@ const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicH
   const sharedGames = needsSharedGames ? await getPublishedGames(60) : [];
   const [resolvedSections, latestGames, popularGames, trendingGames] = await Promise.all([
     Promise.all(publicSections.map(async (section) => ({
-      section: { ...section, limitCount: Math.min(section.limitCount, 12) },
-      games: await resolveSectionGames({ ...section, limitCount: Math.min(section.limitCount, 12) }, sharedGames),
+      section: { ...section, limitCount: renderedSectionLimit(section) },
+      games: await resolveSectionGames({ ...section, limitCount: sectionCandidateLimit(section) }, sharedGames),
     }))),
     sharedGames.length ? Promise.resolve(sharedGames) : getPublishedGames(60),
-    publicSections.length ? Promise.resolve([]) : getPopularPublishedGames(12),
-    publicSections.length ? Promise.resolve([]) : getTrendingPublishedGames(12),
+    publicSections.length ? Promise.resolve([]) : getPopularPublishedGames(HOMEPAGE_FEATURED_GAME_LIMIT),
+    publicSections.length ? Promise.resolve([]) : getTrendingPublishedGames(HOMEPAGE_FEATURED_GAME_LIMIT),
   ]);
   return {
     sections: resolvedSections,
@@ -127,7 +136,7 @@ const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicH
     popularGames,
     trendingGames,
   };
-}, ["public-homepage-snapshot-v3"], { revalidate: 3600, tags: ["homepage-sections", "games", "categories", "tags"] });
+}, ["public-homepage-snapshot-v4"], { revalidate: 3600, tags: ["homepage-sections", "games", "categories", "tags"] });
 
 export async function getPublicHomepageSnapshot() {
   return getPublicHomepageSnapshotCached();
@@ -153,6 +162,18 @@ async function resolveSectionGames(section: HomepageSectionInput, sharedGames: G
   if (section.sectionType === "trending_games") return getTrendingPublishedGames(section.limitCount);
   if (section.sectionType === "random_picks") return shuffled(games).slice(0, section.limitCount);
   return games.slice(0, section.limitCount);
+}
+
+function renderedSectionLimit(section: HomepageSectionInput) {
+  return ["latest_games", "popular_games", "trending_games"].includes(section.sectionType)
+    ? HOMEPAGE_FEATURED_GAME_LIMIT
+    : Math.min(section.limitCount, HOMEPAGE_FEATURED_GAME_LIMIT);
+}
+
+function sectionCandidateLimit(section: HomepageSectionInput) {
+  return ["latest_games", "popular_games", "trending_games"].includes(section.sectionType)
+    ? HOMEPAGE_FEATURED_CANDIDATE_LIMIT
+    : renderedSectionLimit(section);
 }
 
 function shuffled(games: Game[]) {
