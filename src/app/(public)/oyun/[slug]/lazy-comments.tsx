@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { getApprovedCommentsForGame, getTopCommentsForGame } from "@/lib/db-comments";
 import { CommentAuthGate } from "./comment-auth-gate";
+import { CommentGuidelinesDialog } from "./comment-guidelines-dialog";
 import { CommentStatusNotice } from "./comment-status-notice";
 import { CommentsTabs } from "./comments-tabs";
 
@@ -17,9 +18,12 @@ export async function LazyComments({ gameId, slug }: { gameId: string; slug: str
           <h2 className="text-lg font-semibold">Yorumlar</h2>
           <p className="mt-1 text-sm text-muted-foreground">Yorumlar onaydan sonra yayınlanır.</p>
         </div>
-        <span className="rounded-md bg-muted px-2 py-1 text-xs font-bold text-foreground">
-          {latestComments.length.toLocaleString("tr-TR")} yorum
-        </span>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <CommentGuidelinesDialog />
+          <span className="rounded-md bg-muted px-2 py-1 text-xs font-bold text-foreground">
+            {latestComments.length.toLocaleString("tr-TR")} yorum
+          </span>
+        </div>
       </div>
 
       <Suspense fallback={null}>
