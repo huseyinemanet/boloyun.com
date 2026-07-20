@@ -27,7 +27,7 @@ export default async function AdminCrawlerPage({ searchParams }: Props) {
     <div className="space-y-3">
       <AdminPageHeader
         title="Yeni Oyun Tara"
-        description={<>Miniplay sitemap&apos;ini tarar, yeni oyun bilgilerini çeker ve DeepSeek ile Türkçe içeriği hazırlar.</>}
+        description={<>Miniplay sitemap&apos;ini kuyruğa alır; ayrı worker oyun bilgilerini çeker ve DeepSeek ile Türkçe içeriği arka planda hazırlar.</>}
       />
 
       {hasResult ? (

@@ -84,6 +84,13 @@ jobs:
           install -m 600 /dev/null "$HOME/.ssh/known_hosts"
           printf '%s\n' "$SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
       - name: Upload production image
-        run: scp -o BatchMode=yes "/tmp/boloyun-${GITHUB_SHA}.tar.gz" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/${{ secrets.VPS_USER }}/"
+        run: |
+          cp deploy/compose.yml "/tmp/boloyun-compose-${GITHUB_SHA}.yml"
+          cp deploy/server/boloyun-deploy "/tmp/boloyun-deploy-${GITHUB_SHA}"
+          scp -o BatchMode=yes \
+            "/tmp/boloyun-${GITHUB_SHA}.tar.gz" \
+            "/tmp/boloyun-compose-${GITHUB_SHA}.yml" \
+            "/tmp/boloyun-deploy-${GITHUB_SHA}" \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/${{ secrets.VPS_USER }}/"
       - name: Deploy and verify production
         run: ssh -o BatchMode=yes "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "sudo -n /usr/local/sbin/boloyun-deploy '${GITHUB_SHA}'"

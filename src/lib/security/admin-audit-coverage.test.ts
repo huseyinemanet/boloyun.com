@@ -14,6 +14,7 @@ const auditedMutationSurfaces = [
   "src/app/api/admin/ai/automation/route.ts",
   "src/app/api/admin/ai/automation/state/route.ts",
   "src/app/api/admin/ai/process/route.ts",
+  "src/app/admin/crawler/run/route.ts",
 ];
 
 for (const relativePath of auditedMutationSurfaces) {
