@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Figtree } from "next/font/google";
+import { Noto_Sans } from "next/font/google";
 import { Header } from "@/components/layout/header";
 import { getPublicSettings } from "@/lib/db-settings";
 import { ConsentScripts } from "@/components/integrations/consent-scripts";
@@ -8,10 +8,12 @@ import { NavigationRuntime } from "@/components/navigation/navigation-runtime";
 import { ViewerStateProvider } from "@/components/auth/viewer-state-provider";
 import "./globals.css";
 
-const figtree = Figtree({
+const notoSans = Noto_Sans({
+  weight: "variable",
+  style: ["normal", "italic"],
   subsets: ["latin", "latin-ext"],
   display: "swap",
-  variable: "--font-figtree",
+  variable: "--font-noto-sans",
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -38,7 +40,7 @@ export default async function RootLayout({
   const { audio, integrations } = await getPublicSettings();
 
   return (
-    <html lang="tr" className={`${figtree.variable} dark font-sans`} style={{ colorScheme: "dark" }}>
+    <html lang="tr" className={`${notoSans.variable} dark font-sans`} style={{ colorScheme: "dark" }}>
       <body className="min-h-screen bg-background text-foreground antialiased">
         <ClickSoundProvider settings={audio}>
           <ViewerStateProvider>
