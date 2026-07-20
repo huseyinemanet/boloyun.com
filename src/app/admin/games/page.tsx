@@ -162,7 +162,6 @@ function getStatusLabel(status: PublishStatus) {
 }
 
 function getStatusBadgeVariant(status: PublishStatus): "default" | "secondary" | "outline" {
-  if (status === "published") return "default";
-  if (status === "draft") return "secondary";
+  if (status === "published" || status === "draft") return "secondary";
   return "outline";
 }
