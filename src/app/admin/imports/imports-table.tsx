@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { flexRender, getCoreRowModel, getSortedRowModel, useReactTable, type ColumnDef, type SortingState } from "@tanstack/react-table";
 import { IconEmptyFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconEmptyFillDuo18";
+import { IconRadarFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconRadarFillDuo18";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,7 +51,7 @@ export function ImportsTable({ rows, now }: { rows: ImportTableRow[]; now: strin
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({ data: rows, columns, state: { sorting }, onSortingChange: setSorting, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(), getRowId: (row) => row.id });
 
-  if (!rows.length) return <Card size="sm"><CardContent><Empty><EmptyMedia className="text-primary"><IconEmptyFillDuo18 className="size-8" aria-hidden="true" /></EmptyMedia><EmptyHeader><EmptyTitle>Bu filtrede kayıt yok</EmptyTitle><EmptyDescription>Yeni oyun tarayabilir veya başka bir durum filtresine geçebilirsin.</EmptyDescription></EmptyHeader><EmptyContent><Button asChild variant="outline"><Link href="/admin/crawler">Yeni Oyun Tara</Link></Button></EmptyContent></Empty></CardContent></Card>;
+  if (!rows.length) return <Card size="sm"><CardContent><Empty><EmptyMedia className="text-primary"><IconEmptyFillDuo18 className="size-8" aria-hidden="true" /></EmptyMedia><EmptyHeader><EmptyTitle>Bu filtrede kayıt yok</EmptyTitle><EmptyDescription>Yeni oyun tarayabilir veya başka bir durum filtresine geçebilirsin.</EmptyDescription></EmptyHeader><EmptyContent><Button asChild variant="outline"><Link href="/admin/crawler"><IconRadarFillDuo18 className="size-4" aria-hidden="true" />Yeni Oyun Tara</Link></Button></EmptyContent></Empty></CardContent></Card>;
   return (
     <Card size="sm"><CardContent className="px-0"><Table>
       <TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id}>{group.headers.map((header) => <TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
