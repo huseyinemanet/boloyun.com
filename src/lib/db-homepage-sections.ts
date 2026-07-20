@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
+import { getIstanbulDayKey, rotateGamesForDay } from "@/lib/daily-game-rotation";
 import { getPopularPublishedGames, getPublishedGames, getPublishedGamesByCategorySlug, getPublishedGamesByIds, getTrendingPublishedGames, mapGameRow, type GameRow } from "@/lib/db-games";
 import { allowPublicDemoData, publicDataUnavailable } from "@/lib/public-data-guard";
 import type { Game } from "@/types/game";
@@ -76,6 +77,7 @@ export async function saveHomepageSections(input: HomepageSectionInput[]) {
 
 const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicHomepageSnapshotCached(): Promise<{ sections: Array<{ section: HomepageSectionInput; games: Game[] }>; latestGames: Game[]; popularGames: Game[]; trendingGames: Game[] }> {
   const supabase = createSupabaseServiceClient();
+  const dayKey = getIstanbulDayKey();
   if (!supabase && !allowPublicDemoData()) {
     throw publicDataUnavailable("Ana sayfa", "Supabase yapılandırması eksik");
   }
@@ -87,13 +89,18 @@ const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicH
     if (!error && data && typeof data === "object") {
       const snapshot = data as PublicHomepageRpc;
       const sectionRows = Array.isArray(snapshot.sections) ? snapshot.sections : [];
-      const latestGames = (Array.isArray(snapshot.latest_games) ? snapshot.latest_games : []).map(mapGameRow);
+      const latestGames = rotateGamesForDay(
+        (Array.isArray(snapshot.latest_games) ? snapshot.latest_games : []).map(mapGameRow),
+        dayKey,
+        "latest",
+      );
       const needsPopularGames = sectionRows.length === 0 || sectionRows.some((row) => row.section_type === "popular_games");
       const needsTrendingGames = sectionRows.length === 0 || sectionRows.some((row) => row.section_type === "trending_games");
       const [popularGames, trendingGames] = await Promise.all([
         needsPopularGames ? getPopularPublishedGames(HOMEPAGE_FEATURED_CANDIDATE_LIMIT) : Promise.resolve([]),
         needsTrendingGames ? getTrendingPublishedGames(HOMEPAGE_FEATURED_CANDIDATE_LIMIT) : Promise.resolve([]),
       ]);
+      const rotatedTrendingGames = rotateGamesForDay(trendingGames, dayKey, "trending");
       const sections = sectionRows.map((row) => ({
         section: mapSection({
           ...row,
@@ -105,14 +112,14 @@ const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicH
           : row.section_type === "popular_games"
             ? popularGames
             : row.section_type === "trending_games"
-              ? trendingGames
+              ? rotatedTrendingGames
               : (Array.isArray(row.games) ? row.games : []).map(mapGameRow),
       }));
       return {
         sections,
         latestGames,
         popularGames: sections.length ? [] : popularGames.slice(0, HOMEPAGE_FEATURED_GAME_LIMIT),
-        trendingGames: sections.length ? [] : trendingGames.slice(0, HOMEPAGE_FEATURED_GAME_LIMIT),
+        trendingGames: sections.length ? [] : rotatedTrendingGames.slice(0, HOMEPAGE_FEATURED_GAME_LIMIT),
       };
     }
   }
@@ -128,15 +135,25 @@ const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicH
     }))),
     sharedGames.length ? Promise.resolve(sharedGames) : getPublishedGames(60),
     publicSections.length ? Promise.resolve([]) : getPopularPublishedGames(HOMEPAGE_FEATURED_GAME_LIMIT),
-    publicSections.length ? Promise.resolve([]) : getTrendingPublishedGames(HOMEPAGE_FEATURED_GAME_LIMIT),
+    publicSections.length ? Promise.resolve([]) : getTrendingPublishedGames(HOMEPAGE_FEATURED_CANDIDATE_LIMIT),
   ]);
+  const rotatedLatestGames = rotateGamesForDay(latestGames, dayKey, "latest");
+  const rotatedTrendingGames = rotateGamesForDay(trendingGames, dayKey, "trending");
+  const rotatedSections = resolvedSections.map(({ section, games }) => ({
+    section,
+    games: section.sectionType === "latest_games"
+      ? rotateGamesForDay(games, dayKey, "latest")
+      : section.sectionType === "trending_games"
+        ? rotateGamesForDay(games, dayKey, "trending")
+        : games,
+  }));
   return {
-    sections: resolvedSections,
-    latestGames,
+    sections: rotatedSections,
+    latestGames: rotatedLatestGames,
     popularGames,
-    trendingGames,
+    trendingGames: rotatedTrendingGames.slice(0, HOMEPAGE_FEATURED_GAME_LIMIT),
   };
-}, ["public-homepage-snapshot-v4"], { revalidate: 3600, tags: ["homepage-sections", "games", "categories", "tags"] });
+}, ["public-homepage-snapshot-v5"], { revalidate: 3600, tags: ["homepage-sections", "games", "categories", "tags"] });
 
 export async function getPublicHomepageSnapshot() {
   return getPublicHomepageSnapshotCached();
