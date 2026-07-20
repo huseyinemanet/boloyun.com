@@ -25,6 +25,7 @@ import { LazyGameActions } from "./lazy-game-actions";
 import { LazyComments } from "./lazy-comments";
 import { LazyGamePlayer } from "./lazy-game-player";
 import { GameReportDialog } from "@/components/player/game-report-dialog";
+import { Toaster } from "@/components/ui/sonner";
 
 export const revalidate = 3600;
 
@@ -176,6 +177,7 @@ export default async function GameDetailPage({ params }: Props) {
       {settings.community.commentsEnabled ? <AdSlot slotKey="game_page_before_comments" /> : null}
 
       {settings.community.commentsEnabled ? <LazyComments gameId={game.id} slug={game.slug} /> : null}
+      <Toaster position="top-center" />
     </article>
   );
 }

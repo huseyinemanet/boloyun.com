@@ -2,6 +2,7 @@
 
 import { Share2Icon } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { useClickSound } from "@/components/audio/click-sound-provider";
 import { Button } from "@/components/ui/button";
 
@@ -15,13 +16,16 @@ export function ShareGameButton({ title }: { title: string }) {
       if (navigator.share) {
         await navigator.share({ title, url: window.location.href });
         setMessage("Paylaşım penceresi açıldı.");
+        toast.success("Paylaşım penceresi açıldı.");
       } else {
         await navigator.clipboard.writeText(window.location.href);
         setMessage("Oyun bağlantısı kopyalandı.");
+        toast.success("Oyun bağlantısı kopyalandı.");
       }
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       setMessage("Paylaşım yapılamadı.");
+      toast.error("Paylaşım yapılamadı.");
     }
   }
   return (

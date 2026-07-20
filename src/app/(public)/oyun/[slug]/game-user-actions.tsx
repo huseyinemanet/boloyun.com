@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { LoaderCircleIcon } from "lucide-react";
+import { toast } from "sonner";
 import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
 import { IconThumbsDownFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsDownFillDuo18";
 import { IconThumbsUpFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsUpFillDuo18";
@@ -151,9 +152,13 @@ function FavoriteButton({ gameId, isFavorite, onToggle, onNotice }: { gameId: st
         setPending(true);
         try {
           await onToggle();
-          onNotice(isFavorite ? "Favorilerden çıkarıldı." : "Favorilere eklendi.");
+          const message = isFavorite ? "Favorilerden çıkarıldı." : "Favorilere eklendi.";
+          onNotice(message);
+          toast.success(message);
         } catch (error) {
-          onNotice(error instanceof Error ? error.message : "Favori işlemi tamamlanamadı.");
+          const message = error instanceof Error ? error.message : "Favori işlemi tamamlanamadı.";
+          onNotice(message);
+          toast.error(message);
         } finally {
           setPending(false);
         }
@@ -228,9 +233,13 @@ function VoteButton({
         setPending(true);
         try {
           await onClick();
-          onNotice(active ? `${title} tercihin güncellendi.` : `${title} olarak işaretlendi.`);
+          const message = active ? `${title} tercihin güncellendi.` : `${title} olarak işaretlendi.`;
+          onNotice(message);
+          toast.success(message);
         } catch (error) {
-          onNotice(error instanceof Error ? error.message : "Oy işlemi tamamlanamadı.");
+          const message = error instanceof Error ? error.message : "Oy işlemi tamamlanamadı.";
+          onNotice(message);
+          toast.error(message);
         } finally {
           setPending(false);
         }
