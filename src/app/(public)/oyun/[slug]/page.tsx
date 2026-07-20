@@ -26,6 +26,8 @@ import { LazyComments } from "./lazy-comments";
 import { LazyGamePlayer } from "./lazy-game-player";
 import { GameReportDialog } from "@/components/player/game-report-dialog";
 import { Toaster } from "@/components/ui/sonner";
+import { JsonLd } from "@/components/seo/json-ld";
+import { breadcrumbJsonLd } from "@/lib/seo/jsonld";
 
 export const revalidate = 3600;
 
@@ -68,6 +70,7 @@ export default async function GameDetailPage({ params }: Props) {
   }
 
   const { game, categories, tags } = detail;
+  const primaryCategory = categories[0];
   const playEventName = `game-played-${game.id}`;
   const similarGames = settings.games.similarGameStrategy === "popular"
     ? detail.popularCategoryGames
@@ -77,6 +80,17 @@ export default async function GameDetailPage({ params }: Props) {
   const source = game.gameType === "iframe" ? game.embedUrl : game.gameType === "html5" ? game.html5Url : game.gameType === "swf" ? game.swfUrl : game.externalUrl;
   return (
     <article className="space-y-4">
+      {settings.seo.structuredDataEnabled ? (
+        <JsonLd
+          data={breadcrumbJsonLd([
+            { name: "Ana Sayfa", path: "/" },
+            ...(primaryCategory
+              ? [{ name: primaryCategory.name, path: `/kategori/${primaryCategory.slug}` }]
+              : []),
+            { name: game.title, path: `/oyun/${game.slug}` },
+          ])}
+        />
+      ) : null}
       <AdSlot slotKey="game_page_top" />
 
       <section className="rounded-md border border-border bg-card p-4">
@@ -190,7 +204,7 @@ function Breadcrumbs({ gameTitle, categories }: { gameTitle: string; categories:
       <BreadcrumbList className="font-medium">
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <SoundLink href="/" native>Oyunlar</SoundLink>
+            <SoundLink href="/" native>Ana Sayfa</SoundLink>
           </BreadcrumbLink>
         </BreadcrumbItem>
       {primaryCategory ? (
