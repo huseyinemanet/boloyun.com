@@ -15,9 +15,14 @@ function CommentNotice({ status }: { status: "pending" | "approved" | "disabled"
     approved: "Yorumun yayınlandı.",
     disabled: "Bu demo oyun için yorum kaydı yapılamıyor.",
   };
+  const styles = {
+    pending: "bg-warning/10 text-warning",
+    approved: "border border-success/30 bg-success/10 text-success",
+    disabled: "bg-muted text-muted-foreground",
+  };
 
   return (
-    <p className="mt-4 rounded-md bg-warning/10 px-3 py-2 text-sm font-semibold text-warning">
+    <p role="status" className={`mt-4 rounded-md px-3 py-2 text-sm font-semibold ${styles[status]}`}>
       {messages[status]}
     </p>
   );
