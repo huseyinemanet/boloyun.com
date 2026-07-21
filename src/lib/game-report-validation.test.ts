@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import test from "node:test";
 import { validateGameReportInput } from "./game-report-validation";
 
@@ -16,4 +18,11 @@ test("rejects invalid ids, reasons and oversized details", () => {
   assert.equal(validateGameReportInput({ gameId: "bad", reason: "broken" }), null);
   assert.equal(validateGameReportInput({ gameId, reason: "spam" }), null);
   assert.equal(validateGameReportInput({ gameId, reason: "other", details: "x".repeat(501) }), null);
+});
+
+test("oyun detay sayfası kullanıcı bildirim formunu gösterir", () => {
+  const page = readFileSync(path.join(process.cwd(), "src/app/(public)/oyun/[slug]/page.tsx"), "utf8");
+
+  assert.match(page, /import \{ GameReportDialog \}/);
+  assert.match(page, /<GameReportDialog gameId=\{game\.id\} gameTitle=\{game\.title\} \/>/);
 });

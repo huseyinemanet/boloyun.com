@@ -11,6 +11,7 @@ import { notFound } from "next/navigation";
 import { AdSlot } from "@/components/ads/ad-slot";
 import { PlayCountMetric } from "@/components/game/play-count-metric";
 import { SimilarGamesCarousel } from "@/components/game/similar-games-carousel";
+import { GameReportDialog } from "@/components/player/game-report-dialog";
 import { JsonLd } from "@/components/seo/json-ld";
 import {
   Breadcrumb,
@@ -174,6 +175,7 @@ export default async function GameDetailPage({ params }: Props) {
             preRoll={settings.ads.preRollEnabled ? <AdSlot slotKey="game_preroll" /> : undefined}
             preRollSkipSeconds={settings.ads.preRollSkipSeconds}
           />
+          <GameReportDialog gameId={game.id} gameTitle={game.title} />
         </div>
       </section>
 
