@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { auditGameSeo, isTagIndexable } from "@/lib/seo/audit";
 import { breadcrumbJsonLd, videoGameJsonLd } from "@/lib/seo/jsonld";
-import { absoluteUrl, buildMetadata } from "@/lib/seo/metadata";
+import { absoluteUrl, buildMetadata, gameSocialImagePath } from "@/lib/seo/metadata";
 
 const completeGame = {
   title: "Deneme Oyunu",
@@ -45,6 +45,11 @@ test("metadata uses boloyun canonical and noindex when requested", () => {
   assert.equal((metadata.robots as { index?: boolean }).index, false);
 });
 
+test("game social image path is same-origin and URL-safe", () => {
+  assert.equal(gameSocialImagePath("pizza-cafe"), "/oyun/pizza-cafe/paylasim-gorseli");
+  assert.equal(gameSocialImagePath("oyun adı"), "/oyun/oyun%20ad%C4%B1/paylasim-gorseli");
+});
+
 test("VideoGame JSON-LD only exposes real developer and rating", () => {
   const withoutRating = videoGameJsonLd({ name: "Oyun", description: "Açıklama", image: "/logo.svg", path: "/oyun/oyun", genres: [] });
   assert.equal("author" in withoutRating, false);
@@ -54,17 +59,17 @@ test("VideoGame JSON-LD only exposes real developer and rating", () => {
   assert.equal("aggregateRating" in withRating, true);
 });
 
-test("breadcrumb JSON-LD exposes ordered absolute URLs for rich results", () => {
-  const schema = breadcrumbJsonLd([
-    { name: "Ana Sayfa", path: "/" },
-    { name: "3D Oyunlar", path: "/kategori/3d-oyunlar" },
-    { name: "CS Portable", path: "/oyun/cs-portable" },
+test("game breadcrumb JSON-LD exposes an ordered canonical hierarchy", () => {
+  const breadcrumb = breadcrumbJsonLd([
+    { name: "Oyunlar", path: "/" },
+    { name: "Araba Oyunları", path: "/kategori/araba-oyunlari" },
+    { name: "Miami Super Drive", path: "/oyun/miami-super-drive" },
   ]);
 
-  assert.equal(schema["@type"], "BreadcrumbList");
-  assert.deepEqual(schema.itemListElement, [
-    { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: absoluteUrl("/") },
-    { "@type": "ListItem", position: 2, name: "3D Oyunlar", item: absoluteUrl("/kategori/3d-oyunlar") },
-    { "@type": "ListItem", position: 3, name: "CS Portable", item: absoluteUrl("/oyun/cs-portable") },
+  assert.equal(breadcrumb["@type"], "BreadcrumbList");
+  assert.deepEqual(breadcrumb.itemListElement, [
+    { "@type": "ListItem", position: 1, name: "Oyunlar", item: "https://boloyun.com/" },
+    { "@type": "ListItem", position: 2, name: "Araba Oyunları", item: "https://boloyun.com/kategori/araba-oyunlari" },
+    { "@type": "ListItem", position: 3, name: "Miami Super Drive", item: "https://boloyun.com/oyun/miami-super-drive" },
   ]);
 });

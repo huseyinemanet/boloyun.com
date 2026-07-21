@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPopularGameSuggestions, searchPublishedGameSuggestions } from "@/lib/db-games";
+import { getPopularGameSuggestions, searchPublishedGameSuggestions } from "@/lib/games/public-queries";
 import { consumeRateLimits, getClientIp } from "@/lib/abuse";
 import { cacheHeaders } from "@/lib/cache-policy";
 

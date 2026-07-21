@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { UploadIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 export function ProfileAvatarUpload({ className, onPendingChange }: { className?: string; onPendingChange?: (pending: boolean) => void }) {
   const input = useRef<HTMLInputElement>(null);
@@ -23,6 +24,7 @@ export function ProfileAvatarUpload({ className, onPendingChange }: { className?
       const response = await fetch("/api/profile/avatar", { method: "POST", body });
       const result = await response.json() as { error?: string };
       if (!response.ok) throw new Error(result.error || "Yükleme başarısız.");
+      trackAnalyticsEvent("profile_avatar_update", { status: "success" });
       window.location.reload();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Yükleme başarısız.");

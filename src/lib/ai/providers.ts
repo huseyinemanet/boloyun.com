@@ -8,6 +8,7 @@ type ChatMessage = {
 
 type ChatCompletionResponse = {
   choices?: Array<{
+    finish_reason?: "stop" | "length" | "content_filter" | "tool_calls" | "insufficient_system_resource" | null;
     message?: {
       content?: string | null;
     };
@@ -15,6 +16,7 @@ type ChatCompletionResponse = {
 };
 
 const AI_REQUEST_TIMEOUT_MS = 12_000;
+const AI_MAX_OUTPUT_TOKENS = 4_096;
 
 export async function translateGameContent(input: GameTranslationInput, config: AiRuntimeConfig): Promise<TranslatedGameContent> {
   const messages = buildTranslationMessages(input);
@@ -50,6 +52,8 @@ function buildTranslationMessages(input: GameTranslationInput): ChatMessage[] {
         "Çocukların anlayacağı sade, akıcı Türkçe kullan.",
         "SEO spam yapma, bilinmeyen geliştirici/tarih/platform bilgisi uydurma.",
         "Kaynakta kontroller veya özellikler boşsa gerçek dışı tuş uydurma; güvenli ve genel Türkçe ifade kullan.",
+        "Metinleri özlü tut: short_description en fazla 350, long_description 1800, how_to_play 900, seo_title 70 ve seo_description 160 karakter olsun.",
+        "controls ve features alanlarında en fazla 8 madde kullan; her madde en fazla 160 karakter olsun.",
         "Sadece geçerli JSON döndür. Markdown, açıklama veya kod bloğu kullanma.",
       ].join(" "),
     },
@@ -81,7 +85,7 @@ async function callDeepSeek(messages: ChatMessage[], config: AiRuntimeConfig) {
     model: config.model,
     messages,
     temperature: 0.2,
-    max_tokens: 1800,
+    max_tokens: AI_MAX_OUTPUT_TOKENS,
     response_format: { type: "json_object" },
     thinking: { type: "disabled" },
   };
@@ -98,7 +102,17 @@ async function callDeepSeek(messages: ChatMessage[], config: AiRuntimeConfig) {
     const payload = await response.json().catch(() => null) as ChatCompletionResponse & { error?: { message?: string } } | null;
     console.log("[ai-provider] http.response", { provider: config.provider, model: config.model, status: response.status, ok: response.ok, durationMs: Date.now() - startedAt });
     if (!response.ok) throw new Error(payload?.error?.message || `${config.provider} isteği başarısız: HTTP ${response.status}`);
-    const content = payload?.choices?.[0]?.message?.content;
+    const choice = payload?.choices?.[0];
+    if (choice?.finish_reason === "length") {
+      throw new Error(`${config.provider} JSON çıktısını token sınırında yarıda kesti.`);
+    }
+    if (choice?.finish_reason === "content_filter") {
+      throw new Error(`${config.provider} çıktıyı içerik filtresi nedeniyle tamamlayamadı.`);
+    }
+    if (choice?.finish_reason === "insufficient_system_resource") {
+      throw new Error(`${config.provider} yetersiz sistem kaynağı nedeniyle yanıtı tamamlayamadı.`);
+    }
+    const content = choice?.message?.content;
     if (!content) throw new Error(`${config.provider} boş içerik döndürdü.`);
     return content;
   } catch (error) {

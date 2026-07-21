@@ -7,6 +7,7 @@ import { IconShuffleFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconShuff
 import { Button } from "@/components/ui/button";
 import { SoundLink } from "@/components/audio/sound-link";
 import { getRandomGameHref } from "@/lib/random-game";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 export function RandomGameLink() {
   const [pendingPath, setPendingPath] = useState<string | null>(null);
@@ -21,6 +22,7 @@ export function RandomGameLink() {
     if (pending) return;
 
     setPendingPath(pathname);
+    trackAnalyticsEvent("random_game", { source_path: pathname });
     try {
       const response = await fetch(href, {
         cache: "no-store",

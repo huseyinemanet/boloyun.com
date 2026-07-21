@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { getAdminGameById, getAdminGameTaxonomy } from "@/lib/db-games";
+import { getAdminGameById, getAdminGameTaxonomy } from "@/lib/games/admin-repository";
 import { getAdminCategories } from "@/lib/db-categories";
 import { auditGameSeo } from "@/lib/seo/audit";
 import { absoluteUrl, adminPageMetadata } from "@/lib/seo/metadata";

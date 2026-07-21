@@ -7,6 +7,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 export function AdminPagination({
   currentPage,
@@ -39,58 +40,49 @@ export function AdminPagination({
       <p className="shrink-0 text-muted-foreground">
         {total === 0 ? (
           <>Henüz {itemName} yok.</>
-        ) : totalPages === 1 ? (
-          <>
-            <span className="font-bold text-foreground">{total.toLocaleString("tr-TR")} {itemName}</span>
-            {" gösteriliyor"}
-          </>
         ) : (
           <>
-            <span className="font-bold text-foreground">Toplam {total.toLocaleString("tr-TR")} {itemName}</span>
-            {" · Gösterilen: "}{from.toLocaleString("tr-TR")}–{to.toLocaleString("tr-TR")}
+            <span className="font-bold text-foreground">{total.toLocaleString("tr-TR")} {itemName}</span>
+            {" içinden "}{from.toLocaleString("tr-TR")}–{to.toLocaleString("tr-TR")} arası gösteriliyor
           </>
         )}
       </p>
 
-      {totalPages > 1 ? (
-        <Pagination className="mx-0 w-auto justify-end">
-          <PaginationContent>
-            <PaginationItem>
-              {currentPage <= 1 ? (
-                <span className="inline-flex h-8 items-center justify-center gap-1 rounded-md px-2.5 text-sm font-bold text-muted-foreground opacity-45 sm:pr-3">
-                  <span aria-hidden="true">‹</span>
-                  <span className="hidden sm:block">Önceki</span>
-                </span>
+      <Pagination className="mx-0 w-auto justify-end">
+        <PaginationContent>
+          <PaginationItem>
+            {currentPage <= 1 ? (
+              <span aria-label="Önceki sayfa" className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground opacity-45">
+                <ChevronLeftIcon className="size-4" aria-hidden="true" />
+              </span>
+            ) : (
+              <PaginationPrevious href={hrefForPage(basePath, currentPage - 1, pathStyle, queryParams)} />
+            )}
+          </PaginationItem>
+
+          {pages.map((page, index) => (
+            <PaginationItem key={`${page}-${index}`}>
+              {page === "ellipsis" ? (
+                <PaginationEllipsis />
               ) : (
-                <PaginationPrevious href={hrefForPage(basePath, currentPage - 1, pathStyle, queryParams)} text="Önceki" />
+                <PaginationLink href={hrefForPage(basePath, page, pathStyle, queryParams)} isActive={page === currentPage}>
+                  {page.toLocaleString("tr-TR")}
+                </PaginationLink>
               )}
             </PaginationItem>
+          ))}
 
-            {pages.map((page, index) => (
-              <PaginationItem key={`${page}-${index}`}>
-                {page === "ellipsis" ? (
-                  <PaginationEllipsis />
-                ) : (
-                  <PaginationLink href={hrefForPage(basePath, page, pathStyle, queryParams)} isActive={page === currentPage}>
-                    {page.toLocaleString("tr-TR")}
-                  </PaginationLink>
-                )}
-              </PaginationItem>
-            ))}
-
-            <PaginationItem>
-              {currentPage >= totalPages ? (
-                <span className="inline-flex h-8 items-center justify-center gap-1 rounded-md px-2.5 text-sm font-bold text-muted-foreground opacity-45 sm:pl-3">
-                  <span className="hidden sm:block">Sonraki</span>
-                  <span aria-hidden="true">›</span>
-                </span>
-              ) : (
-                <PaginationNext href={hrefForPage(basePath, currentPage + 1, pathStyle, queryParams)} text="Sonraki" />
-              )}
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      ) : null}
+          <PaginationItem>
+            {currentPage >= totalPages ? (
+              <span aria-label="Sonraki sayfa" className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground opacity-45">
+                <ChevronRightIcon className="size-4" aria-hidden="true" />
+              </span>
+            ) : (
+              <PaginationNext href={hrefForPage(basePath, currentPage + 1, pathStyle, queryParams)} />
+            )}
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
     </div>
   );
 }

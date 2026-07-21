@@ -6,6 +6,7 @@ import { ConsentScripts } from "@/components/integrations/consent-scripts";
 import { ClickSoundProvider } from "@/components/audio/click-sound-provider";
 import { NavigationRuntime } from "@/components/navigation/navigation-runtime";
 import { ViewerStateProvider } from "@/components/auth/viewer-state-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 const notoSans = Noto_Sans({
@@ -40,16 +41,18 @@ export default async function RootLayout({
   const { audio, integrations } = await getPublicSettings();
 
   return (
-    <html lang="tr" className={`${notoSans.variable} dark font-sans`} style={{ colorScheme: "dark" }}>
+    <html lang="tr" className={`${notoSans.variable} dark scroll-smooth font-sans`} style={{ colorScheme: "dark" }}>
       <body className="min-h-screen bg-background text-foreground antialiased">
         <ClickSoundProvider settings={audio}>
-          <ViewerStateProvider>
-            <NavigationRuntime />
-            <a href="#main-content" className="skip-link">Ana içeriğe geç</a>
-            <Header />
-            {children}
-            <ConsentScripts settings={integrations} />
-          </ViewerStateProvider>
+          <TooltipProvider>
+            <ViewerStateProvider>
+              <ConsentScripts settings={integrations} />
+              <NavigationRuntime />
+              <a href="#main-content" className="skip-link">Ana içeriğe geç</a>
+              <Header />
+              {children}
+            </ViewerStateProvider>
+          </TooltipProvider>
         </ClickSoundProvider>
       </body>
     </html>

@@ -9,8 +9,6 @@ const AdminEditGameLink = dynamic(() => import("./admin-edit-game-link").then((m
 type LazyGameActionsProps = {
   gameId: string;
   slug: string;
-  likesCount: number;
-  dislikesCount: number;
   showVotes: boolean;
   showFavorite: boolean;
   showShare: boolean;
@@ -20,8 +18,8 @@ type LazyGameActionsProps = {
 export function LazyGameActions({ showShare, title, ...actionProps }: LazyGameActionsProps) {
   return (
     <>
-      <GameUserActions {...actionProps} />
-      {showShare ? <ShareGameButton title={title} /> : null}
+      <GameUserActions {...actionProps} title={title} />
+      {showShare ? <ShareGameButton title={title} slug={actionProps.slug} /> : null}
       <AdminEditGameLink gameId={actionProps.gameId} title={title} />
     </>
   );

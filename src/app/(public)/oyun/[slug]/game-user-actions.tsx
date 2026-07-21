@@ -1,44 +1,40 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { LoaderCircleIcon } from "lucide-react";
 import { toast } from "sonner";
 import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
-import { IconThumbsDownFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsDownFillDuo18";
-import { IconThumbsUpFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconThumbsUpFillDuo18";
 import { useClickSound } from "@/components/audio/click-sound-provider";
 import { Button } from "@/components/ui/button";
-import type { GameVote } from "@/lib/db-game-reactions";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { gameReactions, isGameReaction, type GameReaction } from "@/lib/db-game-reactions";
 import { cn } from "@/lib/utils";
+import { gameAnalyticsItem, trackAnalyticsEvent } from "@/lib/analytics";
 
 type GameState = {
   isFavorite: boolean;
-  userVote: GameVote | null;
+  selectedReaction: GameReaction | null;
   isLoggedIn: boolean;
 };
 
 export function GameUserActions({
   gameId,
   slug,
-  likesCount,
-  dislikesCount,
   showVotes,
   showFavorite,
+  title,
 }: {
   gameId: string;
   slug: string;
-  likesCount: number;
-  dislikesCount: number;
   showVotes: boolean;
   showFavorite: boolean;
+  title: string;
 }) {
-  const [state, setState] = useState<GameState>({ isFavorite: false, userVote: null, isLoggedIn: false });
-  const [counts, setCounts] = useState({ likes: likesCount, dislikes: dislikesCount });
+  const [state, setState] = useState<GameState>({ isFavorite: false, selectedReaction: null, isLoggedIn: false });
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
     if (!isUuid(gameId) || (!showVotes && !showFavorite)) return;
-    if (!hasPersonalStateCookie()) return;
     const controller = new AbortController();
     async function loadState() {
       try {
@@ -52,7 +48,7 @@ export function GameUserActions({
         if (!controller.signal.aborted) {
           setState({
             isFavorite: Boolean(data.isFavorite),
-            userVote: data.userVote === "like" || data.userVote === "dislike" ? data.userVote : null,
+            selectedReaction: isGameReaction(data.selectedReaction) ? data.selectedReaction : null,
             isLoggedIn: Boolean(data.isLoggedIn),
           });
         }
@@ -74,182 +70,209 @@ export function GameUserActions({
     });
     const data = await response.json() as Partial<GameState> & {
       ok?: boolean;
-      likesCount?: number;
-      dislikesCount?: number;
+      selectedReaction?: unknown;
       error?: string;
     };
     if (!response.ok || !data.ok) throw new Error(data.error || "İşlem tamamlanamadı.");
 
     setState((current) => ({
       isFavorite: typeof data.isFavorite === "boolean" ? data.isFavorite : current.isFavorite,
-      userVote: data.userVote === "like" || data.userVote === "dislike" ? data.userVote : current.userVote,
+      selectedReaction: data.selectedReaction === null || isGameReaction(data.selectedReaction) ? data.selectedReaction : current.selectedReaction,
       isLoggedIn: typeof data.isLoggedIn === "boolean" ? data.isLoggedIn : current.isLoggedIn,
     }));
-    if (typeof data.likesCount === "number" || typeof data.dislikesCount === "number") {
-      setCounts((current) => ({
-        likes: typeof data.likesCount === "number" ? data.likesCount : current.likes,
-        dislikes: typeof data.dislikesCount === "number" ? data.dislikesCount : current.dislikes,
-      }));
-    }
   }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       {showVotes ? (
-        <VoteButtons
-          likesCount={counts.likes}
-          dislikesCount={counts.dislikes}
-          userVote={state.userVote}
-          onVote={(vote) => runAction({ action: "vote", vote })}
+        <ReactionButtons
+          selectedReaction={state.selectedReaction}
+          onReact={(reaction) => runAction({ action: "reaction", reaction })}
           onNotice={setNotice}
+          game={{ id: slug, title }}
         />
       ) : null}
-      {showFavorite ? <FavoriteButton gameId={gameId} slug={slug} isFavorite={state.isFavorite} onToggle={() => runAction({ action: "favorite", desired: !state.isFavorite })} onNotice={setNotice} /> : null}
+      {showFavorite ? <FavoriteButton gameId={gameId} slug={slug} gameTitle={title} isFavorite={state.isFavorite} onToggle={() => runAction({ action: "favorite", desired: !state.isFavorite })} onNotice={setNotice} /> : null}
       <span className="sr-only" aria-live="polite">{notice}</span>
     </div>
   );
 }
 
-function hasPersonalStateCookie() {
-  return /(?:^|;\s*)(?:sb-[^=]+-auth-token|supabase-auth-token(?:\.[^=]+)?)=/.test(document.cookie);
-}
-
-function FavoriteButton({ gameId, isFavorite, onToggle, onNotice }: { gameId: string; slug: string; isFavorite: boolean; onToggle: () => Promise<void>; onNotice: (message: string) => void }) {
+function FavoriteButton({ gameId, slug, gameTitle, isFavorite, onToggle, onNotice }: { gameId: string; slug: string; gameTitle: string; isFavorite: boolean; onToggle: () => Promise<void>; onNotice: (message: string) => void }) {
   const canFavorite = isUuid(gameId);
   const [pending, setPending] = useState(false);
   const { playClickSound } = useClickSound();
 
   if (!canFavorite) {
     return (
-      <Button
-        type="button"
-        disabled
-        variant="outline"
-        size="icon-sm"
-        className="cursor-not-allowed text-muted-foreground opacity-60"
-        aria-label="Favorilere ekle"
-        title="Favorilere ekle"
-      >
-        <IconHeartFillDuo18 className="size-[18px]" aria-hidden="true" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex">
+            <Button
+              type="button"
+              disabled
+              variant="outline"
+              size="icon-sm"
+              className="cursor-not-allowed text-muted-foreground opacity-60"
+              aria-label="Favorilere ekle"
+            >
+              <IconHeartFillDuo18 className="size-[18px]" aria-hidden="true" />
+            </Button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent><p>Favorilere ekle</p></TooltipContent>
+      </Tooltip>
     );
   }
 
+  const tooltipLabel = isFavorite ? "Favorilerden çıkar" : "Favorilere ekle";
   return (
-    <Button
-      type="button"
-      variant="secondary"
-      size="icon-sm"
-      className={cn(isFavorite ? "border-destructive/40 bg-destructive/10 text-destructive ring-1 ring-destructive/20" : "")}
-      aria-label={isFavorite ? "Favorilerden çıkar" : "Favorilere ekle"}
-      aria-pressed={isFavorite}
-      aria-busy={pending}
-      disabled={pending}
-      title={isFavorite ? "Favorilerden çıkar" : "Favorilere ekle"}
-      onClick={async () => {
-        if (pending) return;
-        playClickSound();
-        setPending(true);
-        try {
-          await onToggle();
-          const message = isFavorite ? "Favorilerden çıkarıldı." : "Favorilere eklendi.";
-          onNotice(message);
-          toast.success(message);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "Favori işlemi tamamlanamadı.";
-          onNotice(message);
-          toast.error(message);
-        } finally {
-          setPending(false);
-        }
-      }}
-    >
-      <span className="grid size-[18px] shrink-0 place-items-center">
-        {pending ? <LoaderCircleIcon className="size-[18px] animate-spin" aria-hidden="true" /> : <IconHeartFillDuo18 className={`size-[18px] ${isFavorite ? "" : "opacity-60"}`} aria-hidden="true" />}
-      </span>
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon-sm"
+          className={cn(isFavorite ? "border-destructive/40 bg-destructive/10 text-destructive ring-1 ring-destructive/20" : "")}
+          aria-label={tooltipLabel}
+          aria-pressed={isFavorite}
+          aria-busy={pending}
+          disabled={pending}
+          onClick={async () => {
+            if (pending) return;
+            playClickSound();
+            setPending(true);
+            try {
+              await onToggle();
+              trackAnalyticsEvent(isFavorite ? "remove_from_wishlist" : "add_to_wishlist", { items: [gameAnalyticsItem({ id: slug, title: gameTitle })] });
+              const message = isFavorite ? "Favorilerden çıkarıldı." : "Favorilere eklendi.";
+              onNotice(message);
+              toast.success(message);
+            } catch (error) {
+              const message = error instanceof Error ? error.message : "Favori işlemi tamamlanamadı.";
+              onNotice(message);
+              toast.error(message);
+            } finally {
+              setPending(false);
+            }
+          }}
+        >
+          <span className="grid size-[18px] shrink-0 place-items-center">
+            {pending ? <LoaderCircleIcon className="size-[18px] animate-spin" aria-hidden="true" /> : <IconHeartFillDuo18 className={`size-[18px] ${isFavorite ? "" : "opacity-60"}`} aria-hidden="true" />}
+          </span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent><p>{tooltipLabel}</p></TooltipContent>
+    </Tooltip>
   );
 }
 
-function VoteButtons({
-  likesCount,
-  dislikesCount,
-  userVote,
-  onVote,
+const reactionDetails: Record<GameReaction, { emoji: string; label: string }> = {
+  like: { emoji: "👍", label: "Beğendim" },
+  love: { emoji: "❤️", label: "Bayıldım" },
+  haha: { emoji: "😆", label: "Çok komik" },
+  wow: { emoji: "😮", label: "İnanılmaz" },
+  sad: { emoji: "😢", label: "Üzüldüm" },
+  angry: { emoji: "😡", label: "Kızdım" },
+};
+
+function ReactionButtons({
+  selectedReaction,
+  onReact,
   onNotice,
+  game,
 }: {
-  likesCount: number;
-  dislikesCount: number;
-  userVote: GameVote | null;
-  onVote: (vote: GameVote) => Promise<void>;
+  selectedReaction: GameReaction | null;
+  onReact: (reaction: GameReaction) => Promise<void>;
   onNotice: (message: string) => void;
+  game: { id: string; title: string };
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <VoteButton active={userVote === "like"} ariaLabel="Beğendim" count={likesCount.toLocaleString("tr-TR")} title="Beğendim" onClick={() => onVote("like")} onNotice={onNotice}>
-        <IconThumbsUpFillDuo18 className="size-[18px]" aria-hidden="true" />
-      </VoteButton>
-      <VoteButton active={userVote === "dislike"} ariaLabel="Beğenmedim" count={dislikesCount.toLocaleString("tr-TR")} title="Beğenmedim" onClick={() => onVote("dislike")} onNotice={onNotice}>
-        <IconThumbsDownFillDuo18 className="size-[18px]" aria-hidden="true" />
-      </VoteButton>
+    <div className="flex items-center gap-1 rounded-full bg-muted/60 p-1" aria-label="Oyun reaksiyonları">
+      {gameReactions.map((reaction) => {
+        const details = reactionDetails[reaction];
+        return (
+          <ReactionButton
+            key={reaction}
+            active={selectedReaction === reaction}
+            reaction={reaction}
+            emoji={details.emoji}
+            label={details.label}
+            game={game}
+            onClick={() => onReact(reaction)}
+            onNotice={onNotice}
+          />
+        );
+      })}
     </div>
   );
 }
 
-function VoteButton({
+function ReactionButton({
   active,
-  ariaLabel,
-  children,
-  count,
+  emoji,
+  label,
   onClick,
-  title,
   onNotice,
+  reaction,
+  game,
 }: {
   active: boolean;
-  ariaLabel: string;
-  children: ReactNode;
-  count: string;
+  emoji: string;
+  label: string;
   onClick: () => Promise<void>;
-  title: string;
   onNotice: (message: string) => void;
+  reaction: GameReaction;
+  game: { id: string; title: string };
 }) {
   const [pending, setPending] = useState(false);
   const { playClickSound } = useClickSound();
 
   return (
-    <Button
-      type="button"
-      variant="secondary"
-      size="sm"
-      className={cn(active ? "border-primary bg-primary/10 text-primary ring-1 ring-primary" : "")}
-      aria-label={ariaLabel}
-      aria-pressed={active}
-      aria-busy={pending}
-      disabled={pending}
-      title={title}
-      onClick={async () => {
-        if (pending) return;
-        playClickSound();
-        setPending(true);
-        try {
-          await onClick();
-          const message = active ? `${title} tercihin güncellendi.` : `${title} olarak işaretlendi.`;
-          onNotice(message);
-          toast.success(message);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "Oy işlemi tamamlanamadı.";
-          onNotice(message);
-          toast.error(message);
-        } finally {
-          setPending(false);
-        }
-      }}
-    >
-      <span className="grid size-[18px] shrink-0 place-items-center">
-        {pending ? <LoaderCircleIcon className="size-[18px] animate-spin" aria-hidden="true" /> : children}
-      </span>
-      <span className="min-w-[1ch] tabular-nums">{count}</span>
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className={cn(
+            "rounded-full text-lg leading-none transition duration-150 hover:-translate-y-0.5 hover:scale-110 hover:bg-background",
+            active ? "scale-110 bg-background ring-2 ring-primary/70 shadow-sm" : "",
+          )}
+          aria-label={active ? `${label} tepkisini kaldır` : `${label} tepkisi ver`}
+          aria-pressed={active}
+          aria-busy={pending}
+          disabled={pending}
+          onClick={async () => {
+            if (pending) return;
+            playClickSound();
+            setPending(true);
+            try {
+              await onClick();
+              trackAnalyticsEvent("game_reaction", { reaction: active ? `remove_${reaction}` : reaction, items: [gameAnalyticsItem(game)] });
+              const message = active ? "Tepkin kaldırıldı." : `${label} tepkin kaydedildi.`;
+              onNotice(message);
+              toast.success(message);
+            } catch (error) {
+              const message = error instanceof Error ? error.message : "Reaksiyon işlemi tamamlanamadı.";
+              onNotice(message);
+              toast.error(message);
+            } finally {
+              setPending(false);
+            }
+          }}
+        >
+          <span className="flex size-6 shrink-0 items-center justify-center leading-none">
+            {pending ? (
+              <LoaderCircleIcon className="size-[18px] animate-spin" aria-hidden="true" />
+            ) : (
+              <span className="block -translate-y-px leading-none" aria-hidden="true">{emoji}</span>
+            )}
+          </span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent><p>{active ? `${label} tepkisini kaldır` : label}</p></TooltipContent>
+    </Tooltip>
   );
 }
 

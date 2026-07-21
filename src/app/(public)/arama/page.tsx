@@ -1,6 +1,6 @@
 import { GameSection } from "@/components/game/game-section";
 import { AdSlot } from "@/components/ads/ad-slot";
-import { searchPublishedGames } from "@/lib/db-games";
+import { searchPublishedGames } from "@/lib/games/public-queries";
 import { getPublicSettings } from "@/lib/db-settings";
 import type { Metadata } from "next";
 import { AdminPagination, parseAdminPage } from "@/components/admin/admin-pagination";
@@ -23,7 +23,7 @@ export default async function SearchPage({ searchParams }: Props) {
   const results = await searchPublishedGames(q, page, PER_PAGE);
 
   return (
-    <div className="space-y-4">
+    <div data-analytics-search-term={q || undefined} data-analytics-result-count={results.total} className="space-y-4">
       <section className="rounded-md border border-border bg-card p-4">
         <h1 className="text-2xl font-semibold">Oyun Ara</h1>
         <p className="mt-2 text-sm text-muted-foreground">{q ? `"${q}" için ${results.total.toLocaleString("tr-TR")} sonuç bulundu.` : "Aramak istediğin oyunu yaz."}</p>

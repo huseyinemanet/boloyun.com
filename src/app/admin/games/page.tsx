@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getAdminGamesNumberedPage } from "@/lib/db-games";
+import { getAdminGamesNumberedPage } from "@/lib/games/admin-repository";
 import type { PublishStatus } from "@/types/game";
 import { adminPageMetadata } from "@/lib/seo/metadata";
 import { GameNoticeToast } from "./game-notice-toast";

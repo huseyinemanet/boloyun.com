@@ -16,7 +16,7 @@ import {
   type SortingState,
   type VisibilityState,
 } from "@tanstack/react-table";
-import { ChevronDownIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -299,8 +299,8 @@ export function CommentsTable({ comments, counts, activeFilter }: { comments: Ad
           <span className="text-sm font-medium">
             Sayfa {table.getState().pagination.pageIndex + 1} / {Math.max(table.getPageCount(), 1)}
           </span>
-          <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>Önceki</Button>
-          <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>Sonraki</Button>
+          <Button variant="outline" size="icon-sm" aria-label="Önceki sayfa" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}><ChevronLeftIcon aria-hidden="true" /></Button>
+          <Button variant="outline" size="icon-sm" aria-label="Sonraki sayfa" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}><ChevronRightIcon aria-hidden="true" /></Button>
         </div>
       </div>
     </div>

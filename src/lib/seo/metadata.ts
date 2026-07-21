@@ -7,6 +7,10 @@ export const DEFAULT_DESCRIPTION =
   "En sevilen mini oyunları, klasik Flash oyunları, araba, aksiyon, spor ve beceri oyunlarını ücretsiz oyna.";
 export const DEFAULT_OG_IMAGE = "/opengraph-image";
 
+export function gameSocialImagePath(slug: string) {
+  return `/oyun/${encodeURIComponent(slug)}/paylasim-gorseli`;
+}
+
 export function absoluteUrl(path = "/", baseUrl = SITE_URL) {
   if (/^https?:\/\//i.test(path)) return path;
   return `${baseUrl.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;

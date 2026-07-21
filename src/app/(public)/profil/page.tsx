@@ -46,8 +46,8 @@ export default async function ProfilePage({ searchParams }: Props) {
         <div className="mt-3 space-y-3">
           {comments.length ? comments.map((comment) => (
             <article key={comment.id} className="flex gap-3 rounded-md border border-border p-3">
-              <SoundLink href={`/oyun/${comment.gameSlug}#yorumlar`} native className="relative aspect-[4/3] w-24 shrink-0 overflow-hidden rounded-md bg-muted sm:w-28" aria-label={`${comment.gameTitle} oyununu aç`}>
-                <Image src={comment.gameThumbnailUrl} alt="" fill unoptimized={comment.gameThumbnailUrl.split("?", 1)[0].endsWith(".svg")} sizes="112px" className="object-cover transition hover:scale-105" />
+              <SoundLink href={`/oyun/${comment.gameSlug}#yorumlar`} native className="group relative aspect-[4/3] w-24 shrink-0 overflow-hidden rounded-md bg-muted sm:w-28" aria-label={`${comment.gameTitle} oyununu aç`}>
+                <Image src={comment.gameThumbnailUrl} alt="" fill unoptimized={comment.gameThumbnailUrl.split("?", 1)[0].endsWith(".svg")} sizes="112px" draggable={false} className="game-cover-image object-cover transition group-hover:scale-105" />
               </SoundLink>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -68,7 +68,7 @@ export default async function ProfilePage({ searchParams }: Props) {
 
 function GameList({ id, title, empty, games, eagerFirst = false }: { id?: string; title: string; empty: string; games: ProfileGameItem[]; eagerFirst?: boolean }) {
   return (
-    <section id={id} className="scroll-mt-20">
+    <section id={id} data-analytics-view-list data-analytics-list-name={title} className="scroll-mt-20">
       <h2 className="text-lg font-semibold">{title}</h2>
       {games.length ? (
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">

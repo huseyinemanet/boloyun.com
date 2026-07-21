@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 export type ViewerProfile = {
+  id: string;
   username: string;
   email: string;
   avatarUrl: string | null;

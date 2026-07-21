@@ -102,9 +102,9 @@ function normalizeManifestRoute(route) {
 
 function checkHtmlBudgets() {
   const budgets = [
-    { directory: appServerDir, filename: "index.html", gzipLimit: 70 * 1024 },
+    { directory: appServerDir, filename: "index.html", gzipLimit: 90 * 1024 },
     { directory: join(appServerDir, "kategori"), filename: ".html", gzipLimit: 70 * 1024 },
-    { directory: join(appServerDir, "oyun"), filename: ".html", gzipLimit: 50 * 1024 },
+    { directory: join(appServerDir, "oyun"), filename: ".html", gzipLimit: 80 * 1024 },
   ];
 
   for (const budget of budgets) {

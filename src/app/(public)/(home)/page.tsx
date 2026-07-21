@@ -38,8 +38,15 @@ export default async function Home() {
     }).slice(0, HOMEPAGE_FEATURED_GAME_LIMIT);
     return { section, games: uniqueGames };
   }).filter(({ games }) => games.length > 0);
+  const assignedSectionAnchors = new Set<string>();
+  const anchoredSections = deduplicatedSections.map((entry) => {
+    const anchor = homepageSectionAnchor(entry.section.sectionType);
+    if (!anchor || assignedSectionAnchors.has(anchor)) return { ...entry, anchor: undefined };
+    assignedSectionAnchors.add(anchor);
+    return { ...entry, anchor };
+  });
   const allGames = homepage.latestGames.filter((game) => !seenGameIds.has(game.id)).slice(0, HOME_ALL_GAMES_LIMIT);
-  const visibleGames = [...deduplicatedSections.flatMap(({ games }) => games), ...allGames];
+  const visibleGames = [...anchoredSections.flatMap(({ games }) => games), ...allGames];
 
   return (
     <div className="space-y-5">
@@ -55,7 +62,7 @@ export default async function Home() {
 
       <AdSlot slotKey="homepage_top_banner" />
 
-      {deduplicatedSections.length ? deduplicatedSections.map(({ section, games }, index) => <div key={section.id ?? `${section.sectionType}-${index}`} className={section.visibility === "desktop" ? "hidden md:block" : section.visibility === "mobile" ? "md:hidden" : ""}><GameSection title={section.title} games={games} eagerCount={index === 0 ? 4 : 0} />{index > 0 && index % 2 === 1 ? <div className="mt-5"><AdSlot slotKey="homepage_between_sections" /></div> : null}</div>) : <>
+      {anchoredSections.length ? anchoredSections.map(({ section, games, anchor }, index) => <div id={anchor} key={section.id ?? `${section.sectionType}-${index}`} className={`${section.visibility === "desktop" ? "hidden md:block" : section.visibility === "mobile" ? "md:hidden" : ""} scroll-mt-24`}><GameSection title={section.title} games={games} eagerCount={index === 0 ? 4 : 0} />{index > 0 && index % 2 === 1 ? <div className="mt-5"><AdSlot slotKey="homepage_between_sections" /></div> : null}</div>) : <>
         <div id="yeni-oyunlar" className="scroll-mt-24"><GameSection title="Yeni Oyunlar" games={homepage.latestGames.slice(0, HOMEPAGE_FEATURED_GAME_LIMIT)} eagerCount={4} /></div>
         <div id="populer-oyunlar" className="scroll-mt-24"><GameSection title="Popüler Oyunlar" games={homepage.popularGames} /></div>
         <div id="trend-oyunlar" className="scroll-mt-24"><GameSection title="Trend Oyunlar" games={homepage.trendingGames} /></div>
@@ -63,4 +70,11 @@ export default async function Home() {
       <GameSection title="Tüm Oyunlar" games={allGames} />
     </div>
   );
+}
+
+function homepageSectionAnchor(sectionType: string) {
+  if (sectionType === "latest_games") return "yeni-oyunlar";
+  if (sectionType === "popular_games") return "populer-oyunlar";
+  if (sectionType === "trending_games") return "trend-oyunlar";
+  return undefined;
 }

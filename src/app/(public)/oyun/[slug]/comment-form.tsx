@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { createCommentAction } from "./actions";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 export function CommentForm({ gameId, slug }: { gameId: string; slug: string }) {
   const [body, setBody] = useState("");
@@ -17,7 +18,10 @@ export function CommentForm({ gameId, slug }: { gameId: string; slug: string }) 
       action={createCommentAction}
       className="mt-4 space-y-3"
       onInvalidCapture={() => setSubmitted(true)}
-      onSubmit={() => setSubmitted(true)}
+      onSubmit={(event) => {
+        setSubmitted(true);
+        if (event.currentTarget.checkValidity()) trackAnalyticsEvent("comment_submit", { content_type: "game", content_id: slug });
+      }}
     >
       <input type="hidden" name="game_id" value={gameId} />
       <input type="hidden" name="slug" value={slug} />

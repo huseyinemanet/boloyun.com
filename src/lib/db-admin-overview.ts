@@ -6,6 +6,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/client";
 import { activityLabel } from "@/lib/admin-activity-label";
 import { normalizeSiteAssetUrl } from "@/lib/site-assets";
 import { measuredQuery } from "@/lib/query-observability";
+import { getAdminPopularGames } from "@/lib/games/admin-repository";
 
 type AuditRow = {
   id: string;
@@ -69,14 +70,17 @@ export async function getAdminOverviewData() {
   const now = Date.now();
   const since24Hours = new Date(now - 24 * 60 * 60 * 1000).toISOString();
   const since7Days = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const { data, error } = await measuredQuery("admin.overview.snapshot", supabase.rpc(
-    "get_admin_overview_snapshot_v2",
-    {
-      p_since_24_hours: since24Hours,
-      p_since_7_days: since7Days,
-      p_popular_limit: 10,
-    },
-  ));
+  const [{ data, error }, popularGames] = await Promise.all([
+    measuredQuery("admin.overview.snapshot", supabase.rpc(
+      "get_admin_overview_snapshot_v2",
+      {
+        p_since_24_hours: since24Hours,
+        p_since_7_days: since7Days,
+        p_popular_limit: 10,
+      },
+    )),
+    getAdminPopularGames(10),
+  ]);
   if (error || !data || typeof data !== "object" || Array.isArray(data)) {
     console.error("[admin-overview] snapshot query failed", error?.message ?? "invalid payload");
     return empty;
@@ -104,7 +108,7 @@ export async function getAdminOverviewData() {
       pendingComments: numberValue(snapshot.attention?.pendingComments),
     },
     activities: mapAuditRows(snapshot.activities ?? []),
-    popularGames: mapPopularGames(snapshot.popularGames ?? []),
+    popularGames,
     system: {
       database: "Bağlı" as const,
       r2: isR2Configured() ? "Bağlı" as const : "Yapılandırılmadı" as const,
@@ -128,23 +132,6 @@ function runtimeInfo(databaseVersion?: string) {
 function numberValue(value: unknown) {
   const number = Number(value ?? 0);
   return Number.isFinite(number) ? number : 0;
-}
-
-function mapPopularGames(rows: AdminOverviewSnapshot["popularGames"]): AdminOverviewPopularGame[] {
-  return (rows ?? []).map((row) => ({
-    id: row.id,
-    title: row.title,
-    slug: row.slug,
-    categoryName: typeof row.categoryName === "string" ? row.categoryName : "",
-    thumbnailUrl: normalizeSiteAssetUrl(row.thumbnailUrl) ?? "/thumbnails/space.svg",
-    playCount: numberValue(row.playCount),
-    favoriteCount: numberValue(row.favoriteCount),
-    likesCount: numberValue(row.likesCount),
-    dislikesCount: numberValue(row.dislikesCount),
-    ratingAvg: numberValue(row.ratingAvg),
-    ratingCount: numberValue(row.ratingCount),
-    popularityScore: numberValue(row.popularityScore),
-  }));
 }
 
 function mapAuditRows(rows: AuditRow[]) {

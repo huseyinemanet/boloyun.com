@@ -1,7 +1,8 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
-import { getPublishedGamesByIds, mapGameRow, type GameRow } from "@/lib/db-games";
+import { mapGameRow, type GameRow } from "@/lib/games/model";
+import { getPublishedGamesByIds } from "@/lib/games/public-queries";
 import { isTagIndexable } from "@/lib/seo/audit";
 import { slugify } from "@/lib/slug/slugify";
 import { measuredQuery } from "@/lib/query-observability";

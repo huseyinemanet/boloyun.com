@@ -1,20 +1,26 @@
 import { cache } from "react";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 
-export type GameVote = "like" | "dislike";
+export const gameReactions = ["like", "love", "haha", "wow", "sad", "angry"] as const;
 
-export type GameVoteStats = {
+export type GameReaction = (typeof gameReactions)[number];
+
+export type GameReactionStats = {
   likesCount: number;
   dislikesCount: number;
   ratingCount: number;
   ratingAvg: number;
 };
 
-type VoteRow = {
-  vote: GameVote;
+type ReactionRow = {
+  vote: GameReaction;
 };
 
-export const getGameVoteForSession = cache(async function getGameVoteForSession(gameId: string, sessionId: string): Promise<GameVote | null> {
+export function isGameReaction(value: unknown): value is GameReaction {
+  return typeof value === "string" && gameReactions.some((reaction) => reaction === value);
+}
+
+export const getGameReactionForSession = cache(async function getGameReactionForSession(gameId: string, sessionId: string): Promise<GameReaction | null> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return null;
 
@@ -26,20 +32,22 @@ export const getGameVoteForSession = cache(async function getGameVoteForSession(
     .maybeSingle();
 
   if (error || !data) return null;
-  return (data as VoteRow).vote;
+  const reaction = (data as ReactionRow).vote;
+  return isGameReaction(reaction) ? reaction : null;
 });
 
-export async function upsertGameVote(gameId: string, sessionId: string, vote: GameVote): Promise<GameVoteStats> {
+export async function setGameReaction(gameId: string, sessionId: string, reaction: GameReaction): Promise<GameReactionStats & { selectedReaction: GameReaction | null }> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) throw new Error("Supabase service client yok.");
-  const { data, error } = await supabase.rpc("upsert_game_vote_atomic", {
+  const { data, error } = await supabase.rpc("set_game_reaction_atomic", {
     p_game_id: gameId,
     p_session_id: sessionId,
-    p_vote: vote,
+    p_reaction: reaction,
   });
-  if (error) throw new Error(`Oy kaydedilemedi: ${error.message}`);
-  const value = data as Partial<GameVoteStats> | null;
+  if (error) throw new Error(`Tepki kaydedilemedi: ${error.message}`);
+  const value = data as (Partial<GameReactionStats> & { selectedReaction?: unknown }) | null;
   return {
+    selectedReaction: isGameReaction(value?.selectedReaction) ? value.selectedReaction : null,
     likesCount: Number(value?.likesCount ?? 0),
     dislikesCount: Number(value?.dislikesCount ?? 0),
     ratingCount: Number(value?.ratingCount ?? 0),
@@ -47,7 +55,7 @@ export async function upsertGameVote(gameId: string, sessionId: string, vote: Ga
   };
 }
 
-export async function recalculateGameVoteStats(gameId: string): Promise<GameVoteStats> {
+export async function recalculateGameReactionStats(gameId: string): Promise<GameReactionStats> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) throw new Error("Supabase service client yok.");
 
@@ -56,16 +64,16 @@ export async function recalculateGameVoteStats(gameId: string): Promise<GameVote
       .from("game_reactions")
       .select("id", { count: "exact", head: true })
       .eq("game_id", gameId)
-      .eq("vote", "like"),
+      .in("vote", ["like", "love", "haha", "wow"]),
     supabase
       .from("game_reactions")
       .select("id", { count: "exact", head: true })
       .eq("game_id", gameId)
-      .eq("vote", "dislike"),
+      .in("vote", ["sad", "angry"]),
   ]);
 
-  if (likesResult.error) throw new Error(`Like sayisi okunamadi: ${likesResult.error.message}`);
-  if (dislikesResult.error) throw new Error(`Dislike sayisi okunamadi: ${dislikesResult.error.message}`);
+  if (likesResult.error) throw new Error(`Olumlu reaksiyon sayısı okunamadı: ${likesResult.error.message}`);
+  if (dislikesResult.error) throw new Error(`Olumsuz reaksiyon sayısı okunamadı: ${dislikesResult.error.message}`);
 
   const likesCount = likesResult.count ?? 0;
   const dislikesCount = dislikesResult.count ?? 0;

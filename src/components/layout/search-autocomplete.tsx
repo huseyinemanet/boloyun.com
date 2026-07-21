@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useId, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, useTransition, type FocusEvent, type KeyboardEvent, type MouseEvent } from "react";
 import { LoaderCircleIcon, SearchIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { SoundLink } from "@/components/audio/sound-link";
@@ -13,20 +13,27 @@ type SearchResponse = {
   items: GameSearchSuggestion[];
 };
 
+type CachedSuggestions = {
+  items: GameSearchSuggestion[];
+  cachedAt: number;
+};
+
 const MINIMUM_QUERY_LENGTH = 3;
-const SEARCH_CACHE_KEY = "boloyun_search_suggestions_v1";
+const SEARCH_CACHE_KEY = "boloyun_search_suggestions_v3";
+const SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
 const POPULAR_CACHE_KEY = "__popular__";
 
 export function SearchAutocomplete() {
   const listboxId = useId();
   const router = useRouter();
-  const cache = useRef(new Map<string, GameSearchSuggestion[]>());
+  const cache = useRef(new Map<string, CachedSuggestions>());
   const popularRequest = useRef<Promise<GameSearchSuggestion[]> | null>(null);
   const currentQuery = useRef("");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GameSearchSuggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [navigating, startNavigation] = useTransition();
   const [activeIndex, setActiveIndex] = useState(-1);
   const normalizedQuery = query.trim();
   const showPanel = open && (normalizedQuery.length >= MINIMUM_QUERY_LENGTH || results.length > 0 || loading);
@@ -35,8 +42,8 @@ export function SearchAutocomplete() {
     try {
       const stored = sessionStorage.getItem(SEARCH_CACHE_KEY);
       if (!stored) return;
-      const entries = JSON.parse(stored) as Array<[string, GameSearchSuggestion[]]>;
-      cache.current = new Map(entries.slice(-30));
+      const entries = JSON.parse(stored) as Array<[string, CachedSuggestions]>;
+      cache.current = new Map(entries.slice(-30).filter(([, entry]) => isFreshCacheEntry(entry)));
     } catch {
       // Bozuk ya da kapalı sessionStorage aramayı engellemez.
     }
@@ -47,7 +54,7 @@ export function SearchAutocomplete() {
     if (searchTerm.length < MINIMUM_QUERY_LENGTH) return;
 
     const cacheKey = searchTerm.toLocaleLowerCase("tr");
-    if (cache.current.has(cacheKey)) return;
+    if (getCachedResults(cache.current, cacheKey)) return;
 
     const controller = new AbortController();
     const timeout = window.setTimeout(async () => {
@@ -78,7 +85,7 @@ export function SearchAutocomplete() {
   function handleQueryChange(value: string) {
     const searchTerm = value.trim();
     const cacheKey = searchTerm.toLocaleLowerCase("tr");
-    const cachedResults = cache.current.get(cacheKey);
+    const cachedResults = getCachedResults(cache.current, cacheKey);
 
     setQuery(value);
     currentQuery.current = value;
@@ -102,7 +109,7 @@ export function SearchAutocomplete() {
   }
 
   async function loadPopularSuggestions() {
-    const cachedResults = cache.current.get(POPULAR_CACHE_KEY);
+    const cachedResults = getCachedResults(cache.current, POPULAR_CACHE_KEY);
     if (cachedResults) {
       setResults(cachedResults);
       setOpen(true);
@@ -111,7 +118,7 @@ export function SearchAutocomplete() {
 
     setLoading(true);
     setOpen(true);
-    const request = popularRequest.current ?? fetch("/api/search?mode=popular")
+    const request = popularRequest.current ?? fetch("/api/search?mode=popular&v=3")
       .then(async (response) => {
         if (!response.ok) throw new Error("Popüler oyunlar yüklenemedi.");
         const data = await response.json() as SearchResponse;
@@ -161,7 +168,15 @@ export function SearchAutocomplete() {
     if (!normalizedQuery) return;
     setOpen(false);
     setActiveIndex(-1);
-    router.push(`/arama?q=${encodeURIComponent(normalizedQuery)}`);
+    startNavigation(() => router.push(`/arama?q=${encodeURIComponent(normalizedQuery)}`));
+  }
+
+  function navigateFromSuggestion(event: MouseEvent<HTMLAnchorElement>, href: string) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    setOpen(false);
+    setActiveIndex(-1);
+    startNavigation(() => router.push(href));
   }
 
   function handleBlur(event: FocusEvent<HTMLFormElement>) {
@@ -208,7 +223,12 @@ export function SearchAutocomplete() {
           aria-activedescendant={activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined}
           className="h-10 rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
         />
-        {loading ? <LoaderCircleIcon className="size-4 shrink-0 animate-spin text-muted-foreground" aria-label="Aranıyor" /> : null}
+        {loading || navigating ? (
+          <LoaderCircleIcon
+            className="size-4 shrink-0 animate-spin text-muted-foreground"
+            aria-label={navigating ? "Sayfa yükleniyor" : "Aranıyor"}
+          />
+        ) : null}
       </div>
 
       {showPanel ? (
@@ -234,11 +254,16 @@ export function SearchAutocomplete() {
                 role="option"
                 aria-selected={activeIndex === index}
                 onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => setOpen(false)}
+                onClick={(event) => navigateFromSuggestion(event, `/oyun/${game.slug}`)}
+                data-analytics-event="select_item"
+                data-analytics-item-id={game.slug}
+                data-analytics-item-name={game.title}
+                data-analytics-list-name={normalizedQuery ? "Arama Önerileri" : "Popüler Oyun Önerileri"}
+                data-analytics-index={index}
                 className="flex items-center gap-3 rounded-md p-2 outline-none transition hover:bg-accent focus:bg-accent aria-selected:bg-accent"
               >
                 <span className="relative aspect-[4/3] w-16 shrink-0 overflow-hidden rounded-md bg-muted">
-                  <Image src={game.thumbnailUrl} alt="" fill sizes="64px" unoptimized className="object-cover" />
+                  <Image src={game.thumbnailUrl} alt="" fill sizes="64px" unoptimized draggable={false} className="game-cover-image object-cover" />
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-bold text-foreground">{game.title}</span>
@@ -256,7 +281,7 @@ export function SearchAutocomplete() {
             <SoundLink
               href={`/arama?q=${encodeURIComponent(normalizedQuery)}`}
               native
-              onClick={() => setOpen(false)}
+              onClick={(event) => navigateFromSuggestion(event, `/arama?q=${encodeURIComponent(normalizedQuery)}`)}
               className="mt-1 flex items-center justify-center rounded-md border-t border-border px-3 py-2 text-sm font-bold text-primary hover:bg-accent"
             >
               Tüm sonuçları göster
@@ -266,14 +291,27 @@ export function SearchAutocomplete() {
       ) : null}
 
       <span className="sr-only" aria-live="polite">
-        {loading ? "Oyunlar aranıyor" : showPanel ? `${results.length} oyun önerisi bulundu` : ""}
+        {navigating ? "Oyun sayfası yükleniyor" : loading ? "Oyunlar aranıyor" : showPanel ? `${results.length} oyun önerisi bulundu` : ""}
       </span>
     </form>
   );
 }
 
-function rememberResults(cache: Map<string, GameSearchSuggestion[]>, key: string, items: GameSearchSuggestion[]) {
-  cache.set(key, items);
+function getCachedResults(cache: Map<string, CachedSuggestions>, key: string) {
+  const entry = cache.get(key);
+  if (!isFreshCacheEntry(entry)) {
+    cache.delete(key);
+    return undefined;
+  }
+  return entry.items;
+}
+
+function isFreshCacheEntry(entry: CachedSuggestions | undefined): entry is CachedSuggestions {
+  return Boolean(entry && Array.isArray(entry.items) && Date.now() - entry.cachedAt < SEARCH_CACHE_TTL_MS);
+}
+
+function rememberResults(cache: Map<string, CachedSuggestions>, key: string, items: GameSearchSuggestion[]) {
+  cache.set(key, { items, cachedAt: Date.now() });
   if (cache.size > 30) cache.delete(cache.keys().next().value ?? "");
   try {
     sessionStorage.setItem(SEARCH_CACHE_KEY, JSON.stringify(Array.from(cache.entries())));

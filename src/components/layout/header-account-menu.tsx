@@ -17,6 +17,8 @@ import {
 import { SoundLink } from "@/components/audio/sound-link";
 import { useViewerState, type ViewerProfile } from "@/components/auth/viewer-state-provider";
 
+const accountMenuItemClass = "min-h-9 px-2.5 py-2 hover:bg-white/10 focus:bg-white/10 focus:text-foreground data-[highlighted]:bg-white/10";
+
 export function HeaderAccountMenu({ showRegister }: { showRegister: boolean }) {
   const pathname = usePathname();
   const { loaded, profile } = useViewerState();
@@ -39,28 +41,28 @@ export function HeaderAccountMenu({ showRegister }: { showRegister: boolean }) {
           <AvatarFallback>{profile.username.slice(0, 2).toLocaleUpperCase("tr")}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 border-border/70 bg-popover/80 shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-popover/70">
-        <div className="px-3 py-2">
+      <DropdownMenuContent align="end" className="w-60 border-border/70 bg-popover/80 p-1.5 shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-popover/70">
+        <div className="px-2.5 py-2">
           <p className="truncate font-semibold text-foreground">{displayName}</p>
           {profile.email ? <p className="truncate text-xs text-muted-foreground">{profile.email}</p> : null}
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
-            <SoundLink href="/profil" className="gap-2">
+          <DropdownMenuItem asChild className={accountMenuItemClass}>
+            <SoundLink href="/profil" className="gap-2.5">
               <IconProfileBasicFillDuo18 className="size-[18px] shrink-0" aria-hidden="true" />
               Profil
             </SoundLink>
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <SoundLink href="/profil#favoriler" className="gap-2">
+          <DropdownMenuItem asChild className={accountMenuItemClass}>
+            <SoundLink href="/profil#favoriler" className="gap-2.5">
               <IconHeartFillDuo18 className="size-[18px] shrink-0" aria-hidden="true" />
               Favorilerim
             </SoundLink>
           </DropdownMenuItem>
           {profile.role === "admin" ? (
-            <DropdownMenuItem asChild>
-              <SoundLink href="/admin" className="gap-2">
+            <DropdownMenuItem asChild className={accountMenuItemClass}>
+              <SoundLink href="/admin" className="gap-2.5">
                 <IconShieldCheckFillDuo18 className="size-[18px] shrink-0" aria-hidden="true" />
                 Admin
               </SoundLink>
@@ -69,8 +71,8 @@ export function HeaderAccountMenu({ showRegister }: { showRegister: boolean }) {
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <form action="/auth/signout" method="post">
-          <DropdownMenuItem asChild>
-            <button type="submit" className="w-full gap-2 text-left text-foreground">
+          <DropdownMenuItem asChild className={accountMenuItemClass}>
+            <button type="submit" className="w-full gap-2.5 text-left text-foreground">
               <IconCircleLogoutFillDuo18 className="size-[18px] shrink-0" aria-hidden="true" />
               Çıkış
             </button>

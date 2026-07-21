@@ -3,11 +3,15 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import { IconStarFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconStarFillDuo18";
 import { IconStarUserFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconStarUserFillDuo18";
+import { IconCircleQuestionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCircleQuestionFillDuo18";
+import { IconGamepadButtonsFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGamepadButtonsFillDuo18";
+import { IconSparkleFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconSparkleFillDuo18";
 import { SoundLink } from "@/components/audio/sound-link";
 import { notFound } from "next/navigation";
 import { AdSlot } from "@/components/ads/ad-slot";
-import { GameCard } from "@/components/game/game-card";
 import { PlayCountMetric } from "@/components/game/play-count-metric";
+import { SimilarGamesCarousel } from "@/components/game/similar-games-carousel";
+import { JsonLd } from "@/components/seo/json-ld";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -16,21 +20,18 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { getPrebuildGameSlugs, getPublicGamePageBySlug, type GameTaxonomyLink } from "@/lib/db-games";
-import { buildMetadata } from "@/lib/seo/metadata";
+import { getPrebuildGameSlugs, getPublicGamePageBySlug, type GameTaxonomyLink } from "@/lib/games/public-queries";
+import { buildMetadata, gameSocialImagePath } from "@/lib/seo/metadata";
 import { getPublicSettings } from "@/lib/db-settings";
 import { isGameSourceAllowed } from "@/lib/settings/game-security";
 import { renderSeoTemplate } from "@/lib/settings/validation";
+import { breadcrumbJsonLd } from "@/lib/seo/jsonld";
 import { LazyGameActions } from "./lazy-game-actions";
 import { LazyComments } from "./lazy-comments";
 import { LazyGamePlayer } from "./lazy-game-player";
-import { GameReportDialog } from "@/components/player/game-report-dialog";
 import { Toaster } from "@/components/ui/sonner";
-import { JsonLd } from "@/components/seo/json-ld";
-import { breadcrumbJsonLd } from "@/lib/seo/jsonld";
 
 export const revalidate = 3600;
-export const dynamicParams = true;
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -54,7 +55,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: game.seoTitle || renderSeoTemplate(settings.seo.gameTitleTemplate, { oyun_adı: game.title, site_adı: settings.general.siteName, kategori_adı: primaryCategory?.name }),
     description: game.seoDescription || `${game.title} oyununu ücretsiz oyna. ${game.shortDescription} Tarayıcıdan hemen başlat, indirme yapmadan oynamaya başla.`,
     canonicalPath: `/oyun/${game.slug}`,
-    image: game.ogImageUrl || game.thumbnailUrl,
+    image: gameSocialImagePath(game.slug),
     indexable: game.isIndexable && !game.isBroken,
     siteName: settings.general.siteName,
     baseUrl: settings.seo.canonicalDomain,
@@ -82,15 +83,11 @@ export default async function GameDetailPage({ params }: Props) {
   return (
     <article className="space-y-4">
       {settings.seo.structuredDataEnabled ? (
-        <JsonLd
-          data={breadcrumbJsonLd([
-            { name: "Ana Sayfa", path: "/" },
-            ...(primaryCategory
-              ? [{ name: primaryCategory.name, path: `/kategori/${primaryCategory.slug}` }]
-              : []),
-            { name: game.title, path: `/oyun/${game.slug}` },
-          ])}
-        />
+        <JsonLd data={breadcrumbJsonLd([
+          { name: "Oyunlar", path: "/" },
+          ...(primaryCategory ? [{ name: primaryCategory.name, path: `/kategori/${primaryCategory.slug}` }] : []),
+          { name: game.title, path: `/oyun/${game.slug}` },
+        ])} />
       ) : null}
       <AdSlot slotKey="game_page_top" />
 
@@ -106,10 +103,11 @@ export default async function GameDetailPage({ params }: Props) {
               unoptimized
               alt={`${game.title} oyunu kapak görseli`}
               fill
+              draggable={false}
               priority
               loading="eager"
               sizes="220px"
-              className="object-cover"
+              className="game-cover-image object-cover"
             />
           </div>
 
@@ -122,8 +120,6 @@ export default async function GameDetailPage({ params }: Props) {
                     <LazyGameActions
                       gameId={game.id}
                       slug={game.slug}
-                      likesCount={game.likesCount}
-                      dislikesCount={game.dislikesCount}
                       showVotes={settings.games.likesEnabled && settings.community.ratingsEnabled}
                       showFavorite={settings.games.favoritesEnabled && settings.community.favoritesEnabled}
                       showShare={settings.games.sharingEnabled}
@@ -166,28 +162,22 @@ export default async function GameDetailPage({ params }: Props) {
             preRoll={settings.ads.preRollEnabled ? <AdSlot slotKey="game_preroll" /> : undefined}
             preRollSkipSeconds={settings.ads.preRollSkipSeconds}
           />
-          <GameReportDialog gameId={game.id} gameTitle={game.title} />
         </div>
       </section>
 
       <AdSlot slotKey="game_page_below_player" />
 
       <section className="grid gap-3 rounded-md border border-border bg-card p-4 md:grid-cols-2">
-        <InfoBlock title={`${game.title} nasıl oynanır?`} body={compactText(game.howToPlay, 360)} />
-        <ListBlock title="Kontroller" items={game.controls.slice(0, 6).map((item) => compactText(item, 140))} />
-        <ListBlock title="Özellikler" items={game.features.slice(0, 6).map((item) => compactText(item, 140))} />
+        <InfoBlock icon={<IconCircleQuestionFillDuo18 />} title={`${game.title} nasıl oynanır?`} body={compactText(game.howToPlay, 360)} />
+        <ListBlock icon={<IconGamepadButtonsFillDuo18 />} title="Kontroller" items={game.controls.slice(0, 6).map((item) => compactText(item, 140))} />
+        <ListBlock icon={<IconSparkleFillDuo18 />} title="Özellikler" items={game.features.slice(0, 6).map((item) => compactText(item, 140))} />
       </section>
 
       <TaxonomyChips categories={categories} tags={tags} />
 
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">Benzer Oyunlar</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {similarGames.slice(0, 5).map((similar) => (
-            <GameCard key={similar.id} game={similar} />
-          ))}
-        </div>
-      </section>
+      <SimilarGamesCarousel
+        games={similarGames.map(({ id, title, slug, thumbnailUrl }) => ({ id, title, slug, thumbnailUrl }))}
+      />
 
       {settings.community.commentsEnabled ? <AdSlot slotKey="game_page_before_comments" /> : null}
 
@@ -205,7 +195,7 @@ function Breadcrumbs({ gameTitle, categories }: { gameTitle: string; categories:
       <BreadcrumbList className="font-medium">
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <SoundLink href="/" native>Ana Sayfa</SoundLink>
+            <SoundLink href="/" native>Oyunlar</SoundLink>
           </BreadcrumbLink>
         </BreadcrumbItem>
       {primaryCategory ? (
@@ -248,7 +238,7 @@ function TaxonomyChips({ categories, tags }: { categories: GameTaxonomyLink[]; t
   return (
     <div className="flex flex-wrap gap-2 text-xs font-semibold">
       {items.map((item) => (
-        <SoundLink key={item.href} href={item.href} native className="rounded-md bg-muted px-2 py-1 text-foreground hover:bg-accent">
+        <SoundLink key={item.href} href={item.href} native data-analytics-event="select_item" data-analytics-content-type={item.href.startsWith("/kategori/") ? "category" : "tag"} data-analytics-content-id={item.slug} data-analytics-content-name={item.name} className="rounded-md bg-muted px-2 py-1 text-foreground hover:bg-accent">
           {item.name}
         </SoundLink>
       ))}
@@ -257,25 +247,34 @@ function TaxonomyChips({ categories, tags }: { categories: GameTaxonomyLink[]; t
 }
 
 
-function InfoBlock({ title, body }: { title: string; body: string }) {
+function InfoBlock({ icon, title, body }: { icon: ReactNode; title: string; body: string }) {
   return (
     <div>
-      <h2 className="mb-2 text-base font-semibold">{title}</h2>
+      <BlockHeading icon={icon}>{title}</BlockHeading>
       <p className="text-sm leading-6 text-foreground">{body}</p>
     </div>
   );
 }
 
-function ListBlock({ title, items }: { title: string; items: string[] }) {
+function ListBlock({ icon, title, items }: { icon: ReactNode; title: string; items: string[] }) {
   return (
     <div>
-      <h2 className="mb-2 text-base font-semibold">{title}</h2>
+      <BlockHeading icon={icon}>{title}</BlockHeading>
       <ul className="space-y-1 text-sm text-foreground">
         {items.map((item) => (
           <li key={item}>- {item}</li>
         ))}
       </ul>
     </div>
+  );
+}
+
+function BlockHeading({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+  return (
+    <h2 className="mb-2 flex items-center gap-2 text-base font-semibold">
+      <span className="text-primary [&_svg]:size-[18px]" aria-hidden="true">{icon}</span>
+      <span>{children}</span>
+    </h2>
   );
 }
 

@@ -16,6 +16,7 @@ export function LoginForm({ next, challenge, hasServerFieldError }: LoginFormPro
     <ValidatedAuthForm
       action="/auth/signin"
       className="mt-4"
+      analyticsEvent="login_attempt"
     >
       <BotProtectionFields challenge={challenge} action="login" />
       <input type="hidden" name="next" value={next} />

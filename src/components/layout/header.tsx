@@ -32,15 +32,15 @@ export async function Header() {
             const Icon = item.icon;
 
             return (
-              <SoundLink
+              <a
                 key={item.href}
                 href={item.href}
-                native
+                data-click-sound="true"
                 className="flex items-center gap-1.5 rounded-md px-2.5 py-2 text-sm font-bold text-muted-foreground transition hover:bg-accent hover:text-foreground"
               >
                 <Icon aria-hidden="true" className="size-[18px] shrink-0 text-primary" />
                 <span>{item.label}</span>
-              </SoundLink>
+              </a>
             );
           })}
         </nav>

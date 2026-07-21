@@ -9,15 +9,15 @@ test("İstanbul gün sınırını rotasyon anahtarına dönüştürür", () => {
   assert.equal(getIstanbulDayKey(new Date("2026-07-20T21:00:00.000Z")), "2026-07-21");
 });
 
-test("aynı gün aynı oyun sırasını üretir", () => {
+test("aynı gün ve bölüm için aynı oyun sırasını üretir", () => {
   const first = rotateGamesForDay(games, "2026-07-20", "latest").map((game) => game.id);
   const second = rotateGamesForDay(games, "2026-07-20", "latest").map((game) => game.id);
   assert.deepEqual(first, second);
 });
 
-test("ertesi gün sıralamayı değiştirirken aday havuzunu korur", () => {
+test("ertesi gün görünen oyunları değiştirirken aday havuzunu korur", () => {
   const today = rotateGamesForDay(games, "2026-07-20", "trending");
   const tomorrow = rotateGamesForDay(games, "2026-07-21", "trending");
-  assert.notDeepEqual(today.slice(0, 20), tomorrow.slice(0, 20));
+  assert.notDeepEqual(today.slice(0, 12), tomorrow.slice(0, 12));
   assert.deepEqual(today.map((game) => game.id).toSorted(), tomorrow.map((game) => game.id).toSorted());
 });

@@ -6,7 +6,7 @@ import { GameSection } from "@/components/game/game-section";
 import { JsonLd } from "@/components/seo/json-ld";
 import { getPublicCategories, getPublicCategoryBySlug } from "@/lib/db-categories";
 import { AdSlot } from "@/components/ads/ad-slot";
-import { getPublishedGamesByCategorySlugPage } from "@/lib/db-games";
+import { getPublishedGamesByCategorySlugPage } from "@/lib/games/public-queries";
 import { breadcrumbJsonLd, itemListJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getPublicSettings } from "@/lib/db-settings";

@@ -11,6 +11,7 @@ export async function GET() {
     {
       profile: profile
         ? {
+            id: profile.id,
             username: profile.username,
             email: profile.email,
             avatarUrl: profile.avatarUrl,

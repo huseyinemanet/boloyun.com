@@ -1,9 +1,11 @@
 "use client";
 
 import Script from "next/script";
-import { useEffect, useSyncExternalStore } from "react";
+import { Suspense, useEffect, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
+import { configureAnalytics } from "@/lib/analytics";
+import { AnalyticsRuntime } from "./analytics-runtime";
 
 type Consent = "accepted" | "rejected" | null;
 type ConsentState = Consent | "unknown";
@@ -11,21 +13,19 @@ type IntegrationSettings = { googleAnalyticsId: string; googleTagManagerId: stri
 const consentStorageKey = "boloyun_cookie_consent";
 const consentChangeEvent = "boloyun_cookie_consent_change";
 
-declare global {
-  interface Window {
-    dataLayer?: unknown[];
-    gtag?: (...args: unknown[]) => void;
-  }
-}
-
 export function ConsentScripts({ settings }: { settings: IntegrationSettings }) {
   const pathname = usePathname();
   const savedConsent = useSyncExternalStore(subscribeConsent, getConsentSnapshot, getServerConsentSnapshot);
   const consent: ConsentState = pathname.startsWith("/admin") || !settings.consentModeEnabled ? "accepted" : savedConsent;
 
   useEffect(() => {
+    configureAnalytics({
+      allowed: consent === "accepted",
+      googleAnalytics: Boolean(settings.googleAnalyticsId),
+      googleTagManager: Boolean(settings.googleTagManagerId),
+    });
     updateGoogleConsent(consent === "accepted");
-  }, [consent]);
+  }, [consent, settings.googleAnalyticsId, settings.googleTagManagerId]);
 
   if (pathname.startsWith("/admin")) return null;
 
@@ -41,7 +41,8 @@ export function ConsentScripts({ settings }: { settings: IntegrationSettings }) 
 
   const canLoadOptionalScripts = consent === "accepted" || !settings.consentModeEnabled;
   return <>
-    {canLoadOptionalScripts && settings.googleAnalyticsId ? <><Script src={`https://www.googletagmanager.com/gtag/js?id=${settings.googleAnalyticsId}`} strategy="lazyOnload" /><Script id="boloyun-ga" strategy="lazyOnload">{`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('consent','default',{'analytics_storage':'granted','ad_storage':'granted','ad_user_data':'granted','ad_personalization':'granted','wait_for_update':500});gtag('js',new Date());gtag('config','${settings.googleAnalyticsId}');`}</Script></> : null}
+    <Suspense fallback={null}><AnalyticsRuntime allowed={canLoadOptionalScripts} googleAnalytics={Boolean(settings.googleAnalyticsId)} googleTagManager={Boolean(settings.googleTagManagerId)} /></Suspense>
+    {canLoadOptionalScripts && settings.googleAnalyticsId ? <><Script src={`https://www.googletagmanager.com/gtag/js?id=${settings.googleAnalyticsId}`} strategy="lazyOnload" /><Script id="boloyun-ga" strategy="lazyOnload">{`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('consent','default',{'analytics_storage':'granted','ad_storage':'granted','ad_user_data':'granted','ad_personalization':'granted','wait_for_update':500});gtag('js',new Date());gtag('config','${settings.googleAnalyticsId}',{'send_page_view':false});`}</Script></> : null}
     {canLoadOptionalScripts && settings.googleTagManagerId ? <Script id="boloyun-gtm" strategy="lazyOnload">{`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${settings.googleTagManagerId}');`}</Script> : null}
     {canLoadOptionalScripts && settings.clarityProjectId ? <Script id="boloyun-clarity" strategy="lazyOnload">{`(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src='https://www.clarity.ms/tag/'+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,'clarity','script','${settings.clarityProjectId}');`}</Script> : null}
     {canLoadOptionalScripts && settings.metaPixelId ? <Script id="boloyun-meta-pixel" strategy="lazyOnload">{`!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${settings.metaPixelId}');fbq('track','PageView');`}</Script> : null}

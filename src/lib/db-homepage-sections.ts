@@ -1,12 +1,13 @@
 import { unstable_cache } from "next/cache";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 import { getIstanbulDayKey, rotateGamesForDay } from "@/lib/daily-game-rotation";
-import { getPopularPublishedGames, getPublishedGames, getPublishedGamesByCategorySlug, getPublishedGamesByIds, getTrendingPublishedGames, mapGameRow, type GameRow } from "@/lib/db-games";
+import { mapGameRow, type GameRow } from "@/lib/games/model";
+import { getPopularPublishedGames, getPublishedGames, getPublishedGamesByCategorySlug, getPublishedGamesByIds, getTrendingPublishedGames } from "@/lib/games/public-queries";
 import { allowPublicDemoData, publicDataUnavailable } from "@/lib/public-data-guard";
 import type { Game } from "@/types/game";
 
 export const HOMEPAGE_FEATURED_GAME_LIMIT = 20;
-const HOMEPAGE_FEATURED_CANDIDATE_LIMIT = 60;
+const HOMEPAGE_CANDIDATE_LIMIT = 60;
 
 export type HomepageSectionInput = {
   id: string | null;
@@ -84,7 +85,7 @@ const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicH
   if (supabase) {
     const { data, error } = await supabase.rpc("get_public_homepage", {
       p_section_limit: HOMEPAGE_FEATURED_GAME_LIMIT,
-      p_all_limit: 60,
+      p_all_limit: HOMEPAGE_CANDIDATE_LIMIT,
     });
     if (!error && data && typeof data === "object") {
       const snapshot = data as PublicHomepageRpc;
@@ -96,11 +97,11 @@ const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicH
       );
       const needsPopularGames = sectionRows.length === 0 || sectionRows.some((row) => row.section_type === "popular_games");
       const needsTrendingGames = sectionRows.length === 0 || sectionRows.some((row) => row.section_type === "trending_games");
-      const [popularGames, trendingGames] = await Promise.all([
-        needsPopularGames ? getPopularPublishedGames(HOMEPAGE_FEATURED_CANDIDATE_LIMIT) : Promise.resolve([]),
-        needsTrendingGames ? getTrendingPublishedGames(HOMEPAGE_FEATURED_CANDIDATE_LIMIT) : Promise.resolve([]),
+      const [popularGames, trendingCandidates] = await Promise.all([
+        needsPopularGames ? getPopularPublishedGames(HOMEPAGE_FEATURED_GAME_LIMIT) : Promise.resolve([]),
+        needsTrendingGames ? getTrendingPublishedGames(HOMEPAGE_CANDIDATE_LIMIT) : Promise.resolve([]),
       ]);
-      const rotatedTrendingGames = rotateGamesForDay(trendingGames, dayKey, "trending");
+      const trendingGames = rotateGamesForDay(trendingCandidates, dayKey, "trending");
       const sections = sectionRows.map((row) => ({
         section: mapSection({
           ...row,
@@ -112,14 +113,14 @@ const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicH
           : row.section_type === "popular_games"
             ? popularGames
             : row.section_type === "trending_games"
-              ? rotatedTrendingGames
+              ? trendingGames
               : (Array.isArray(row.games) ? row.games : []).map(mapGameRow),
       }));
       return {
         sections,
         latestGames,
-        popularGames: sections.length ? [] : popularGames.slice(0, HOMEPAGE_FEATURED_GAME_LIMIT),
-        trendingGames: sections.length ? [] : rotatedTrendingGames.slice(0, HOMEPAGE_FEATURED_GAME_LIMIT),
+        popularGames: sections.length ? [] : popularGames,
+        trendingGames: sections.length ? [] : trendingGames.slice(0, HOMEPAGE_FEATURED_GAME_LIMIT),
       };
     }
   }
@@ -127,33 +128,32 @@ const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicH
   const sections = (await getHomepageSectionsAdmin()).filter((section) => section.status === "active");
   const publicSections = sections.filter((section) => section.visibility !== "members");
   const needsSharedGames = publicSections.some((section) => !["manual_games", "category_based", "tag_based"].includes(section.sectionType));
-  const sharedGames = needsSharedGames ? await getPublishedGames(60) : [];
-  const [resolvedSections, latestGames, popularGames, trendingGames] = await Promise.all([
+  const sharedGames = needsSharedGames ? await getPublishedGames(HOMEPAGE_CANDIDATE_LIMIT) : [];
+  const [resolvedSections, latestCandidates, popularGames, trendingCandidates] = await Promise.all([
     Promise.all(publicSections.map(async (section) => ({
       section: { ...section, limitCount: renderedSectionLimit(section) },
       games: await resolveSectionGames({ ...section, limitCount: sectionCandidateLimit(section) }, sharedGames),
     }))),
-    sharedGames.length ? Promise.resolve(sharedGames) : getPublishedGames(60),
+    sharedGames.length ? Promise.resolve(sharedGames) : getPublishedGames(HOMEPAGE_CANDIDATE_LIMIT),
     publicSections.length ? Promise.resolve([]) : getPopularPublishedGames(HOMEPAGE_FEATURED_GAME_LIMIT),
-    publicSections.length ? Promise.resolve([]) : getTrendingPublishedGames(HOMEPAGE_FEATURED_CANDIDATE_LIMIT),
+    publicSections.length ? Promise.resolve([]) : getTrendingPublishedGames(HOMEPAGE_CANDIDATE_LIMIT),
   ]);
-  const rotatedLatestGames = rotateGamesForDay(latestGames, dayKey, "latest");
-  const rotatedTrendingGames = rotateGamesForDay(trendingGames, dayKey, "trending");
-  const rotatedSections = resolvedSections.map(({ section, games }) => ({
-    section,
-    games: section.sectionType === "latest_games"
-      ? rotateGamesForDay(games, dayKey, "latest")
-      : section.sectionType === "trending_games"
-        ? rotateGamesForDay(games, dayKey, "trending")
-        : games,
-  }));
+  const latestGames = rotateGamesForDay(latestCandidates, dayKey, "latest");
+  const trendingGames = rotateGamesForDay(trendingCandidates, dayKey, "trending");
   return {
-    sections: rotatedSections,
-    latestGames: rotatedLatestGames,
+    sections: resolvedSections.map(({ section, games }) => ({
+      section,
+      games: section.sectionType === "latest_games"
+        ? rotateGamesForDay(games, dayKey, "latest")
+        : section.sectionType === "trending_games"
+          ? rotateGamesForDay(games, dayKey, "trending")
+          : games,
+    })),
+    latestGames,
     popularGames,
-    trendingGames: rotatedTrendingGames.slice(0, HOMEPAGE_FEATURED_GAME_LIMIT),
+    trendingGames: trendingGames.slice(0, HOMEPAGE_FEATURED_GAME_LIMIT),
   };
-}, ["public-homepage-snapshot-v5"], { revalidate: 3600, tags: ["homepage-sections", "games", "categories", "tags"] });
+}, ["public-homepage-snapshot-v6"], { revalidate: 3600, tags: ["homepage-sections", "games", "categories", "tags"] });
 
 export async function getPublicHomepageSnapshot() {
   return getPublicHomepageSnapshotCached();
@@ -181,16 +181,16 @@ async function resolveSectionGames(section: HomepageSectionInput, sharedGames: G
   return games.slice(0, section.limitCount);
 }
 
+function sectionCandidateLimit(section: HomepageSectionInput) {
+  return ["latest_games", "popular_games", "trending_games"].includes(section.sectionType)
+    ? HOMEPAGE_CANDIDATE_LIMIT
+    : renderedSectionLimit(section);
+}
+
 function renderedSectionLimit(section: HomepageSectionInput) {
   return ["latest_games", "popular_games", "trending_games"].includes(section.sectionType)
     ? HOMEPAGE_FEATURED_GAME_LIMIT
     : Math.min(section.limitCount, HOMEPAGE_FEATURED_GAME_LIMIT);
-}
-
-function sectionCandidateLimit(section: HomepageSectionInput) {
-  return ["latest_games", "popular_games", "trending_games"].includes(section.sectionType)
-    ? HOMEPAGE_FEATURED_CANDIDATE_LIMIT
-    : renderedSectionLimit(section);
 }
 
 function shuffled(games: Game[]) {

@@ -6,6 +6,7 @@ import { measuredQuery } from "@/lib/query-observability";
 
 export type GameComment = {
   id: string;
+  profileId: string;
   body: string;
   createdAt: string;
   username: string;
@@ -33,8 +34,8 @@ type CommentRow = {
   likes_count?: number | null;
   status?: string | null;
   profiles?:
-    | { user_id?: string | null; username?: string | null; avatar_url?: string | null; first_name?: string | null; last_name?: string | null; display_name?: string | null; role?: string | null }
-    | { user_id?: string | null; username?: string | null; avatar_url?: string | null; first_name?: string | null; last_name?: string | null; display_name?: string | null; role?: string | null }[]
+    | { id?: string | null; user_id?: string | null; username?: string | null; avatar_url?: string | null; first_name?: string | null; last_name?: string | null; display_name?: string | null; role?: string | null }
+    | { id?: string | null; user_id?: string | null; username?: string | null; avatar_url?: string | null; first_name?: string | null; last_name?: string | null; display_name?: string | null; role?: string | null }[]
     | null;
   games?: { title?: string | null; slug?: string | null } | { title?: string | null; slug?: string | null }[] | null;
 };
@@ -45,7 +46,7 @@ const getApprovedCommentsForGameCached = unstable_cache(async function getApprov
 
   const { data, error } = await measuredQuery("comments.approved.latest", supabase
     .from("comments")
-    .select("id, body, likes_count, created_at, profiles(username, avatar_url, first_name, last_name, display_name)")
+    .select("id, body, likes_count, created_at, profiles(id, username, avatar_url, first_name, last_name, display_name)")
     .eq("game_id", gameId)
     .eq("status", "approved")
     .order("created_at", { ascending: false })
@@ -55,6 +56,7 @@ const getApprovedCommentsForGameCached = unstable_cache(async function getApprov
 
   return (data as unknown as CommentRow[]).map((comment) => ({
     id: comment.id,
+    profileId: getProfile(comment.profiles).profileId,
     body: comment.body,
     createdAt: comment.created_at ?? new Date().toISOString(),
     username: getProfile(comment.profiles).username,
@@ -62,9 +64,27 @@ const getApprovedCommentsForGameCached = unstable_cache(async function getApprov
     avatarUrl: getProfile(comment.profiles).avatarUrl,
     likesCount: comment.likes_count ?? 0,
   }));
-}, ["approved-comments-for-game-v1"], { revalidate: 3600, tags: ["comments"] });
+}, ["approved-comments-for-game-v4"], { revalidate: 3600, tags: ["comments"] });
 export const getApprovedCommentsForGame = cache(async function getApprovedCommentsForGame(gameId: string, limit = 20): Promise<GameComment[]> {
   return getApprovedCommentsForGameCached(gameId, limit);
+});
+
+const getApprovedCommentsCountForGameCached = unstable_cache(async function getApprovedCommentsCountForGameCached(gameId: string): Promise<number> {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return 0;
+
+  const { count, error } = await measuredQuery("comments.approved.count", supabase
+    .from("comments")
+    .select("id", { count: "exact", head: true })
+    .eq("game_id", gameId)
+    .eq("status", "approved"));
+
+  if (error) return 0;
+  return count ?? 0;
+}, ["approved-comments-count-for-game-v2"], { revalidate: 3600, tags: ["comments"] });
+
+export const getApprovedCommentsCountForGame = cache(async function getApprovedCommentsCountForGame(gameId: string): Promise<number> {
+  return getApprovedCommentsCountForGameCached(gameId);
 });
 
 const getTopCommentsForGameCached = unstable_cache(async function getTopCommentsForGame(gameId: string, limit = 5): Promise<GameComment[]> {
@@ -73,7 +93,7 @@ const getTopCommentsForGameCached = unstable_cache(async function getTopComments
 
   const { data, error } = await measuredQuery("comments.approved.top", supabase
     .from("comments")
-    .select("id, body, likes_count, created_at, profiles(username, avatar_url, first_name, last_name, display_name)")
+    .select("id, body, likes_count, created_at, profiles(id, username, avatar_url, first_name, last_name, display_name)")
     .eq("game_id", gameId)
     .eq("status", "approved")
     .order("likes_count", { ascending: false })
@@ -84,6 +104,7 @@ const getTopCommentsForGameCached = unstable_cache(async function getTopComments
 
   return (data as unknown as CommentRow[]).map((comment) => ({
     id: comment.id,
+    profileId: getProfile(comment.profiles).profileId,
     body: comment.body,
     createdAt: comment.created_at ?? new Date().toISOString(),
     username: getProfile(comment.profiles).username,
@@ -91,7 +112,7 @@ const getTopCommentsForGameCached = unstable_cache(async function getTopComments
     avatarUrl: getProfile(comment.profiles).avatarUrl,
     likesCount: comment.likes_count ?? 0,
   }));
-}, ["top-comments-for-game-v1"], { revalidate: 3600, tags: ["comments"] });
+}, ["top-comments-for-game-v4"], { revalidate: 3600, tags: ["comments"] });
 export const getTopCommentsForGame = cache(async function getTopCommentsForGame(gameId: string, limit = 5): Promise<GameComment[]> {
   return getTopCommentsForGameCached(gameId, limit);
 });
@@ -123,7 +144,7 @@ export async function getAdminComments(limit = 100): Promise<AdminComment[]> {
 
   const { data, error } = await supabase
     .from("comments")
-    .select("id, body, status, created_at, profiles(user_id, username, avatar_url, first_name, last_name, display_name, role), games(title, slug)")
+    .select("id, body, status, created_at, profiles(id, user_id, username, avatar_url, first_name, last_name, display_name, role), games(title, slug)")
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -138,6 +159,7 @@ export async function getAdminComments(limit = 100): Promise<AdminComment[]> {
 
     return {
       id: comment.id,
+      profileId: profile.profileId,
       body: comment.body,
       status: comment.status ?? "pending",
       createdAt: comment.created_at ?? new Date().toISOString(),
@@ -248,6 +270,7 @@ function getProfile(profile: CommentRow["profiles"]) {
   const fullName = [item?.first_name, item?.last_name].filter(Boolean).join(" ").trim();
 
   return {
+    profileId: item?.id || "",
     userId: item?.user_id || "",
     username,
     displayName: fullName || item?.display_name || username,

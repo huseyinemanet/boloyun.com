@@ -33,7 +33,7 @@ export default async function RegisterPage({ searchParams }: Props) {
       {!registrationsEnabled ? <AuthMessage type="error">Yeni üyelikler şu anda kapalı. Mevcut hesabınla giriş yapabilirsin.</AuthMessage> : null}
       {error ? <AuthMessage id="register-form-error" type="error">{registerError}</AuthMessage> : null}
       {registrationsEnabled ? (
-        <ValidatedAuthForm action="/auth/signup" className="mt-4">
+        <ValidatedAuthForm action="/auth/signup" className="mt-4" analyticsEvent="sign_up_attempt">
           <BotProtectionFields challenge={challenge === "1"} action="signup" />
           <FieldGroup>
             <Field>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth";
-import { updateAdminGameFromForm } from "@/lib/admin-game-update";
+import { updateAdminGameFromForm } from "@/lib/games/admin-update-service";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { publicUrlFromRequest } from "@/lib/request-origin";
 import { hasTrustedMutationOrigin } from "@/lib/request-security";

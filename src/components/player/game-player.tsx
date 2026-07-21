@@ -8,6 +8,8 @@ import { useClickSound } from "@/components/audio/click-sound-provider";
 import type { PlayableGameSource } from "@/types/game";
 import { Button } from "@/components/ui/button";
 import { useViewerState } from "@/components/auth/viewer-state-provider";
+import { gameAnalyticsItem, trackAnalyticsEvent } from "@/lib/analytics";
+import { IconMediaPlayFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMediaPlayFillDuo18";
 
 export function GamePlayer({
   game,
@@ -60,6 +62,7 @@ export function GamePlayer({
   function startGame() {
     setPreRollActive(false);
     setStarted(true);
+    trackAnalyticsEvent("game_start", { game_type: game.gameType, items: [gameAnalyticsItem({ id: game.slug, title: game.title })] });
     if (playEventName) window.dispatchEvent(new Event(playEventName));
     if (isUuid(game.id)) void sendPlayEvent(game.id);
   }
@@ -73,9 +76,12 @@ export function GamePlayer({
 
   useEffect(() => {
     if (!started || loaded || game.gameType === "swf" || game.gameType === "external") return;
-    const timer = window.setTimeout(() => setTimedOut(true), loadTimeoutSeconds * 1000);
+    const timer = window.setTimeout(() => {
+      setTimedOut(true);
+      trackAnalyticsEvent("game_load_timeout", { game_type: game.gameType, timeout_seconds: loadTimeoutSeconds, items: [gameAnalyticsItem({ id: game.slug, title: game.title })] });
+    }, loadTimeoutSeconds * 1000);
     return () => window.clearTimeout(timer);
-  }, [game.gameType, loadTimeoutSeconds, loaded, started]);
+  }, [game, game.gameType, loadTimeoutSeconds, loaded, started]);
 
   const loginChecked = isLoggedIn || allowGuestPlay || viewer.loaded;
   const loggedIn = isLoggedIn || Boolean(viewer.profile);
@@ -89,11 +95,11 @@ export function GamePlayer({
   }
 
   if (!sourceAllowed) {
-    return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center rounded-md border border-warning/30 bg-warning/10 p-6 text-center`}><p className="font-bold text-warning">Bu oyunun kaynağı güvenli veya izinli değil.</p></div>;
+    return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center rounded-md border border-warning/30 bg-warning/10 p-6 text-center`}><p className="font-bold text-warning">Bu oyunun kaynağı güvenlik izin listesinde değil.</p></div>;
   }
 
   if (preRollActive) {
-    return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center overflow-hidden rounded-md border border-border bg-black p-4`}><div className="w-full max-w-3xl text-center">{preRoll}<Button className="mt-4" disabled={remaining > 0} onClick={() => { playClickSound(); startGame(); }}>{remaining > 0 ? `${remaining} saniye sonra geç` : "Oyuna Geç"}</Button></div></div>;
+    return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center overflow-hidden rounded-md border border-border bg-black p-4`}><div className="w-full max-w-3xl text-center">{preRoll}<Button className="mt-4" disabled={remaining > 0} onClick={() => { playClickSound(); trackAnalyticsEvent("game_preroll_skip", { items: [gameAnalyticsItem({ id: game.slug, title: game.title })] }); startGame(); }}>{remaining > 0 ? `${remaining} saniye sonra geç` : "Oyuna Geç"}</Button></div></div>;
   }
 
   if (!started) {
@@ -102,7 +108,8 @@ export function GamePlayer({
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(245,158,11,0.42),transparent_28%),radial-gradient(circle_at_70%_60%,rgba(20,184,166,0.36),transparent_32%)]" />
         <div className="relative z-10 flex flex-col items-center gap-3 text-center">
           <p className="text-sm font-semibold text-muted-foreground">{game.title}</p>
-          <Button className="h-12 px-6 text-base" onClick={handleStart}>
+          <Button className="game-start-pulse h-12 px-6 text-base" onClick={handleStart}>
+            <IconMediaPlayFillDuo18 aria-hidden="true" className="size-[18px]" />
             Oyunu Başlat
           </Button>
         </div>
@@ -124,7 +131,8 @@ export function GamePlayer({
         <div className="space-y-3">
           <p className="font-semibold">Bu oyun dış sitede açılıyor.</p>
           <Button asChild>
-            <SoundAnchor href={source} target="_blank" rel="noreferrer">
+            <SoundAnchor href={source} target="_blank" rel="noreferrer" onClick={() => trackAnalyticsEvent("game_external_open", { game_type: game.gameType, items: [gameAnalyticsItem({ id: game.slug, title: game.title })] })}>
+              <IconMediaPlayFillDuo18 aria-hidden="true" className="size-[18px]" />
               Oyunu Başlat
             </SoundAnchor>
           </Button>
@@ -152,12 +160,12 @@ export function GamePlayer({
       loading="lazy"
       allow={`${allowFullscreen ? "fullscreen; " : ""}autoplay; gamepad`}
       allowFullScreen={allowFullscreen}
-      onLoad={() => { setLoaded(true); setTimedOut(false); }}
+      onLoad={() => { setLoaded(true); setTimedOut(false); trackAnalyticsEvent("game_loaded", { game_type: game.gameType, items: [gameAnalyticsItem({ id: game.slug, title: game.title })] }); }}
       sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups allow-forms"
       className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} w-full rounded-md border-0 bg-black`}
     />
-    {timedOut ? <div className="absolute inset-x-3 bottom-3 rounded-md bg-black/80 p-3 text-center text-sm font-bold text-white">Oyun beklenenden uzun sürede yükleniyor. Kaynağı yeniden deneyebilir veya aşağıdaki “Oyunu Bildir” seçeneğini kullanabilirsin.</div> : null}
-    {allowFullscreen ? <Button type="button" size="sm" variant="secondary" className="absolute right-3 top-3" onClick={() => { playClickSound(); void containerRef.current?.requestFullscreen(); }}>Tam Ekran</Button> : null}
+    {timedOut ? <div className="absolute inset-x-3 bottom-3 rounded-md bg-black/80 p-3 text-center text-sm font-bold text-white">Oyun beklenenden uzun sürede yükleniyor. Kaynağı yeniden deneyebilir veya bozuk oyun olarak bildirebilirsin.</div> : null}
+    {allowFullscreen ? <Button type="button" size="sm" variant="secondary" className="absolute right-3 top-3" onClick={() => { playClickSound(); trackAnalyticsEvent("game_fullscreen", { items: [gameAnalyticsItem({ id: game.slug, title: game.title })] }); void containerRef.current?.requestFullscreen(); }}>Tam Ekran</Button> : null}
     </div>
   );
 }

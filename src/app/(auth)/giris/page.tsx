@@ -31,7 +31,7 @@ export default async function LoginPage({ searchParams }: Props) {
 
       <Field>
         <Button asChild variant="outline" className="h-10 w-full px-4 text-sm font-semibold">
-          <SoundAnchor href={`/auth/google?next=${encodeURIComponent(next)}`} className="gap-2">
+          <SoundAnchor href={`/auth/google?next=${encodeURIComponent(next)}`} data-analytics-event="login_attempt" data-analytics-content-type="google" className="gap-2">
             <GoogleLogo className="size-4 shrink-0" />
             Google ile Giriş Yap
           </SoundAnchor>

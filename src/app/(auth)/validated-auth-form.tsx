@@ -8,11 +8,12 @@ type ValidatedAuthFormProps = {
   action: string;
   className?: string;
   children: ReactNode;
+  analyticsEvent?: "login_attempt" | "sign_up_attempt";
 };
 
 const InvalidFieldsContext = createContext<Set<string> | null>(null);
 
-export function ValidatedAuthForm({ action, className, children }: ValidatedAuthFormProps) {
+export function ValidatedAuthForm({ action, className, children, analyticsEvent }: ValidatedAuthFormProps) {
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
 
   function markInvalid(fieldName: string) {
@@ -35,6 +36,7 @@ export function ValidatedAuthForm({ action, className, children }: ValidatedAuth
       action={action}
       method="post"
       className={className}
+      data-analytics-event={analyticsEvent}
       onInvalidCapture={(event: FormEvent<HTMLFormElement>) => {
         const target = event.target;
         if (target instanceof HTMLInputElement) markInvalid(target.name);

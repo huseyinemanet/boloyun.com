@@ -2,7 +2,7 @@ import "server-only";
 
 import { revalidatePath } from "next/cache";
 import { mirrorGameCover, isCdnCoverUrl } from "@/import/covers/mirror-cover";
-import { getAdminGameById, updateAdminGame } from "@/lib/db-games";
+import { getAdminGameById, updateAdminGame } from "@/lib/games/admin-repository";
 import { auditGameSeo } from "@/lib/seo/audit";
 import type { GameType, PublishStatus } from "@/types/game";
 import { invalidatePublicContent } from "@/lib/public-cache-invalidation";

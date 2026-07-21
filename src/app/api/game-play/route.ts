@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       maxAge: 60 * 60 * 24 * 365,
       path: "/",
       sameSite: "lax",
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
     });
   }
 
@@ -44,10 +44,7 @@ export async function POST(request: Request) {
   ]);
   if (!rate.allowed) return response({ accepted: false }, 429, rate.retryAfterSeconds);
 
-  const hasAuthCookie = cookieStore.getAll().some(({ name }) => (
-    /^sb-.+-auth-token(?:\.\d+)?$/.test(name) || name.startsWith("supabase-auth-token")
-  ));
-  const profile = hasAuthCookie ? await getCurrentProfile() : null;
+  const profile = await getCurrentProfile();
   await recordGamePlay(input.gameId, sessionId, input.eventId, profile?.id);
 
   return response({ accepted: true }, 202);

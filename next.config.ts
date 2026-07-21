@@ -20,6 +20,9 @@ const publicHtmlCacheControl = "public, max-age=0, s-maxage=3600, stale-while-re
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  experimental: {
+    cpus: 2,
+  },
   deploymentId: process.env.DEPLOYMENT_VERSION,
   poweredByHeader: false,
   async redirects() {

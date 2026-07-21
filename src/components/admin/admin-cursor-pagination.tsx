@@ -1,6 +1,7 @@
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { encodeKeysetCursor, type KeysetCursor } from "@/lib/keyset-pagination";
 import { cn } from "@/lib/utils";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 export function AdminCursorPagination({
   basePath,
@@ -45,14 +46,14 @@ export function AdminCursorPagination({
         <PaginationContent>
           <PaginationItem>
             {previousCursor ? (
-              <PaginationPrevious href={cursorHref(basePath, previousCursor, "previous", query)} text="Önceki" />
+              <PaginationPrevious href={cursorHref(basePath, previousCursor, "previous", query)} />
             ) : (
               <DisabledPageLink label="Önceki" side="previous" />
             )}
           </PaginationItem>
           <PaginationItem>
             {nextCursor ? (
-              <PaginationNext href={cursorHref(basePath, nextCursor, "next", query)} text="Sonraki" />
+              <PaginationNext href={cursorHref(basePath, nextCursor, "next", query)} />
             ) : (
               <DisabledPageLink label="Sonraki" side="next" />
             )}
@@ -75,10 +76,8 @@ function cursorHref(basePath: string, cursor: KeysetCursor, direction: "next" | 
 
 function DisabledPageLink({ label, side }: { label: string; side: "previous" | "next" }) {
   return (
-    <span className="inline-flex h-8 items-center justify-center gap-1 rounded-md px-2.5 text-sm font-bold text-muted-foreground opacity-45">
-      {side === "previous" ? <span aria-hidden="true">‹</span> : null}
-      <span>{label}</span>
-      {side === "next" ? <span aria-hidden="true">›</span> : null}
+    <span aria-label={label} className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground opacity-45">
+      {side === "previous" ? <ChevronLeftIcon className="size-4" aria-hidden="true" /> : <ChevronRightIcon className="size-4" aria-hidden="true" />}
     </span>
   );
 }

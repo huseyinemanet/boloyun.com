@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getRandomPublishedGameSlug } from "@/lib/db-games";
+import { getRandomPublishedGameSlug } from "@/lib/games/public-queries";
 
 export async function GET(request: Request) {
   const excludeSlug = new URL(request.url).searchParams.get("exclude")?.trim() || undefined;

@@ -10,6 +10,10 @@ export function SidebarCategoryLink({ category }: { category: PublicNavCategory 
       href={href}
       data-sidebar-path={href}
       data-active="false"
+      data-analytics-event="select_item"
+      data-analytics-content-type="category"
+      data-analytics-content-id={category.slug}
+      data-analytics-content-name={category.name}
       className="group mb-0 flex min-w-fit items-center gap-2 rounded-md px-2 py-1.5 text-sm font-normal text-sidebar-foreground transition hover:bg-sidebar-accent data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:hover:bg-primary/90 md:min-w-0"
       title={category.name}
     >
