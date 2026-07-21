@@ -25,7 +25,7 @@ import { buildMetadata, gameSocialImagePath } from "@/lib/seo/metadata";
 import { getPublicSettings } from "@/lib/db-settings";
 import { isGameSourceAllowed } from "@/lib/settings/game-security";
 import { renderSeoTemplate } from "@/lib/settings/validation";
-import { breadcrumbJsonLd } from "@/lib/seo/jsonld";
+import { breadcrumbJsonLd, videoGameJsonLd } from "@/lib/seo/jsonld";
 import { LazyGameActions } from "./lazy-game-actions";
 import { LazyComments } from "./lazy-comments";
 import { LazyGamePlayer } from "./lazy-game-player";
@@ -83,11 +83,23 @@ export default async function GameDetailPage({ params }: Props) {
   return (
     <article className="space-y-4">
       {settings.seo.structuredDataEnabled ? (
-        <JsonLd data={breadcrumbJsonLd([
-          { name: "Oyunlar", path: "/" },
-          ...(primaryCategory ? [{ name: primaryCategory.name, path: `/kategori/${primaryCategory.slug}` }] : []),
-          { name: game.title, path: `/oyun/${game.slug}` },
-        ])} />
+        <JsonLd data={[
+          breadcrumbJsonLd([
+            { name: "Oyunlar", path: "/" },
+            ...(primaryCategory ? [{ name: primaryCategory.name, path: `/kategori/${primaryCategory.slug}` }] : []),
+            { name: game.title, path: `/oyun/${game.slug}` },
+          ]),
+          videoGameJsonLd({
+            name: game.title,
+            description: game.shortDescription,
+            image: game.thumbnailUrl,
+            path: `/oyun/${game.slug}`,
+            genres: categories.map((category) => category.name),
+            developer: game.developer,
+            ratingAvg: game.ratingAvg,
+            ratingCount: game.ratingCount,
+          }),
+        ]} />
       ) : null}
       <AdSlot slotKey="game_page_top" />
 

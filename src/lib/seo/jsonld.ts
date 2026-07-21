@@ -73,15 +73,19 @@ export function videoGameJsonLd(input: {
 }): JsonLd {
   const value: JsonLd = {
     "@context": "https://schema.org",
-    "@type": "VideoGame",
+    "@type": ["VideoGame", "WebApplication"],
     name: input.name,
     description: input.description,
     image: absoluteUrl(input.image),
     url: absoluteUrl(input.path),
-    applicationCategory: "Game",
-    operatingSystem: "Web Browser",
+    applicationCategory: "GameApplication",
+    operatingSystem: "Web browser",
     genre: input.genres,
     inLanguage: "tr-TR",
+    offers: {
+      "@type": "Offer",
+      price: 0,
+    },
   };
 
   if (input.developer?.trim()) {

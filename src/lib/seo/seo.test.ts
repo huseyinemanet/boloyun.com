@@ -52,11 +52,21 @@ test("game social image path is same-origin and URL-safe", () => {
 
 test("VideoGame JSON-LD only exposes real developer and rating", () => {
   const withoutRating = videoGameJsonLd({ name: "Oyun", description: "Açıklama", image: "/logo.svg", path: "/oyun/oyun", genres: [] });
+  assert.deepEqual(withoutRating["@type"], ["VideoGame", "WebApplication"]);
+  assert.equal(withoutRating.applicationCategory, "GameApplication");
+  assert.equal(withoutRating.operatingSystem, "Web browser");
+  assert.deepEqual(withoutRating.offers, { "@type": "Offer", price: 0 });
   assert.equal("author" in withoutRating, false);
   assert.equal("aggregateRating" in withoutRating, false);
   const withRating = videoGameJsonLd({ name: "Oyun", description: "Açıklama", image: "/logo.svg", path: "/oyun/oyun", genres: ["Aksiyon"], developer: "Stüdyo", ratingAvg: 4.2, ratingCount: 8 });
   assert.equal("author" in withRating, true);
-  assert.equal("aggregateRating" in withRating, true);
+  assert.deepEqual(withRating.aggregateRating, {
+    "@type": "AggregateRating",
+    ratingValue: "4.2",
+    ratingCount: 8,
+    bestRating: 5,
+    worstRating: 1,
+  });
 });
 
 test("game breadcrumb JSON-LD exposes an ordered canonical hierarchy", () => {
