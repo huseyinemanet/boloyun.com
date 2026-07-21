@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AdSlot } from "@/components/ads/ad-slot";
 import { SoundLink } from "@/components/audio/sound-link";
 import { GameSection } from "@/components/game/game-section";
+import { ContinuePlayingSection } from "@/components/game/continue-playing-section";
 import { JsonLd } from "@/components/seo/json-ld";
 import { ArrowRightIcon } from "@/components/icons/app-icons";
 import { itemListJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo/jsonld";
@@ -29,7 +30,9 @@ export default async function Home() {
     getPublicHomepageSnapshot(),
     getPublicSettings(),
   ]);
-  const visibleConfiguredSections = homepage.sections.filter(({ section }) => section.visibility !== "members");
+  const visibleConfiguredSections = homepage.sections.filter(({ section }) =>
+    section.visibility !== "members" && section.sectionType !== "continue_playing" && section.sectionType !== "favorites"
+  );
   const seenGameIds = new Set<string>();
   const sourceSections = visibleConfiguredSections.length ? visibleConfiguredSections : [
     fallbackSection("Yeni Oyunlar", "latest_games", homepage.latestGames),
@@ -65,6 +68,8 @@ export default async function Home() {
       </section>
 
       <AdSlot slotKey="homepage_top_banner" />
+
+      <ContinuePlayingSection />
 
       {anchoredSections.map(({ section, games, anchor }, index) => <div id={anchor} key={section.id ?? `${section.sectionType}-${index}`} className={`${section.visibility === "desktop" ? "hidden md:block" : section.visibility === "mobile" ? "md:hidden" : ""} scroll-mt-24`}><GameSection title={section.title} games={games} eagerCount={index === 0 ? 1 : 0} />{index > 0 && index % 2 === 1 ? <div className="mt-5"><AdSlot slotKey="homepage_between_sections" /></div> : null}</div>)}
       <section aria-labelledby="tum-oyunlar-baslik" className="flex flex-col gap-3 border-t border-border py-5 sm:flex-row sm:items-center sm:justify-between">

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { publicUrlFromRequest } from "@/lib/request-origin";
 import { createSupabaseRouteClient } from "@/lib/supabase/server";
-import { migrateCurrentSessionFavorites } from "@/lib/auth-favorites";
+import { migrateCurrentSessionActivity } from "@/lib/auth-favorites";
 import { safeLocalPath } from "@/lib/security/navigation";
 import { ensureProfileForAuthUser } from "@/lib/auth-profiles";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       await routeClient.supabase.auth.signOut();
       return routeClient.applyTo(redirectTo(request, "/giris?error=blocked"));
     }
-    await migrateCurrentSessionFavorites(data.user.id);
+    await migrateCurrentSessionActivity(data.user.id);
   } catch {
     await routeClient.supabase.auth.signOut();
     return routeClient.applyTo(redirectTo(request, "/giris?error=profile"));

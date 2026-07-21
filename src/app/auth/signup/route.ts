@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { assertHumanForm, consumeRateLimits, getClientIp } from "@/lib/abuse";
 import { ensureProfileForAuthUser } from "@/lib/auth-profiles";
-import { migrateCurrentSessionFavorites } from "@/lib/auth-favorites";
+import { migrateCurrentSessionActivity } from "@/lib/auth-favorites";
 import { syncBrevoMarketingContact } from "@/lib/brevo-contacts";
 import { getPublicSettings } from "@/lib/db-settings";
 import { getRequestOrigin, publicUrlFromRequest } from "@/lib/request-origin";
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!data.session) return routeClient.applyTo(redirectTo(request, "/giris?notice=verify-email"));
-  await migrateCurrentSessionFavorites(data.user.id);
+  await migrateCurrentSessionActivity(data.user.id);
   return routeClient.applyTo(redirectTo(request, "/profil?notice=registered"));
 }
 
