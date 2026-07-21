@@ -26,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: seo.defaultDescription,
     applicationName: general.siteName,
     alternates: { canonical: "/" },
-    icons: customFavicon ? { icon: customFavicon } : undefined,
+    icons: { icon: customFavicon ?? "/favicon.ico" },
     robots: { index: true, follow: true },
     verification: { google: seo.googleVerification || undefined, other: seo.bingVerification ? { "msvalidate.01": seo.bingVerification } : undefined },
     openGraph: { title: seo.defaultTitle, description: seo.defaultDescription, siteName: general.siteName, type: "website", locale: "tr_TR", url: "/", images: [{ url: seo.openGraphImageUrl, width: 1200, height: 630, alt: general.siteName }] },
