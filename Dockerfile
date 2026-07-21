@@ -9,7 +9,8 @@ WORKDIR /app
 
 FROM base AS dependencies
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile
 
 FROM base AS builder
 ARG DEPLOYMENT_VERSION
@@ -24,7 +25,8 @@ ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ENV SITE_URL=$SITE_URL
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
-RUN --mount=type=secret,id=supabase_service_role_key,required=true \
+RUN --mount=type=cache,id=next-build-cache,target=/app/.next/cache \
+    --mount=type=secret,id=supabase_service_role_key,required=true \
     SUPABASE_SERVICE_ROLE_KEY="$(cat /run/secrets/supabase_service_role_key)" pnpm build
 
 FROM node:22-bookworm-slim AS runner

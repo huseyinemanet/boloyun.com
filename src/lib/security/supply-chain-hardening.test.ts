@@ -11,7 +11,7 @@ test("service role secret Docker katmanına veya build arg'a yazılmaz", () => {
   assert.doesNotMatch(workflow, /--build-arg SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(dockerfile, /--mount=type=secret,id=supabase_service_role_key,required=true/);
   assert.match(dockerfile, /SUPABASE_SERVICE_ROLE_KEY="\$\(cat \/run\/secrets\/supabase_service_role_key\)" pnpm build/);
-  assert.match(workflow, /--secret id=supabase_service_role_key,env=SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(workflow, /secrets: \|\n\s+supabase_service_role_key=\$\{\{ secrets\.SUPABASE_SERVICE_ROLE_KEY \}\}/);
 });
 
 test("GitHub Actions immutable SHA değerlerine sabitlenmiştir", () => {
@@ -19,6 +19,10 @@ test("GitHub Actions immutable SHA değerlerine sabitlenmiştir", () => {
   assert.match(workflow, /actions\/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0/);
   assert.match(workflow, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020/);
   assert.match(workflow, /pnpm\/action-setup@b0f76dfb45f55f8421693e4803ac7bb65143bd34/);
+  assert.match(workflow, /docker\/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f/);
+  assert.match(workflow, /docker\/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8/);
+  assert.match(workflow, /actions\/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02/);
+  assert.match(workflow, /actions\/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093/);
   assert.doesNotMatch(workflow, /uses:\s+[^\s]+@v\d+/);
 });
 
