@@ -22,7 +22,9 @@ export function ProfileAvatarUpload({ className, onPendingChange }: { className?
     body.set("file", file);
     try {
       const response = await fetch("/api/profile/avatar", { method: "POST", body });
-      const result = await response.json() as { error?: string };
+      const result = response.headers.get("content-type")?.includes("application/json")
+        ? await response.json() as { error?: string }
+        : { error: response.ok ? undefined : "Sunucu yükleme isteğini tamamlayamadı. Lütfen tekrar deneyin." };
       if (!response.ok) throw new Error(result.error || "Yükleme başarısız.");
       trackAnalyticsEvent("profile_avatar_update", { status: "success" });
       window.location.reload();

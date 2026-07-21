@@ -1,7 +1,6 @@
 import "server-only";
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { createHash, randomUUID } from "crypto";
-import sharp from "sharp";
 import { isR2Configured } from "@/lib/system-status";
 import { matchesAudioSignature, matchesImageSignature, SUPPORTED_AUDIO_MIME_TYPES } from "@/lib/settings/media-validation";
 import { getSiteAssetPublicUrl } from "@/lib/site-assets";
@@ -54,6 +53,9 @@ export async function uploadSiteAsset(file: File, kind: "logo" | "favicon" | "co
   let outputWidth = dimensions.width;
   let outputHeight = dimensions.height;
   try {
+    // Keep the native image runtime out of read/delete paths. A broken optional
+    // sharp dependency must not make already-stored public assets unavailable.
+    const { default: sharp } = await import("sharp");
     const image = sharp(bytes, { animated: false, failOn: "error", limitInputPixels: limit.pixels });
     const metadata = await image.metadata();
     if (!metadata.width || !metadata.height || metadata.width !== dimensions.width || metadata.height !== dimensions.height) {
