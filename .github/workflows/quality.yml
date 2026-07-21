@@ -74,14 +74,13 @@ jobs:
           secrets: |
             supabase_service_role_key=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           cache-from: type=gha,scope=production-image
-          cache-to: type=gha,mode=max,scope=production-image
       - name: Package production image
         run: |
           docker save "${IMAGE_NAME}" | gzip -1 > "boloyun-${GITHUB_SHA}.tar.gz"
           cp deploy/compose.yml "boloyun-compose-${GITHUB_SHA}.yml"
           cp deploy/server/boloyun-deploy "boloyun-deploy-${GITHUB_SHA}"
       - name: Store production image
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: production-image-${{ github.sha }}
           path: |
@@ -104,7 +103,7 @@ jobs:
       IMAGE_NAME: boloyun:${{ github.sha }}
     steps:
       - name: Download production image
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
         with:
           name: production-image-${{ github.sha }}
           path: /tmp/boloyun-deploy-artifact
