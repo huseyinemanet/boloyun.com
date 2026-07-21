@@ -98,7 +98,7 @@ const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicH
       const needsPopularGames = sectionRows.length === 0 || sectionRows.some((row) => row.section_type === "popular_games");
       const needsTrendingGames = sectionRows.length === 0 || sectionRows.some((row) => row.section_type === "trending_games");
       const [popularGames, trendingCandidates] = await Promise.all([
-        needsPopularGames ? getPopularPublishedGames(HOMEPAGE_FEATURED_GAME_LIMIT) : Promise.resolve([]),
+        needsPopularGames ? getPopularPublishedGames(HOMEPAGE_CANDIDATE_LIMIT) : Promise.resolve([]),
         needsTrendingGames ? getTrendingPublishedGames(HOMEPAGE_CANDIDATE_LIMIT) : Promise.resolve([]),
       ]);
       const trendingGames = rotateGamesForDay(trendingCandidates, dayKey, "trending");
@@ -120,7 +120,7 @@ const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicH
         sections,
         latestGames,
         popularGames: sections.length ? [] : popularGames,
-        trendingGames: sections.length ? [] : trendingGames.slice(0, HOMEPAGE_FEATURED_GAME_LIMIT),
+        trendingGames: sections.length ? [] : trendingGames,
       };
     }
   }
@@ -135,7 +135,7 @@ const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicH
       games: await resolveSectionGames({ ...section, limitCount: sectionCandidateLimit(section) }, sharedGames),
     }))),
     sharedGames.length ? Promise.resolve(sharedGames) : getPublishedGames(HOMEPAGE_CANDIDATE_LIMIT),
-    publicSections.length ? Promise.resolve([]) : getPopularPublishedGames(HOMEPAGE_FEATURED_GAME_LIMIT),
+    publicSections.length ? Promise.resolve([]) : getPopularPublishedGames(HOMEPAGE_CANDIDATE_LIMIT),
     publicSections.length ? Promise.resolve([]) : getTrendingPublishedGames(HOMEPAGE_CANDIDATE_LIMIT),
   ]);
   const latestGames = rotateGamesForDay(latestCandidates, dayKey, "latest");
@@ -151,7 +151,7 @@ const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicH
     })),
     latestGames,
     popularGames,
-    trendingGames: trendingGames.slice(0, HOMEPAGE_FEATURED_GAME_LIMIT),
+    trendingGames,
   };
 }, ["public-homepage-snapshot-v6"], { revalidate: 3600, tags: ["homepage-sections", "games", "categories", "tags"] });
 

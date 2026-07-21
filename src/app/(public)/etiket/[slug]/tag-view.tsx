@@ -41,7 +41,7 @@ export async function TagView({ slug, page }: { slug: string; page: number }) {
     <div className="space-y-4">
       {settings.seo.structuredDataEnabled ? <JsonLd data={[
         breadcrumbJsonLd([{ name: "Ana Sayfa", path: "/" }, { name: tag.name, path }]),
-        itemListJsonLd(`${tag.name} oyunları`, tagGames.items.map((game) => `/oyun/${game.slug}`)),
+        itemListJsonLd(`${tag.name} oyunları`, tagGames.items.map((game) => ({ name: game.title, path: `/oyun/${game.slug}` }))),
       ]} /> : null}
       <section className="rounded-md border border-border bg-card p-4">
         <h1 className="text-2xl font-semibold">{tag.name} Oyunları{page > 1 ? ` - Sayfa ${page}` : ""}</h1>

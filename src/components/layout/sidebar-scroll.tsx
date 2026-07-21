@@ -16,7 +16,6 @@ export function SidebarScroll({ children, categories }: { children: ReactNode; c
   const router = useRouter();
   const { playClickSound } = useClickSound();
   const navRef = useRef<HTMLElement>(null);
-  const [mobileViewport, setMobileViewport] = useState(false);
   const [fadeEdges, setFadeEdges] = useState<FadeEdges>({ top: false, bottom: false });
   const activeCategoryHref = categories
     .map((category) => `/kategori/${category.slug}`)
@@ -37,17 +36,6 @@ export function SidebarScroll({ children, categories }: { children: ReactNode; c
   }, []);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 767px)");
-    const updateViewport = () => setMobileViewport(mediaQuery.matches);
-
-    updateViewport();
-    mediaQuery.addEventListener("change", updateViewport);
-    return () => mediaQuery.removeEventListener("change", updateViewport);
-  }, []);
-
-  useEffect(() => {
-    if (mobileViewport) return;
-
     const nav = navRef.current;
     if (!nav) return;
 
@@ -56,7 +44,7 @@ export function SidebarScroll({ children, categories }: { children: ReactNode; c
     resizeObserver.observe(nav);
 
     return () => resizeObserver.disconnect();
-  }, [mobileViewport, updateFadeEdges]);
+  }, [updateFadeEdges]);
 
   function navigateFromMobileMenu(event: ChangeEvent<HTMLSelectElement>) {
     const href = event.target.value;
@@ -68,8 +56,7 @@ export function SidebarScroll({ children, categories }: { children: ReactNode; c
 
   return (
     <div className="relative h-11 md:h-full">
-      {mobileViewport ? (
-        <div>
+      <div className="md:hidden">
           <label htmlFor="mobile-category-menu" className="sr-only">
             Oyun kategorisi seç
           </label>
@@ -87,28 +74,24 @@ export function SidebarScroll({ children, categories }: { children: ReactNode; c
               </option>
             ))}
           </select>
-        </div>
-      ) : (
-        <>
-          <nav
-            ref={navRef}
-            onScroll={updateFadeEdges}
-            className="hidden h-full overflow-y-auto overflow-x-hidden [scrollbar-width:none] md:block [&::-webkit-scrollbar]:hidden"
-            aria-label="Oyun kategorileri"
-          >
-            {children}
-          </nav>
+      </div>
+      <nav
+        ref={navRef}
+        onScroll={updateFadeEdges}
+        className="hidden h-full overflow-y-auto overflow-x-hidden [scrollbar-width:none] md:block [&::-webkit-scrollbar]:hidden"
+        aria-label="Oyun kategorileri"
+      >
+        {children}
+      </nav>
 
-          <div
-            aria-hidden="true"
-            className={`pointer-events-none absolute inset-x-0 top-0 z-10 hidden h-10 bg-gradient-to-b from-background via-background/85 to-transparent transition-opacity duration-200 md:block ${fadeEdges.top ? "opacity-100" : "opacity-0"}`}
-          />
-          <div
-            aria-hidden="true"
-            className={`pointer-events-none absolute inset-x-0 bottom-0 z-10 hidden h-10 bg-gradient-to-t from-background via-background/85 to-transparent transition-opacity duration-200 md:block ${fadeEdges.bottom ? "opacity-100" : "opacity-0"}`}
-          />
-        </>
-      )}
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-x-0 top-0 z-10 hidden h-10 bg-gradient-to-b from-background via-background/85 to-transparent transition-opacity duration-200 md:block ${fadeEdges.top ? "opacity-100" : "opacity-0"}`}
+      />
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-x-0 bottom-0 z-10 hidden h-10 bg-gradient-to-t from-background via-background/85 to-transparent transition-opacity duration-200 md:block ${fadeEdges.bottom ? "opacity-100" : "opacity-0"}`}
+      />
     </div>
   );
 }

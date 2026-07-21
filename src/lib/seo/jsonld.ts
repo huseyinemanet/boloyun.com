@@ -45,16 +45,18 @@ export function breadcrumbJsonLd(entries: BreadcrumbEntry[]): JsonLd {
   };
 }
 
-export function itemListJsonLd(name: string, paths: string[]): JsonLd {
+export function itemListJsonLd(name: string, items: Array<string | BreadcrumbEntry>): JsonLd {
   return {
     "@context": "https://schema.org",
     "@type": "ItemList",
     name,
-    numberOfItems: paths.length,
-    itemListElement: paths.map((path, index) => ({
+    numberOfItems: items.length,
+    itemListElement: items.map((item, index) => ({
       "@type": "ListItem",
       position: index + 1,
-      url: absoluteUrl(path),
+      ...(typeof item === "string"
+        ? { url: absoluteUrl(item) }
+        : { name: item.name, url: absoluteUrl(item.path) }),
     })),
   };
 }

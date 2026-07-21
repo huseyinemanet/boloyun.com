@@ -50,7 +50,7 @@ export async function CategoryView({ slug, page }: { slug: string; page: number 
           { name: "Ana Sayfa", path: "/" },
           { name: category.name, path: canonicalPath },
         ]),
-        itemListJsonLd(`${category.name}${page > 1 ? ` - Sayfa ${page}` : ""}`, categoryGames.items.map((game) => `/oyun/${game.slug}`)),
+        itemListJsonLd(`${category.name}${page > 1 ? ` - Sayfa ${page}` : ""}`, categoryGames.items.map((game) => ({ name: game.title, path: `/oyun/${game.slug}` }))),
       ]} /> : null}
       <section>
         <h1 className="text-2xl font-semibold">{category.name}{page > 1 ? ` - Sayfa ${page}` : ""}</h1>

@@ -10,17 +10,10 @@ type GameCardItem = {
 
 export function GameCard({ game, eager = false, loadImage = true }: { game: GameCardItem; eager?: boolean; loadImage?: boolean }) {
   return (
-    <article
-      className="group min-w-0"
-      itemScope
-      itemType="https://schema.org/VideoGame"
-    >
-      <meta itemProp="gamePlatform" content="Web Browser" />
-      <meta itemProp="inLanguage" content="tr-TR" />
+    <article className="group min-w-0">
       <IntentPrefetchLink
         href={`/oyun/${game.slug}`}
         className="block"
-        itemProp="url"
         aria-label={`${game.title} oyununu aç`}
       >
         <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-muted">
@@ -30,17 +23,16 @@ export function GameCard({ game, eager = false, loadImage = true }: { game: Game
               alt={`${game.title} oyun kapağı`}
               fill
               draggable={false}
-              itemProp="image"
               unoptimized={game.thumbnailUrl.split("?", 1)[0].endsWith(".svg")}
               loading={eager ? "eager" : "lazy"}
               fetchPriority={eager ? "high" : "auto"}
-              sizes="(max-width: 768px) 50vw, 220px"
+              sizes="(max-width: 639px) calc(50vw - 18px), (max-width: 1023px) calc(33vw - 24px), (max-width: 1279px) calc(25vw - 72px), 220px"
               className="game-cover-image object-cover transition group-hover:scale-105"
             />
           ) : null}
         </div>
         <div className="min-w-0 pt-2">
-          <h3 className="truncate text-sm font-semibold" title={game.title} itemProp="name">{game.title}</h3>
+          <h3 className="truncate text-sm font-semibold" title={game.title}>{game.title}</h3>
         </div>
       </IntentPrefetchLink>
     </article>

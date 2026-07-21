@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import { AdSlot } from "@/components/ads/ad-slot";
+import { SoundLink } from "@/components/audio/sound-link";
 import { GameSection } from "@/components/game/game-section";
 import { JsonLd } from "@/components/seo/json-ld";
+import { ArrowRightIcon } from "lucide-react";
 import { itemListJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getPublicSettings } from "@/lib/db-settings";
 import { getPublicHomepageSnapshot, HOMEPAGE_FEATURED_GAME_LIMIT } from "@/lib/db-homepage-sections";
 
 export const revalidate = 3600;
-const HOME_ALL_GAMES_LIMIT = 20;
 
 export async function generateMetadata(): Promise<Metadata> {
   const { general, seo } = await getPublicSettings();
@@ -30,14 +31,15 @@ export default async function Home() {
   ]);
   const visibleConfiguredSections = homepage.sections.filter(({ section }) => section.visibility !== "members");
   const seenGameIds = new Set<string>();
-  const deduplicatedSections = visibleConfiguredSections.map(({ section, games }) => {
-    const uniqueGames = games.filter((game) => {
-      if (seenGameIds.has(game.id)) return false;
-      seenGameIds.add(game.id);
-      return true;
-    }).slice(0, HOMEPAGE_FEATURED_GAME_LIMIT);
-    return { section, games: uniqueGames };
-  }).filter(({ games }) => games.length > 0);
+  const sourceSections = visibleConfiguredSections.length ? visibleConfiguredSections : [
+    fallbackSection("Yeni Oyunlar", "latest_games", homepage.latestGames),
+    fallbackSection("Popüler Oyunlar", "popular_games", homepage.popularGames),
+    fallbackSection("Trend Oyunlar", "trending_games", homepage.trendingGames),
+  ];
+  const deduplicatedSections = sourceSections.map(({ section, games }) => ({
+    section,
+    games: takeUniqueGames(games, seenGameIds),
+  })).filter(({ games }) => games.length > 0);
   const assignedSectionAnchors = new Set<string>();
   const anchoredSections = deduplicatedSections.map((entry) => {
     const anchor = homepageSectionAnchor(entry.section.sectionType);
@@ -45,12 +47,14 @@ export default async function Home() {
     assignedSectionAnchors.add(anchor);
     return { ...entry, anchor };
   });
-  const allGames = homepage.latestGames.filter((game) => !seenGameIds.has(game.id)).slice(0, HOME_ALL_GAMES_LIMIT);
-  const visibleGames = [...anchoredSections.flatMap(({ games }) => games), ...allGames];
 
   return (
     <div className="space-y-5">
-      {settings.seo.structuredDataEnabled ? <JsonLd data={[websiteJsonLd(), organizationJsonLd(), itemListJsonLd(`${settings.general.siteName}'daki oyunlar`, visibleGames.map((game) => `/oyun/${game.slug}`))]} /> : null}
+      {settings.seo.structuredDataEnabled ? <JsonLd data={[
+        websiteJsonLd(),
+        organizationJsonLd(),
+        ...anchoredSections.map(({ section, games }) => itemListJsonLd(section.title, games.map((game) => ({ name: game.title, path: `/oyun/${game.slug}` })))),
+      ]} /> : null}
       <section className="py-4 text-card-foreground">
         <div className="max-w-3xl">
           <h1 className="text-2xl font-semibold sm:text-3xl">{settings.appearance.heroTitle}</h1>
@@ -62,14 +66,48 @@ export default async function Home() {
 
       <AdSlot slotKey="homepage_top_banner" />
 
-      {anchoredSections.length ? anchoredSections.map(({ section, games, anchor }, index) => <div id={anchor} key={section.id ?? `${section.sectionType}-${index}`} className={`${section.visibility === "desktop" ? "hidden md:block" : section.visibility === "mobile" ? "md:hidden" : ""} scroll-mt-24`}><GameSection title={section.title} games={games} eagerCount={index === 0 ? 4 : 0} />{index > 0 && index % 2 === 1 ? <div className="mt-5"><AdSlot slotKey="homepage_between_sections" /></div> : null}</div>) : <>
-        <div id="yeni-oyunlar" className="scroll-mt-24"><GameSection title="Yeni Oyunlar" games={homepage.latestGames.slice(0, HOMEPAGE_FEATURED_GAME_LIMIT)} eagerCount={4} /></div>
-        <div id="populer-oyunlar" className="scroll-mt-24"><GameSection title="Popüler Oyunlar" games={homepage.popularGames} /></div>
-        <div id="trend-oyunlar" className="scroll-mt-24"><GameSection title="Trend Oyunlar" games={homepage.trendingGames} /></div>
-      </>}
-      <GameSection title="Tüm Oyunlar" games={allGames} />
+      {anchoredSections.map(({ section, games, anchor }, index) => <div id={anchor} key={section.id ?? `${section.sectionType}-${index}`} className={`${section.visibility === "desktop" ? "hidden md:block" : section.visibility === "mobile" ? "md:hidden" : ""} scroll-mt-24`}><GameSection title={section.title} games={games} eagerCount={index === 0 ? 1 : 0} />{index > 0 && index % 2 === 1 ? <div className="mt-5"><AdSlot slotKey="homepage_between_sections" /></div> : null}</div>)}
+      <section aria-labelledby="tum-oyunlar-baslik" className="flex flex-col gap-3 border-t border-border py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 id="tum-oyunlar-baslik" className="text-xl font-semibold">Tüm Oyunlar</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Arşivdeki tüm oyunları sayfa sayfa keşfet.</p>
+        </div>
+        <SoundLink href="/oyunlar" className="inline-flex h-10 w-fit items-center gap-2 rounded-md bg-primary px-4 text-sm font-bold text-primary-foreground transition hover:bg-primary/90">
+          Tümünü gör
+          <ArrowRightIcon className="size-4" aria-hidden="true" />
+        </SoundLink>
+      </section>
     </div>
   );
+}
+
+function fallbackSection(title: string, sectionType: "latest_games" | "popular_games" | "trending_games", games: Awaited<ReturnType<typeof getPublicHomepageSnapshot>>["latestGames"]) {
+  return {
+    section: {
+      id: null,
+      title,
+      sectionType,
+      sourceType: "" as const,
+      sourceId: "",
+      manualGameIds: [],
+      limitCount: HOMEPAGE_FEATURED_GAME_LIMIT,
+      sortOrder: 0,
+      visibility: "all" as const,
+      status: "active" as const,
+    },
+    games,
+  };
+}
+
+function takeUniqueGames<T extends { id: string }>(games: T[], seenGameIds: Set<string>) {
+  const uniqueGames: T[] = [];
+  for (const game of games) {
+    if (seenGameIds.has(game.id)) continue;
+    seenGameIds.add(game.id);
+    uniqueGames.push(game);
+    if (uniqueGames.length === HOMEPAGE_FEATURED_GAME_LIMIT) break;
+  }
+  return uniqueGames;
 }
 
 function homepageSectionAnchor(sectionType: string) {

@@ -4,6 +4,7 @@ import { getSidebarCategories } from "@/lib/db-categories";
 import { getPublicSettings } from "@/lib/db-settings";
 import { SoundLink } from "@/components/audio/sound-link";
 import { RouteScrollReset } from "@/components/navigation/route-scroll-reset";
+import { Footer } from "@/components/layout/footer";
 
 export default async function PublicLayout({ children }: { children: ReactNode }) {
   const [{ general, appearance }, categories] = await Promise.all([
@@ -21,6 +22,7 @@ export default async function PublicLayout({ children }: { children: ReactNode }
         <Sidebar categories={categories} />
         <main id="main-content" tabIndex={-1} className="min-w-0 scroll-mt-4">{children}</main>
       </div>
+      <Footer />
     </>
   );
 }

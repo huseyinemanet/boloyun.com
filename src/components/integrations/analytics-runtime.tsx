@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { configureAnalytics, gameAnalyticsItem, trackAnalyticsEvent, type AnalyticsEventName, type AnalyticsParams } from "@/lib/analytics";
 
 export function AnalyticsRuntime({ allowed, googleAnalytics, googleTagManager }: { allowed: boolean; googleAnalytics: boolean; googleTagManager: boolean }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const lastPage = useRef("");
 
   useEffect(() => {
     configureAnalytics({ allowed, googleAnalytics, googleTagManager });
     if (!allowed || pathname.startsWith("/admin")) return;
+    const searchParams = new URLSearchParams(window.location.search);
     const pageLocation = window.location.href;
     if (lastPage.current === pageLocation) return;
     lastPage.current = pageLocation;
@@ -22,7 +22,7 @@ export function AnalyticsRuntime({ allowed, googleAnalytics, googleTagManager }:
     });
     trackCurrentView(pathname);
     trackAuthOutcome(pathname, searchParams);
-  }, [allowed, googleAnalytics, googleTagManager, pathname, searchParams]);
+  }, [allowed, googleAnalytics, googleTagManager, pathname]);
 
   useEffect(() => {
     function trackDeclarativeEvent(event: Event) {
