@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LoaderCircleIcon } from "lucide-react";
+import { LoaderCircleIcon } from "@/components/icons/app-icons";
 import { IconBrainSparkleFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBrainSparkleFillDuo18";
 import { IconChatBubbleWritingFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconChatBubbleWritingFillDuo18";
 import { IconFolderFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconFolderFillDuo18";

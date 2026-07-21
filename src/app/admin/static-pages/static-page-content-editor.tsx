@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { LinkIcon } from "lucide-react";
+import { LinkIcon } from "@/components/icons/app-icons";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import {
   parseStaticPageEditorContent,

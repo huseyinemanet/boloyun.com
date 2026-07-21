@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
-import { ArrowDownIcon, ArrowUpIcon, DownloadIcon, Trash2Icon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, DownloadIcon, Trash2Icon } from "@/components/icons/app-icons";
 import { toast } from "sonner";
 import { IconAddSectionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconAddSectionFillDuo18";
 import { IconCloudUploadFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCloudUploadFillDuo18";

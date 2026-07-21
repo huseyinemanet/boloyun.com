@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:22-bookworm-slim AS base
+FROM node:24-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN corepack enable && corepack prepare pnpm@11.7.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.15.1 --activate
 WORKDIR /app
 
 FROM base AS dependencies
@@ -29,7 +29,7 @@ RUN --mount=type=cache,id=next-build-cache,target=/app/.next/cache \
     --mount=type=secret,id=supabase_service_role_key,required=true \
     SUPABASE_SERVICE_ROLE_KEY="$(cat /run/secrets/supabase_service_role_key)" pnpm build
 
-FROM node:22-bookworm-slim AS runner
+FROM node:24-bookworm-slim AS runner
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0

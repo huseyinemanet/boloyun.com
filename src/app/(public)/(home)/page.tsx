@@ -3,7 +3,7 @@ import { AdSlot } from "@/components/ads/ad-slot";
 import { SoundLink } from "@/components/audio/sound-link";
 import { GameSection } from "@/components/game/game-section";
 import { JsonLd } from "@/components/seo/json-ld";
-import { ArrowRightIcon } from "lucide-react";
+import { ArrowRightIcon } from "@/components/icons/app-icons";
 import { itemListJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getPublicSettings } from "@/lib/db-settings";

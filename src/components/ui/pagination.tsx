@@ -2,7 +2,7 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from "lucide-react"
+import { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from "@/components/icons/app-icons"
 import { SoundLink } from "@/components/audio/sound-link"
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PencilIcon, PlusIcon } from "lucide-react";
+import { PencilIcon, PlusIcon } from "@/components/icons/app-icons";
 import { IconBadgeDollarFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBadgeDollarFillDuo18";
 import { IconCircleInfoFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCircleInfoFillDuo18";
 import { IconCodeActionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCodeActionFillDuo18";

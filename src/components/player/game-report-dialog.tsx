@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CircleCheckBigIcon, FlagIcon, LoaderCircleIcon } from "lucide-react";
+import { CircleCheckBigIcon, FlagIcon, LoaderCircleIcon } from "@/components/icons/app-icons";
 import {
   AlertDialog,
   AlertDialogCancel,

@@ -1,7 +1,7 @@
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { encodeKeysetCursor, type KeysetCursor } from "@/lib/keyset-pagination";
 import { cn } from "@/lib/utils";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons/app-icons";
 
 export function AdminCursorPagination({
   basePath,

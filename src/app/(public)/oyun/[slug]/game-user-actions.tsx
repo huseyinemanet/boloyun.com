@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LoaderCircleIcon } from "lucide-react";
+import { LoaderCircleIcon } from "@/components/icons/app-icons";
 import { toast } from "sonner";
 import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
 import { useClickSound } from "@/components/audio/click-sound-provider";

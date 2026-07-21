@@ -2,7 +2,7 @@
 
 import { useState, type MouseEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { LoaderCircleIcon } from "lucide-react";
+import { LoaderCircleIcon } from "@/components/icons/app-icons";
 import { IconShuffleFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconShuffleFillDuo18";
 import { Button } from "@/components/ui/button";
 import { SoundLink } from "@/components/audio/sound-link";

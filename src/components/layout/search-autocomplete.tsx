@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useId, useRef, useState, useTransition, type FocusEvent, type KeyboardEvent, type MouseEvent } from "react";
-import { LoaderCircleIcon, SearchIcon } from "lucide-react";
+import { LoaderCircleIcon, SearchIcon } from "@/components/icons/app-icons";
 import { useRouter } from "next/navigation";
 import { SoundLink } from "@/components/audio/sound-link";
 import { IntentPrefetchLink } from "@/components/navigation/intent-prefetch-link";

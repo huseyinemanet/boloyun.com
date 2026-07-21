@@ -7,7 +7,7 @@ import { IconBadgeCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBa
 import { IconCalendarClockFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCalendarClockFillDuo18";
 import { IconCodeActionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCodeActionFillDuo18";
 import { IconTextTitleCaseFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconTextTitleCaseFillDuo18";
-import { ArrowUpDownIcon, Trash2Icon } from "lucide-react";
+import { ArrowUpDownIcon, Trash2Icon } from "@/components/icons/app-icons";
 import {
   AlertDialog,
   AlertDialogAction,

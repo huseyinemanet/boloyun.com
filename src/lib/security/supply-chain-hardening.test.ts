@@ -16,13 +16,13 @@ test("service role secret Docker katmanına veya build arg'a yazılmaz", () => {
 
 test("GitHub Actions immutable SHA değerlerine sabitlenmiştir", () => {
   const workflow = readFileSync(path.join(process.cwd(), ".github/workflows/quality.yml"), "utf8");
-  assert.match(workflow, /actions\/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0/);
+  assert.match(workflow, /actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1/);
   assert.match(workflow, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020/);
   assert.match(workflow, /pnpm\/action-setup@b0f76dfb45f55f8421693e4803ac7bb65143bd34/);
-  assert.match(workflow, /docker\/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f/);
-  assert.match(workflow, /docker\/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8/);
-  assert.match(workflow, /actions\/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f/);
-  assert.match(workflow, /actions\/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53/);
+  assert.match(workflow, /docker\/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c/);
+  assert.match(workflow, /docker\/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a/);
+  assert.match(workflow, /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/);
+  assert.match(workflow, /actions\/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c/);
   assert.doesNotMatch(workflow, /uses:\s+[^\s]+@v\d+/);
 });
 
@@ -31,7 +31,7 @@ test("Ruffle sabit npm sürümünden self-host edilir ve CSP genel HTTPS scripti
   const player = readFileSync(path.join(process.cwd(), "src/components/player/game-player.tsx"), "utf8");
   const nextConfig = readFileSync(path.join(process.cwd(), "next.config.ts"), "utf8");
 
-  assert.equal(packageJson.dependencies?.["@ruffle-rs/ruffle"], "0.3.0");
+  assert.equal(packageJson.dependencies?.["@ruffle-rs/ruffle"], "0.4.1");
   assert.match(player, /src="\/ruffle\/ruffle\.js"/);
   assert.doesNotMatch(player, /unpkg\.com/);
   const scriptSource = nextConfig.split("\n").find((line) => line.includes("script-src")) ?? "";

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { type FormEvent, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ExternalLinkIcon } from "lucide-react";
+import { ExternalLinkIcon } from "@/components/icons/app-icons";
 import { AdminCheckboxField } from "@/components/admin/admin-checkbox-field";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";

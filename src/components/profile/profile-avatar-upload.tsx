@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { UploadIcon } from "lucide-react";
+import { UploadIcon } from "@/components/icons/app-icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { trackAnalyticsEvent } from "@/lib/analytics";

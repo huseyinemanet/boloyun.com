@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "@/components/icons/app-icons";
 import { useState } from "react";
 import { ProfileAvatarUpload } from "@/components/profile/profile-avatar-upload";
 import { cn } from "@/lib/utils";

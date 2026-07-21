@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useFormStatus } from "react-dom";
-import { LoaderCircleIcon } from "lucide-react";
+import { LoaderCircleIcon } from "@/components/icons/app-icons";
 import { useClickSound } from "@/components/audio/click-sound-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

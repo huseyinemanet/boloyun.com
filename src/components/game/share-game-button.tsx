@@ -1,6 +1,6 @@
 "use client";
 
-import { Share2Icon } from "lucide-react";
+import { Share2Icon } from "@/components/icons/app-icons";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useClickSound } from "@/components/audio/click-sound-provider";

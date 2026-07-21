@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { Column, ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDownIcon, MoreHorizontalIcon } from "lucide-react";
+import { ArrowUpDownIcon, MoreHorizontalIcon } from "@/components/icons/app-icons";
 import { IconBadgeCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBadgeCheckFillDuo18";
 import { IconBadgeDollarFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBadgeDollarFillDuo18";
 import { IconCodeActionFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCodeActionFillDuo18";

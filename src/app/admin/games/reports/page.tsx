@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ExternalLinkIcon, Gamepad2Icon, PencilIcon } from "lucide-react";
+import { ExternalLinkIcon, Gamepad2Icon, PencilIcon } from "@/components/icons/app-icons";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
