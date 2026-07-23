@@ -27,6 +27,7 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 RUN --mount=type=cache,id=next-build-cache,target=/app/.next/cache \
     --mount=type=secret,id=supabase_service_role_key,required=true \
+    BOL_OYUN_PREBUILD_FALLBACK=1 \
     SUPABASE_SERVICE_ROLE_KEY="$(cat /run/secrets/supabase_service_role_key)" pnpm build
 
 FROM node:24-bookworm-slim AS runner

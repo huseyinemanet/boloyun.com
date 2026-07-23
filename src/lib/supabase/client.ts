@@ -18,6 +18,10 @@ export function createSupabaseBrowserClient(config?: SupabaseBrowserConfig) {
 }
 
 export function createSupabaseServiceClient() {
+  if (process.env.BOL_OYUN_PREBUILD_FALLBACK === "1") {
+    return null;
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
