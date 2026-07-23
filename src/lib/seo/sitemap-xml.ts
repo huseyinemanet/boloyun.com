@@ -11,14 +11,19 @@ export function sitemapIndex(urls: string[]) {
 }
 
 export function sitemapUrlSet(records: SitemapRecord[], canonicalDomain: string, includeHome = false) {
+  const hasImages = records.some((record) => Boolean(record.imageUrl));
   const home = includeHome
     ? `<url><loc>${escapeXml(absoluteUrl("/", canonicalDomain))}</loc><changefreq>daily</changefreq><priority>1.0</priority></url>`
     : "";
   const items = records.map((record) => {
     const lastModified = record.updatedAt ? `<lastmod>${escapeXml(new Date(record.updatedAt).toISOString())}</lastmod>` : "";
-    return `<url><loc>${escapeXml(absoluteUrl(record.path, canonicalDomain))}</loc>${lastModified}<changefreq>${frequency(record.kind)}</changefreq><priority>${priority(record.kind)}</priority></url>`;
+    const image = record.imageUrl
+      ? `<image:image><image:loc>${escapeXml(absoluteUrl(record.imageUrl, canonicalDomain))}</image:loc></image:image>`
+      : "";
+    return `<url><loc>${escapeXml(absoluteUrl(record.path, canonicalDomain))}</loc>${lastModified}<changefreq>${frequency(record.kind)}</changefreq><priority>${priority(record.kind)}</priority>${image}</url>`;
   }).join("");
-  return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${home}${items}</urlset>`;
+  const imageNamespace = hasImages ? " xmlns:image=\"http://www.google.com/schemas/sitemap-image/1.1\"" : "";
+  return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"${imageNamespace}>${home}${items}</urlset>`;
 }
 
 export function xmlResponse(xml: string, status = 200) {

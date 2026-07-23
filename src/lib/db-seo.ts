@@ -5,6 +5,7 @@ export type SitemapRecord = {
   path: string;
   updatedAt: string | null;
   kind: "game" | "category" | "tag" | "static";
+  imageUrl?: string | null;
 };
 
 type SlugRow = {
@@ -15,6 +16,7 @@ type SlugRow = {
   seo_description?: string | null;
   is_indexable?: boolean | null;
   is_broken?: boolean | null;
+  thumbnail_url?: string | null;
 };
 
 export async function getCoreSitemapRecords(): Promise<SitemapRecord[]> {
@@ -52,7 +54,7 @@ export async function getGameSitemapPage(page: number, pageSize: number): Promis
   const from = page * pageSize;
   const { data, error } = await supabase
     .from("games")
-    .select("slug, updated_at")
+    .select("slug, updated_at, thumbnail_url")
     .eq("status", "published")
     .eq("is_indexable", true)
     .eq("is_broken", false)
@@ -60,7 +62,10 @@ export async function getGameSitemapPage(page: number, pageSize: number): Promis
     .order("slug", { ascending: true })
     .range(from, from + pageSize - 1);
   if (error) return [];
-  return ((data ?? []) as SlugRow[]).map((row) => record("game", `/oyun/${row.slug}`, row.updated_at));
+  return ((data ?? []) as SlugRow[]).map((row) => ({
+    ...record("game", `/oyun/${row.slug}`, row.updated_at),
+    imageUrl: row.thumbnail_url,
+  }));
 }
 
 async function fetchCategories() {

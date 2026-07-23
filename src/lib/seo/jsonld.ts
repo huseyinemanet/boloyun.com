@@ -45,6 +45,35 @@ export function breadcrumbJsonLd(entries: BreadcrumbEntry[]): JsonLd {
   };
 }
 
+export function webPageJsonLd(input: {
+  name: string;
+  description: string;
+  image: string;
+  path: string;
+}): JsonLd {
+  const pageUrl = absoluteUrl(input.path);
+  const imageUrl = absoluteUrl(input.image);
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${pageUrl}#webpage`,
+    url: pageUrl,
+    name: input.name,
+    description: input.description,
+    inLanguage: "tr-TR",
+    primaryImageOfPage: {
+      "@type": "ImageObject",
+      "@id": `${pageUrl}#primaryimage`,
+      url: imageUrl,
+      contentUrl: imageUrl,
+      caption: `${input.name} oyunu kapak görseli`,
+      width: 800,
+      height: 600,
+    },
+  };
+}
+
 export function itemListJsonLd(name: string, items: Array<string | BreadcrumbEntry>): JsonLd {
   return {
     "@context": "https://schema.org",
@@ -71,13 +100,16 @@ export function videoGameJsonLd(input: {
   ratingAvg?: number;
   ratingCount?: number;
 }): JsonLd {
+  const pageUrl = absoluteUrl(input.path);
   const value: JsonLd = {
     "@context": "https://schema.org",
     "@type": ["VideoGame", "WebApplication"],
+    "@id": `${pageUrl}#game`,
     name: input.name,
     description: input.description,
     image: absoluteUrl(input.image),
-    url: absoluteUrl(input.path),
+    url: pageUrl,
+    mainEntityOfPage: { "@id": `${pageUrl}#webpage` },
     applicationCategory: "GameApplication",
     operatingSystem: "Web browser",
     genre: input.genres,

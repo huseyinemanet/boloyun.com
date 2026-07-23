@@ -27,7 +27,12 @@ export async function generateMetadata(): Promise<Metadata> {
     applicationName: general.siteName,
     alternates: { canonical: "/" },
     icons: { icon: customFavicon ?? "/favicon.ico" },
-    robots: { index: true, follow: true },
+    robots: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      googleBot: { index: true, follow: true, "max-image-preview": "large" },
+    },
     verification: { google: seo.googleVerification || undefined, other: seo.bingVerification ? { "msvalidate.01": seo.bingVerification } : undefined },
     openGraph: { title: seo.defaultTitle, description: seo.defaultDescription, siteName: general.siteName, type: "website", locale: "tr_TR", url: "/", images: [{ url: seo.openGraphImageUrl, width: 1200, height: 630, alt: general.siteName }] },
     twitter: { card: "summary_large_image", title: seo.defaultTitle, description: seo.defaultDescription, images: [{ url: seo.openGraphImageUrl, alt: general.siteName }] },

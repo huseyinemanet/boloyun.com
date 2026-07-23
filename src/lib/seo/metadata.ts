@@ -11,6 +11,10 @@ export function gameSocialImagePath(slug: string) {
   return `/oyun/${encodeURIComponent(slug)}/paylasim-gorseli`;
 }
 
+export function gameCoverImagePath(slug: string) {
+  return `/oyun/${encodeURIComponent(slug)}/paylasim-kapagi`;
+}
+
 export function absoluteUrl(path = "/", baseUrl = SITE_URL) {
   if (/^https?:\/\//i.test(path)) return path;
   return `${baseUrl.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
@@ -21,6 +25,8 @@ export function buildMetadata({
   description,
   canonicalPath,
   image,
+  imageWidth = 1200,
+  imageHeight = 630,
   indexable = true,
   siteName = SITE_NAME,
   baseUrl = SITE_URL,
@@ -30,6 +36,8 @@ export function buildMetadata({
   description: string;
   canonicalPath: string;
   image?: string | null;
+  imageWidth?: number;
+  imageHeight?: number;
   indexable?: boolean;
   siteName?: string;
   baseUrl?: string;
@@ -43,7 +51,12 @@ export function buildMetadata({
     description,
     alternates: { canonical },
     robots: indexable
-      ? { index: true, follow: true }
+      ? {
+          index: true,
+          follow: true,
+          "max-image-preview": "large",
+          googleBot: { index: true, follow: true, "max-image-preview": "large" },
+        }
       : { index: false, follow: true, googleBot: { index: false, follow: true } },
     openGraph: {
       type: "website",
@@ -52,7 +65,7 @@ export function buildMetadata({
       title,
       description,
       url: canonical,
-      images: [{ url: socialImage, width: 1200, height: 630, alt: title }],
+      images: [{ url: socialImage, width: imageWidth, height: imageHeight, alt: title }],
     },
     twitter: {
       card: "summary_large_image",

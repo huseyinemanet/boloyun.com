@@ -22,11 +22,11 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { getPrebuildGameSlugs, getPublicGamePageBySlug, type GameTaxonomyLink } from "@/lib/games/public-queries";
-import { buildMetadata, gameSocialImagePath } from "@/lib/seo/metadata";
+import { buildMetadata, gameCoverImagePath } from "@/lib/seo/metadata";
 import { getPublicSettings } from "@/lib/db-settings";
 import { isGameSourceAllowed } from "@/lib/settings/game-security";
 import { renderSeoTemplate } from "@/lib/settings/validation";
-import { breadcrumbJsonLd, videoGameJsonLd } from "@/lib/seo/jsonld";
+import { breadcrumbJsonLd, videoGameJsonLd, webPageJsonLd } from "@/lib/seo/jsonld";
 import { LazyGameActions } from "./lazy-game-actions";
 import { LazyComments } from "./lazy-comments";
 import { LazyGamePlayer } from "./lazy-game-player";
@@ -56,7 +56,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: game.seoTitle || renderSeoTemplate(settings.seo.gameTitleTemplate, { oyun_adı: game.title, site_adı: settings.general.siteName, kategori_adı: primaryCategory?.name }),
     description: game.seoDescription || `${game.title} oyununu ücretsiz oyna. ${game.shortDescription} Tarayıcıdan hemen başlat, indirme yapmadan oynamaya başla.`,
     canonicalPath: `/oyun/${game.slug}`,
-    image: gameSocialImagePath(game.slug),
+    image: gameCoverImagePath(game.slug),
+    imageWidth: 800,
+    imageHeight: 600,
     indexable: game.isIndexable && !game.isBroken,
     siteName: settings.general.siteName,
     baseUrl: settings.seo.canonicalDomain,
@@ -74,6 +76,7 @@ export default async function GameDetailPage({ params }: Props) {
 
   const { game, categories, tags } = detail;
   const primaryCategory = categories[0];
+  const gameCoverImage = gameCoverImagePath(game.slug);
   const playEventName = `game-played-${game.id}`;
   const similarGames = settings.games.similarGameStrategy === "popular"
     ? detail.popularCategoryGames
@@ -90,10 +93,16 @@ export default async function GameDetailPage({ params }: Props) {
             ...(primaryCategory ? [{ name: primaryCategory.name, path: `/kategori/${primaryCategory.slug}` }] : []),
             { name: game.title, path: `/oyun/${game.slug}` },
           ]),
+          webPageJsonLd({
+            name: game.title,
+            description: game.shortDescription,
+            image: gameCoverImage,
+            path: `/oyun/${game.slug}`,
+          }),
           videoGameJsonLd({
             name: game.title,
             description: game.shortDescription,
-            image: game.thumbnailUrl,
+            image: gameCoverImage,
             path: `/oyun/${game.slug}`,
             genres: categories.map((category) => category.name),
             developer: game.developer,

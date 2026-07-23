@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { auditGameSeo, isTagIndexable } from "@/lib/seo/audit";
-import { breadcrumbJsonLd, videoGameJsonLd } from "@/lib/seo/jsonld";
-import { absoluteUrl, buildMetadata, gameSocialImagePath } from "@/lib/seo/metadata";
+import { breadcrumbJsonLd, videoGameJsonLd, webPageJsonLd } from "@/lib/seo/jsonld";
+import { absoluteUrl, buildMetadata, gameCoverImagePath, gameSocialImagePath } from "@/lib/seo/metadata";
+import { sitemapUrlSet } from "@/lib/seo/sitemap-xml";
 
 const completeGame = {
   title: "Deneme Oyunu",
@@ -45,9 +46,33 @@ test("metadata uses boloyun canonical and noindex when requested", () => {
   assert.equal((metadata.robots as { index?: boolean }).index, false);
 });
 
+test("indexable metadata explicitly allows large Google image previews", () => {
+  const metadata = buildMetadata({
+    title: "Pool Oyna",
+    description: "Pool oyununu oyna.",
+    canonicalPath: "/oyun/pool",
+    image: "/oyun/pool/paylasim-kapagi",
+    imageWidth: 800,
+    imageHeight: 600,
+  });
+  const robots = metadata.robots as {
+    "max-image-preview"?: string;
+    googleBot?: { "max-image-preview"?: string };
+  };
+  assert.equal(robots["max-image-preview"], "large");
+  assert.equal(robots.googleBot?.["max-image-preview"], "large");
+  assert.deepEqual(metadata.openGraph?.images, [{
+    url: "https://boloyun.com/oyun/pool/paylasim-kapagi",
+    width: 800,
+    height: 600,
+    alt: "Pool Oyna",
+  }]);
+});
+
 test("game social image path is same-origin and URL-safe", () => {
   assert.equal(gameSocialImagePath("pizza-cafe"), "/oyun/pizza-cafe/paylasim-gorseli");
   assert.equal(gameSocialImagePath("oyun adı"), "/oyun/oyun%20ad%C4%B1/paylasim-gorseli");
+  assert.equal(gameCoverImagePath("oyun adı"), "/oyun/oyun%20ad%C4%B1/paylasim-kapagi");
 });
 
 test("VideoGame JSON-LD only exposes real developer and rating", () => {
@@ -82,4 +107,36 @@ test("game breadcrumb JSON-LD exposes an ordered canonical hierarchy", () => {
     { "@type": "ListItem", position: 2, name: "Araba Oyunları", item: "https://boloyun.com/kategori/araba-oyunlari" },
     { "@type": "ListItem", position: 3, name: "Miami Super Drive", item: "https://boloyun.com/oyun/miami-super-drive" },
   ]);
+});
+
+test("game WebPage JSON-LD identifies the preferred cover image", () => {
+  const page = webPageJsonLd({
+    name: "Pool",
+    description: "Pool oyununu ücretsiz oyna.",
+    image: "/oyun/pool/paylasim-kapagi",
+    path: "/oyun/pool",
+  });
+
+  assert.equal(page["@id"], "https://boloyun.com/oyun/pool#webpage");
+  assert.deepEqual(page.primaryImageOfPage, {
+    "@type": "ImageObject",
+    "@id": "https://boloyun.com/oyun/pool#primaryimage",
+    url: "https://boloyun.com/oyun/pool/paylasim-kapagi",
+    contentUrl: "https://boloyun.com/oyun/pool/paylasim-kapagi",
+    caption: "Pool oyunu kapak görseli",
+    width: 800,
+    height: 600,
+  });
+});
+
+test("game sitemap exposes crawlable image URLs", () => {
+  const xml = sitemapUrlSet([{
+    kind: "game",
+    path: "/oyun/pool",
+    updatedAt: "2026-07-23T08:00:00.000Z",
+    imageUrl: "https://cdn.example.com/pool.webp",
+  }], "https://boloyun.com");
+
+  assert.match(xml, /xmlns:image="http:\/\/www\.google\.com\/schemas\/sitemap-image\/1\.1"/);
+  assert.match(xml, /<image:image><image:loc>https:\/\/cdn\.example\.com\/pool\.webp<\/image:loc><\/image:image>/);
 });
