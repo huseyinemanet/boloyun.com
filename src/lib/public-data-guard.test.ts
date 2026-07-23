@@ -11,6 +11,14 @@ test("GitHub doğrulama build'i dış veri olmadan çalışabilir", () => {
   assert.equal(allowPublicDemoData("production", "true"), true);
 });
 
+test("Docker ön derlemesi açık yedek modunda dış veri olmadan çalışabilir", () => {
+  assert.equal(allowPublicDemoData("production", "false", "1"), true);
+});
+
+test("üretim çalışma zamanında ön derleme yedeği kapalı kalır", () => {
+  assert.equal(allowPublicDemoData("production", "false", "0"), false);
+});
+
 test("veri kaynağı hatası canlı önbellek korumasını açıklar", () => {
   assert.match(
     publicDataUnavailable("Ana sayfa", "Supabase yapılandırması eksik").message,
