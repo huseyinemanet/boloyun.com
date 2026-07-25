@@ -5,24 +5,13 @@ import { useViewerState } from "@/components/auth/viewer-state-provider";
 import { CommentForm } from "./comment-form";
 
 export function CommentAuthGate({ gameId, slug }: { gameId: string; slug: string }) {
-  const { status, profile, refresh } = useViewerState();
+  const { loaded, profile } = useViewerState();
 
-  if (status === "loading") {
+  if (!loaded) {
     return null;
   }
 
-  if (status === "unavailable") {
-    return (
-      <p className="mt-4 rounded-md bg-muted/40 p-4 text-sm font-semibold text-muted-foreground">
-        Hesap durumu alınamadı.{" "}
-        <button type="button" onClick={() => void refresh()} className="text-primary hover:underline">
-          Yeniden dene
-        </button>
-      </p>
-    );
-  }
-
-  if (status === "authenticated" && profile) {
+  if (profile) {
     return <CommentForm gameId={gameId} slug={slug} />;
   }
 

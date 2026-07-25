@@ -5,7 +5,6 @@ import { LoaderCircleIcon } from "@/components/icons/app-icons";
 import { toast } from "sonner";
 import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
 import { useClickSound } from "@/components/audio/click-sound-provider";
-import { useViewerState } from "@/components/auth/viewer-state-provider";
 import { SoundLink } from "@/components/audio/sound-link";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -35,11 +34,9 @@ export function GameUserActions({
 }) {
   const [state, setState] = useState<GameState>({ isFavorite: false, selectedReaction: null, isLoggedIn: null });
   const [notice, setNotice] = useState("");
-  const { status: viewerStatus } = useViewerState();
 
   useEffect(() => {
     if (!isUuid(gameId) || (!showVotes && !showFavorite)) return;
-    if (viewerStatus !== "authenticated" && viewerStatus !== "anonymous") return;
     const controller = new AbortController();
     async function loadState() {
       try {
@@ -63,7 +60,7 @@ export function GameUserActions({
     }
     void loadState();
     return () => controller.abort();
-  }, [gameId, showFavorite, showVotes, viewerStatus]);
+  }, [gameId, showFavorite, showVotes]);
 
   async function runAction(payload: Record<string, unknown>) {
     const response = await fetch("/api/game-action", {

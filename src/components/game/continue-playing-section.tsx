@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useViewerState } from "@/components/auth/viewer-state-provider";
 import { GameCard } from "@/components/game/game-card";
 import type { ContinuePlayingGame } from "@/lib/db-continue-playing";
 
@@ -11,16 +10,14 @@ type ContinuePlayingResponse = {
 
 export function ContinuePlayingSection() {
   const [games, setGames] = useState<ContinuePlayingGame[]>([]);
-  const { status: viewerStatus } = useViewerState();
 
   useEffect(() => {
-    if (viewerStatus !== "authenticated" && viewerStatus !== "anonymous") return;
     const controller = new AbortController();
     void loadContinuePlayingGames(controller.signal).then((nextGames) => {
       if (!controller.signal.aborted) setGames(nextGames);
     });
     return () => controller.abort();
-  }, [viewerStatus]);
+  }, []);
 
   if (games.length === 0) return null;
 
