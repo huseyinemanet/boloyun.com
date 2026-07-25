@@ -1,76 +1,59 @@
 import { cache } from "react";
 import { redirect, unstable_rethrow } from "next/navigation";
-import { normalizeSiteAssetUrl } from "@/lib/site-assets";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  resolveViewerProfile,
+  type CurrentProfile,
+  type CurrentProfileResult,
+} from "@/lib/auth-viewer";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export type UserRole = "admin" | "member";
-export type UserStatus = "active" | "blocked";
-
-export type CurrentProfile = {
-  id: string;
-  userId: string;
-  username: string;
-  email: string;
-  avatarUrl: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  displayName: string | null;
-  role: UserRole;
-  status: UserStatus;
-};
-
-type ProfileRow = {
-  id: string;
-  user_id: string;
-  username: string;
-  avatar_url: string | null;
-  first_name: string | null;
-  last_name: string | null;
-  display_name: string | null;
-  role: UserRole | null;
-  status: UserStatus | null;
-};
+export type { CurrentProfile, CurrentProfileResult, UserRole, UserStatus } from "@/lib/auth-viewer";
 
 export const getCurrentProfile = cache(async function getCurrentProfile(): Promise<CurrentProfile | null> {
+  const result = await resolveCurrentProfile();
+  return result.profile;
+});
+
+export async function resolveCurrentProfile(): Promise<CurrentProfileResult> {
+  return resolveCurrentProfileForClient(await createSupabaseServerClient());
+}
+
+export async function resolveCurrentProfileForClient(
+  supabase: SupabaseClient | null,
+): Promise<CurrentProfileResult> {
+  if (!supabase) {
+    return { status: "unavailable", profile: null, reason: "configuration" };
+  }
+
   try {
-    const supabase = await createSupabaseServerClient();
-    if (!supabase) return null;
+    return await resolveViewerProfile({
+      async getUser() {
+        const { data, error } = await supabase.auth.getUser();
+        return { user: data.user, error };
+      },
+      async getProfile(userId) {
+        const service = createSupabaseServiceClient();
+        if (!service) {
+          return { profile: null, error: new Error("Supabase service client is unavailable.") };
+        }
 
-    const { data: userResult } = await supabase.auth.getUser();
-    const user = userResult.user;
-    if (!user?.id) return null;
+        const { data, error } = await service
+          .from("profiles")
+          .select("id, user_id, username, avatar_url, first_name, last_name, display_name, role, status")
+          .eq("user_id", userId)
+          .maybeSingle();
 
-    const service = createSupabaseServiceClient();
-    if (!service) return null;
-
-    const { data: profile } = await service
-      .from("profiles")
-      .select("id, user_id, username, avatar_url, first_name, last_name, display_name, role, status")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (!profile) return null;
-
-    const row = profile as ProfileRow;
-    return {
-      id: row.id,
-      userId: row.user_id,
-      username: row.username,
-      email: user.email ?? "",
-      avatarUrl: normalizeSiteAssetUrl(row.avatar_url),
-      firstName: row.first_name,
-      lastName: row.last_name,
-      displayName: row.display_name,
-      role: row.role ?? "member",
-      status: row.status ?? "active",
-    };
+        return { profile: data, error };
+      },
+    });
   } catch (error) {
     unstable_rethrow(error);
     console.error("[auth] current profile could not be read", toLogError(error));
-    return null;
+    return { status: "unavailable", profile: null, reason: "auth" };
   }
-});
+}
 
 function toLogError(error: unknown) {
   if (error instanceof Error) return { name: error.name, message: error.message };

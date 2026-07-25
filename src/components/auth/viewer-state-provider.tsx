@@ -1,82 +1,69 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  createViewerLoader,
+  type ViewerProfile,
+  type ViewerSnapshot,
+} from "@/components/auth/viewer-state";
 
-export type ViewerProfile = {
-  id: string;
-  username: string;
-  email: string;
-  avatarUrl: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  displayName: string | null;
-  role: "admin" | "member";
-  status: "active" | "blocked";
-};
+export type { ViewerProfile } from "@/components/auth/viewer-state";
 
 type ViewerState = {
-  loaded: boolean;
+  status: "loading" | ViewerSnapshot["status"];
   profile: ViewerProfile | null;
   refresh: () => Promise<void>;
 };
 
 const ViewerStateContext = createContext<ViewerState>({
-  loaded: false,
+  status: "loading",
   profile: null,
   refresh: async () => {},
 });
 
-let viewerPromise: Promise<ViewerProfile | null> | null = null;
+const loadViewer = createViewerLoader();
 
 export function ViewerStateProvider({ children }: { children: ReactNode }) {
-  const [profile, setProfile] = useState<ViewerProfile | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [snapshot, setSnapshot] = useState<ViewerSnapshot | null>(null);
+  const mountedRef = useRef(false);
 
-  async function refresh() {
-    viewerPromise = null;
-    const nextProfile = await loadViewerProfile();
-    setProfile(nextProfile);
-    setLoaded(true);
-  }
-
-  useEffect(() => {
-    let mounted = true;
-
-    void loadViewerProfile().then((nextProfile) => {
-      if (!mounted) return;
-      setProfile(nextProfile);
-      setLoaded(true);
-    }).catch(() => {
-      if (!mounted) return;
-      setProfile(null);
-      setLoaded(true);
-    });
-
-    return () => {
-      mounted = false;
-    };
+  const refresh = useCallback(async () => {
+    const nextSnapshot = await loadViewer();
+    if (!mountedRef.current) return;
+    setSnapshot(nextSnapshot);
   }, []);
 
-  const value = useMemo(() => ({ loaded, profile, refresh }), [loaded, profile]);
+  useEffect(() => {
+    mountedRef.current = true;
+    void refresh();
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [refresh]);
+
+  useEffect(() => {
+    function refreshWhenVisible() {
+      if (document.visibilityState === "visible") {
+        void refresh();
+      }
+    }
+
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => document.removeEventListener("visibilitychange", refreshWhenVisible);
+  }, [refresh]);
+
+  const value = useMemo<ViewerState>(
+    () => ({
+      status: snapshot?.status ?? "loading",
+      profile: snapshot?.profile ?? null,
+      refresh,
+    }),
+    [refresh, snapshot],
+  );
   return <ViewerStateContext.Provider value={value}>{children}</ViewerStateContext.Provider>;
 }
 
 export function useViewerState() {
   return useContext(ViewerStateContext);
-}
-
-async function loadViewerProfile() {
-  viewerPromise ??= fetch("/api/me", {
-    cache: "no-store",
-    credentials: "same-origin",
-  }).then(async (response) => {
-    if (!response.ok) throw new Error("Profil okunamadı.");
-    const data = await response.json() as { profile?: ViewerProfile | null };
-    return data.profile ?? null;
-  }).catch((error) => {
-    viewerPromise = null;
-    throw error;
-  });
-
-  return viewerPromise;
 }

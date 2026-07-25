@@ -83,11 +83,20 @@ export function GamePlayer({
     return () => window.clearTimeout(timer);
   }, [game, game.gameType, loadTimeoutSeconds, loaded, started]);
 
-  const loginChecked = isLoggedIn || allowGuestPlay || viewer.loaded;
-  const loggedIn = isLoggedIn || Boolean(viewer.profile);
+  const loginChecked = isLoggedIn || allowGuestPlay || viewer.status === "authenticated" || viewer.status === "anonymous";
+  const loggedIn = isLoggedIn || viewer.status === "authenticated";
 
   if (!allowGuestPlay && !loginChecked) {
-    return <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center rounded-md border border-border bg-card p-6 text-center`}><p className="font-bold">Oyun hazırlanıyor...</p></div>;
+    return (
+      <div className={`${aspectRatio === "4:3" ? "aspect-[4/3]" : "aspect-video"} grid place-items-center rounded-md border border-border bg-card p-6 text-center`}>
+        {viewer.status === "unavailable" ? (
+          <div>
+            <p className="font-bold">Hesap durumu alınamadı.</p>
+            <Button className="mt-3" variant="outline" onClick={() => void viewer.refresh()}>Yeniden Dene</Button>
+          </div>
+        ) : <p className="font-bold">Oyun hazırlanıyor...</p>}
+      </div>
+    );
   }
 
   if (!allowGuestPlay && !loggedIn) {

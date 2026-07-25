@@ -21,12 +21,14 @@ const accountMenuItemClass = "min-h-9 px-2.5 py-2 hover:bg-white/10 focus:bg-whi
 
 export function HeaderAccountMenu({ showRegister }: { showRegister: boolean }) {
   const pathname = usePathname();
-  const { loaded, profile } = useViewerState();
+  const { status, profile, refresh } = useViewerState();
   const protectedAccountPath = pathname === "/profil" || pathname.startsWith("/profil/") || pathname.startsWith("/admin");
 
-  if (!loaded) return <AccountLoading />;
-  if (!profile && protectedAccountPath) return <AccountLoading />;
-  if (!profile) return <AccountLinks showRegister={showRegister} />;
+  if (status === "loading") return <AccountLoading />;
+  if (status === "unavailable") return <AccountUnavailable onRetry={refresh} />;
+  if (status === "anonymous" && protectedAccountPath) return <AccountLoading />;
+  if (status === "anonymous") return <AccountLinks showRegister={showRegister} />;
+  if (!profile) return <AccountLoading />;
 
   const displayName = getDisplayName(profile);
 
@@ -92,6 +94,20 @@ function AccountLoading() {
     >
       <span className="size-5 animate-pulse rounded-full bg-muted-foreground/40" />
     </div>
+  );
+}
+
+function AccountUnavailable({ onRetry }: { onRetry: () => Promise<void> }) {
+  return (
+    <button
+      type="button"
+      onClick={() => void onRetry()}
+      className="grid size-10 shrink-0 place-items-center rounded-full border border-warning/40 bg-warning/10 text-xs font-bold text-warning transition hover:bg-warning/20"
+      aria-label="Hesap durumunu yeniden kontrol et"
+      title="Hesap durumu alınamadı. Yeniden dene."
+    >
+      ↻
+    </button>
   );
 }
 
