@@ -153,7 +153,7 @@ const getPublicHomepageSnapshotCached = unstable_cache(async function getPublicH
     popularGames,
     trendingGames,
   };
-}, ["public-homepage-snapshot-v6"], { revalidate: 3600, tags: ["homepage-sections", "games", "categories", "tags"] });
+}, ["public-homepage-snapshot-v7"], { revalidate: 3600, tags: ["homepage-sections", "games", "categories", "tags"] });
 
 export async function getPublicHomepageSnapshot() {
   return getPublicHomepageSnapshotCached();

@@ -9,6 +9,7 @@ const homepageSource = readFileSync(
 );
 
 test("ana sayfa Tüm Oyunlar bölümünde yayınlanmış oyun kartlarını gösterir", () => {
+  assert.match(homepageSource, /export const dynamic = "force-dynamic"/);
   assert.match(homepageSource, /const HOME_ALL_GAMES_LIMIT = 20/);
   assert.match(homepageSource, /const allGames = \[[\s\S]*homepage\.latestGames/);
   assert.match(homepageSource, /allGames\.map\(\(game\) => <GameCard/);

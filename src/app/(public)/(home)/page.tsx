@@ -11,7 +11,7 @@ import { buildMetadata } from "@/lib/seo/metadata";
 import { getPublicSettings } from "@/lib/db-settings";
 import { getPublicHomepageSnapshot, HOMEPAGE_FEATURED_GAME_LIMIT } from "@/lib/db-homepage-sections";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 const HOME_ALL_GAMES_LIMIT = 20;
 
 export async function generateMetadata(): Promise<Metadata> {
