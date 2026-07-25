@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth";
 import { cacheHeaders } from "@/lib/cache-policy";
 import { getGameReactionForSession } from "@/lib/db-game-reactions";
-import { getProfileFavorite, getSessionFavorite } from "@/lib/db-session-favorites";
+import { getProfileFavorite } from "@/lib/db-session-favorites";
 
 const gameSessionCookie = "mini_game_session";
 
@@ -24,9 +24,7 @@ export async function GET(request: Request) {
   const [isFavorite, selectedReaction] = await Promise.all([
     profile?.id
       ? getProfileFavorite(gameId, profile.id)
-      : sessionId
-        ? getSessionFavorite(gameId, sessionId)
-        : Promise.resolve(false),
+      : Promise.resolve(false),
     sessionId ? getGameReactionForSession(gameId, sessionId) : Promise.resolve(null),
   ]);
 

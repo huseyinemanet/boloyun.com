@@ -6,8 +6,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createPendingComment } from "@/lib/db-comments";
 import { isGameReaction, setGameReaction } from "@/lib/db-game-reactions";
-import { migrateSessionFavoritesToProfile, setProfileFavorite, setSessionFavorite } from "@/lib/db-session-favorites";
-import { getCurrentProfile, requireProfile } from "@/lib/auth";
+import { setProfileFavorite } from "@/lib/db-session-favorites";
+import { requireProfile } from "@/lib/auth";
 import { getPublicSettings } from "@/lib/db-settings";
 import { consumeRateLimits, getClientIp } from "@/lib/abuse";
 import { invalidatePublicContent } from "@/lib/public-cache-invalidation";
@@ -77,14 +77,8 @@ export async function toggleFavoriteAction(formData: FormData) {
     throw new Error("Favori için oyun bilgisi eksik.");
   }
 
-  const sessionId = await getOrCreateGameSession();
-  const profile = await getCurrentProfile();
-  if (profile?.id) {
-    await migrateSessionFavoritesToProfile(sessionId, profile.id);
-    await setProfileFavorite(gameId, profile.id, desired);
-  } else {
-    await setSessionFavorite(gameId, sessionId, desired);
-  }
+  const profile = await requireProfile();
+  await setProfileFavorite(gameId, profile.id, desired);
 }
 
 async function getOrCreateGameSession() {

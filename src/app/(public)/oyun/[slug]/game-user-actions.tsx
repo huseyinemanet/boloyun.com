@@ -5,7 +5,9 @@ import { LoaderCircleIcon } from "@/components/icons/app-icons";
 import { toast } from "sonner";
 import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
 import { useClickSound } from "@/components/audio/click-sound-provider";
+import { SoundLink } from "@/components/audio/sound-link";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { gameReactions, isGameReaction, type GameReaction } from "@/lib/db-game-reactions";
 import { cn } from "@/lib/utils";
@@ -14,7 +16,7 @@ import { gameAnalyticsItem, trackAnalyticsEvent } from "@/lib/analytics";
 type GameState = {
   isFavorite: boolean;
   selectedReaction: GameReaction | null;
-  isLoggedIn: boolean;
+  isLoggedIn: boolean | null;
 };
 
 export function GameUserActions({
@@ -30,7 +32,7 @@ export function GameUserActions({
   showFavorite: boolean;
   title: string;
 }) {
-  const [state, setState] = useState<GameState>({ isFavorite: false, selectedReaction: null, isLoggedIn: false });
+  const [state, setState] = useState<GameState>({ isFavorite: false, selectedReaction: null, isLoggedIn: null });
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -92,15 +94,16 @@ export function GameUserActions({
           game={{ id: slug, title }}
         />
       ) : null}
-      {showFavorite ? <FavoriteButton gameId={gameId} slug={slug} gameTitle={title} isFavorite={state.isFavorite} onToggle={() => runAction({ action: "favorite", desired: !state.isFavorite })} onNotice={setNotice} /> : null}
+      {showFavorite ? <FavoriteButton gameId={gameId} slug={slug} gameTitle={title} isFavorite={state.isFavorite} isLoggedIn={state.isLoggedIn} onToggle={() => runAction({ action: "favorite", desired: !state.isFavorite })} onNotice={setNotice} /> : null}
       <span className="sr-only" aria-live="polite">{notice}</span>
     </div>
   );
 }
 
-function FavoriteButton({ gameId, slug, gameTitle, isFavorite, onToggle, onNotice }: { gameId: string; slug: string; gameTitle: string; isFavorite: boolean; onToggle: () => Promise<void>; onNotice: (message: string) => void }) {
+function FavoriteButton({ gameId, slug, gameTitle, isFavorite, isLoggedIn, onToggle, onNotice }: { gameId: string; slug: string; gameTitle: string; isFavorite: boolean; isLoggedIn: boolean | null; onToggle: () => Promise<void>; onNotice: (message: string) => void }) {
   const canFavorite = isUuid(gameId);
   const [pending, setPending] = useState(false);
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const { playClickSound } = useClickSound();
 
   if (!canFavorite) {
@@ -126,44 +129,76 @@ function FavoriteButton({ gameId, slug, gameTitle, isFavorite, onToggle, onNotic
   }
 
   const tooltipLabel = isFavorite ? "Favorilerden çıkar" : "Favorilere ekle";
+  const authPending = isLoggedIn === null;
+  const returnPath = `/oyun/${slug}`;
+
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          type="button"
-          variant="secondary"
-          size="icon-sm"
-          className={cn(isFavorite ? "border-destructive/40 bg-destructive/10 text-destructive ring-1 ring-destructive/20" : "")}
-          aria-label={tooltipLabel}
-          aria-pressed={isFavorite}
-          aria-busy={pending}
-          disabled={pending}
-          onClick={async () => {
-            if (pending) return;
-            playClickSound();
-            setPending(true);
-            try {
-              await onToggle();
-              trackAnalyticsEvent(isFavorite ? "remove_from_wishlist" : "add_to_wishlist", { items: [gameAnalyticsItem({ id: slug, title: gameTitle })] });
-              const message = isFavorite ? "Favorilerden çıkarıldı." : "Favorilere eklendi.";
-              onNotice(message);
-              toast.success(message);
-            } catch (error) {
-              const message = error instanceof Error ? error.message : "Favori işlemi tamamlanamadı.";
-              onNotice(message);
-              toast.error(message);
-            } finally {
-              setPending(false);
-            }
-          }}
-        >
-          <span className="grid size-[18px] shrink-0 place-items-center">
-            {pending ? <LoaderCircleIcon className="size-[18px] animate-spin" aria-hidden="true" /> : <IconHeartFillDuo18 className={`size-[18px] ${isFavorite ? "" : "opacity-60"}`} aria-hidden="true" />}
-          </span>
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent><p>{tooltipLabel}</p></TooltipContent>
-    </Tooltip>
+    <>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon-sm"
+            className={cn(isFavorite ? "border-destructive/40 bg-destructive/10 text-destructive ring-1 ring-destructive/20" : "")}
+            aria-label={tooltipLabel}
+            aria-pressed={isFavorite}
+            aria-busy={pending || authPending}
+            disabled={pending || authPending}
+            onClick={async () => {
+              if (pending || authPending) return;
+              playClickSound();
+              if (!isLoggedIn) {
+                setAuthDialogOpen(true);
+                return;
+              }
+
+              setPending(true);
+              try {
+                await onToggle();
+                trackAnalyticsEvent(isFavorite ? "remove_from_wishlist" : "add_to_wishlist", { items: [gameAnalyticsItem({ id: slug, title: gameTitle })] });
+                const message = isFavorite ? "Favorilerden çıkarıldı." : "Favorilere eklendi.";
+                onNotice(message);
+                toast.success(message);
+              } catch (error) {
+                const message = error instanceof Error ? error.message : "Favori işlemi tamamlanamadı.";
+                onNotice(message);
+                toast.error(message);
+              } finally {
+                setPending(false);
+              }
+            }}
+          >
+            <span className="grid size-[18px] shrink-0 place-items-center">
+              {pending || authPending ? <LoaderCircleIcon className="size-[18px] animate-spin" aria-hidden="true" /> : <IconHeartFillDuo18 className={`size-[18px] ${isFavorite ? "" : "opacity-60"}`} aria-hidden="true" />}
+            </span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent><p>{tooltipLabel}</p></TooltipContent>
+      </Tooltip>
+
+      <Dialog open={authDialogOpen} onOpenChange={setAuthDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="grid size-10 place-items-center rounded-full bg-primary/10 text-primary">
+              <IconHeartFillDuo18 className="size-5" aria-hidden="true" />
+            </div>
+            <DialogTitle>Favorilerine eklemek için giriş yap</DialogTitle>
+            <DialogDescription>
+              Favori oyunlarını hesabında saklamak ve daha sonra kolayca bulmak için giriş yap veya ücretsiz hesap oluştur.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button asChild variant="outline">
+              <SoundLink href="/kayit">Kayıt Ol</SoundLink>
+            </Button>
+            <Button asChild>
+              <SoundLink href={`/giris?next=${encodeURIComponent(returnPath)}`}>Giriş Yap</SoundLink>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

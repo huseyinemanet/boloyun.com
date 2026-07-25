@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth";
 import { cacheHeaders } from "@/lib/cache-policy";
 import { isGameReaction, setGameReaction } from "@/lib/db-game-reactions";
-import { setProfileFavorite, setSessionFavorite } from "@/lib/db-session-favorites";
+import { setProfileFavorite } from "@/lib/db-session-favorites";
 
 const gameSessionCookie = "mini_game_session";
 
@@ -22,18 +22,23 @@ export async function POST(request: Request) {
   const gameId = typeof input.gameId === "string" ? input.gameId : "";
   if (!isUuid(gameId)) return actionResponse({ error: "Oyun bilgisi eksik." }, 400);
 
-  const sessionId = await getOrCreateGameSession();
   const profile = await getCurrentProfile();
 
   if (input.action === "favorite") {
-    const desired = Boolean(input.desired);
-    const isFavorite = profile?.id
-      ? await setProfileFavorite(gameId, profile.id, desired)
-      : await setSessionFavorite(gameId, sessionId, desired);
+    if (!profile?.id) {
+      return actionResponse(
+        { error: "Favorilere eklemek için giriş yapmalısın.", isLoggedIn: false },
+        401,
+      );
+    }
 
-    return actionResponse({ ok: true, isFavorite, isLoggedIn: Boolean(profile?.id) });
+    const desired = Boolean(input.desired);
+    const isFavorite = await setProfileFavorite(gameId, profile.id, desired);
+
+    return actionResponse({ ok: true, isFavorite, isLoggedIn: true });
   }
 
+  const sessionId = await getOrCreateGameSession();
   const reaction = input.action === "reaction"
     ? input.reaction
     : input.action === "vote"
