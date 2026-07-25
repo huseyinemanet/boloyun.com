@@ -2,6 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { IconBadgeCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBadgeCheckFillDuo18";
+import { IconBrainNodesFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBrainNodesFillDuo18";
+import { IconCircleWarningFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCircleWarningFillDuo18";
+import { IconCloudDownload2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCloudDownload2FillDuo18";
+import { IconDatabasePlusFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconDatabasePlusFillDuo18";
+import { IconDuplicate2FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconDuplicate2FillDuo18";
+import { IconGaugeFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconGaugeFillDuo18";
+import { IconHourglassClockFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHourglassClockFillDuo18";
+import { IconLink3FillDuo18 } from "nucleo-ui-fill-duo-18/components/IconLink3FillDuo18";
+import { IconMagnifierCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconMagnifierCheckFillDuo18";
+import { IconTimerProgressFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconTimerProgressFillDuo18";
 import { AdminCheckboxField } from "@/components/admin/admin-checkbox-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -142,17 +153,17 @@ export function CrawlerRunner() {
 
           {stats ? (
             <div className="mt-3 grid gap-2 md:grid-cols-4">
-              <ProgressStat label="Bulunan URL" value={stats.discovered} />
-              <ProgressStat label="Kontrol edilen" value={stats.duplicateChecked} />
-              <ProgressStat label="Yeni eklenen" value={stats.inserted} />
-              <ProgressStat label="Zaten vardı" value={stats.skipped} />
-              <ProgressStat label="Bekleyen discovered" value={stats.pendingDiscovered} />
-              <ProgressStat label="Bilgisi çekilen" value={stats.scraped} />
-              <ProgressStat label="AI içerik" value={stats.aiGenerated} />
-              <ProgressStat label="Hazırlanan" value={stats.pendingReview} />
-              <ProgressStat label="Hata" value={stats.failed} />
-              <ProgressStat label="URL limiti" value={stats.limit} />
-              <ProgressStat label="İşlem limiti" value={stats.scrapeLimit} />
+              <ProgressStat label="Bulunan URL" value={stats.discovered} icon={IconLink3FillDuo18} />
+              <ProgressStat label="Kontrol edilen" value={stats.duplicateChecked} icon={IconMagnifierCheckFillDuo18} />
+              <ProgressStat label="Yeni eklenen" value={stats.inserted} icon={IconDatabasePlusFillDuo18} />
+              <ProgressStat label="Zaten vardı" value={stats.skipped} icon={IconDuplicate2FillDuo18} />
+              <ProgressStat label="Bekleyen discovered" value={stats.pendingDiscovered} icon={IconHourglassClockFillDuo18} />
+              <ProgressStat label="Bilgisi çekilen" value={stats.scraped} icon={IconCloudDownload2FillDuo18} />
+              <ProgressStat label="AI içerik" value={stats.aiGenerated} icon={IconBrainNodesFillDuo18} />
+              <ProgressStat label="Hazırlanan" value={stats.pendingReview} icon={IconBadgeCheckFillDuo18} />
+              <ProgressStat label="Hata" value={stats.failed} icon={IconCircleWarningFillDuo18} tone="destructive" />
+              <ProgressStat label="URL limiti" value={stats.limit} icon={IconGaugeFillDuo18} />
+              <ProgressStat label="İşlem limiti" value={stats.scrapeLimit} icon={IconTimerProgressFillDuo18} />
             </div>
           ) : null}
 
@@ -186,10 +197,25 @@ function getProgressPercent(job: CrawlerJob | null) {
   return 0;
 }
 
-function ProgressStat({ label, value }: { label: string; value: number }) {
+function ProgressStat({
+  label,
+  value,
+  icon: Icon,
+  tone = "primary",
+}: {
+  label: string;
+  value: number;
+  icon: typeof IconLink3FillDuo18;
+  tone?: "primary" | "destructive";
+}) {
   return (
     <div className="rounded-md border border-border bg-card p-3">
-      <p className="text-[11px] font-bold uppercase text-muted-foreground">{label}</p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="pt-1 text-[11px] font-bold uppercase text-muted-foreground">{label}</p>
+        <span className={`grid size-8 shrink-0 place-items-center rounded-md ${tone === "destructive" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
+          <Icon className="size-[18px]" aria-hidden="true" />
+        </span>
+      </div>
       <p className="mt-1 text-lg font-bold">{value.toLocaleString("tr-TR")}</p>
     </div>
   );
