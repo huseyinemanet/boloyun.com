@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AdSlot } from "@/components/ads/ad-slot";
 import { SoundLink } from "@/components/audio/sound-link";
+import { GameCard } from "@/components/game/game-card";
 import { GameSection } from "@/components/game/game-section";
 import { ContinuePlayingSection } from "@/components/game/continue-playing-section";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -11,6 +12,7 @@ import { getPublicSettings } from "@/lib/db-settings";
 import { getPublicHomepageSnapshot, HOMEPAGE_FEATURED_GAME_LIMIT } from "@/lib/db-homepage-sections";
 
 export const revalidate = 3600;
+const HOME_ALL_GAMES_LIMIT = 20;
 
 export async function generateMetadata(): Promise<Metadata> {
   const { general, seo } = await getPublicSettings();
@@ -50,6 +52,10 @@ export default async function Home() {
     assignedSectionAnchors.add(anchor);
     return { ...entry, anchor };
   });
+  const allGames = [
+    ...homepage.latestGames.filter((game) => !seenGameIds.has(game.id)),
+    ...homepage.latestGames.filter((game) => seenGameIds.has(game.id)),
+  ].slice(0, HOME_ALL_GAMES_LIMIT);
 
   return (
     <div className="space-y-5">
@@ -57,6 +63,7 @@ export default async function Home() {
         websiteJsonLd(),
         organizationJsonLd(),
         ...anchoredSections.map(({ section, games }) => itemListJsonLd(section.title, games.map((game) => ({ name: game.title, path: `/oyun/${game.slug}` })))),
+        itemListJsonLd("Tüm Oyunlar", allGames.map((game) => ({ name: game.title, path: `/oyun/${game.slug}` }))),
       ]} /> : null}
       <section className="py-4 text-card-foreground">
         <div className="max-w-3xl">
@@ -72,15 +79,25 @@ export default async function Home() {
       <ContinuePlayingSection />
 
       {anchoredSections.map(({ section, games, anchor }, index) => <div id={anchor} key={section.id ?? `${section.sectionType}-${index}`} className={`${section.visibility === "desktop" ? "hidden md:block" : section.visibility === "mobile" ? "md:hidden" : ""} scroll-mt-24`}><GameSection title={section.title} games={games} eagerCount={index === 0 ? 1 : 0} />{index > 0 && index % 2 === 1 ? <div className="mt-5"><AdSlot slotKey="homepage_between_sections" /></div> : null}</div>)}
-      <section aria-labelledby="tum-oyunlar-baslik" className="flex flex-col gap-3 border-t border-border py-5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 id="tum-oyunlar-baslik" className="text-xl font-semibold">Tüm Oyunlar</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Arşivdeki tüm oyunları sayfa sayfa keşfet.</p>
+      <section
+        aria-labelledby="tum-oyunlar-baslik"
+        data-analytics-view-list
+        data-analytics-list-name="Tüm Oyunlar"
+        className="border-t border-border py-5 [contain-intrinsic-size:1px_1600px] [content-visibility:auto] sm:[contain-intrinsic-size:1px_850px] lg:[contain-intrinsic-size:1px_650px]"
+      >
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 id="tum-oyunlar-baslik" className="text-xl font-semibold">Tüm Oyunlar</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Arşivdeki yayınlanmış oyunları keşfet.</p>
+          </div>
+          <SoundLink href="/oyunlar" className="inline-flex h-10 w-fit items-center gap-2 rounded-md bg-primary px-4 text-sm font-bold text-primary-foreground transition hover:bg-primary/90">
+            Tümünü gör
+            <ArrowRightIcon className="size-4" aria-hidden="true" />
+          </SoundLink>
         </div>
-        <SoundLink href="/oyunlar" className="inline-flex h-10 w-fit items-center gap-2 rounded-md bg-primary px-4 text-sm font-bold text-primary-foreground transition hover:bg-primary/90">
-          Tümünü gör
-          <ArrowRightIcon className="size-4" aria-hidden="true" />
-        </SoundLink>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {allGames.map((game) => <GameCard key={game.id} game={game} />)}
+        </div>
       </section>
     </div>
   );
