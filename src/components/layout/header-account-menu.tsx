@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-html-link-for-pages -- Auth links intentionally cross a full-document session boundary. */
+
 import { usePathname } from "next/navigation";
 import { IconCircleLogoutFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCircleLogoutFillDuo18";
 import { IconHeartFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconHeartFillDuo18";
@@ -98,10 +100,10 @@ function AccountLoading() {
 function AccountLinks({ showRegister }: { showRegister: boolean }) {
   return (
     <div className="flex shrink-0 items-center gap-2">
-      <SoundLink href="/giris" native className="inline-flex h-10 items-center justify-center rounded-md border border-border px-3 text-sm font-semibold leading-none">
+      <a href="/giris" data-click-sound="true" className="inline-flex h-10 items-center justify-center rounded-md border border-border px-3 text-sm font-semibold leading-none">
         Giriş Yap
-      </SoundLink>
-      {showRegister ? <SoundLink href="/kayit" native className="hidden h-10 items-center justify-center rounded-md bg-primary px-3 text-sm font-semibold leading-none text-primary-foreground sm:inline-flex">Kayıt Ol</SoundLink> : null}
+      </a>
+      {showRegister ? <a href="/kayit" data-click-sound="true" className="hidden h-10 items-center justify-center rounded-md bg-primary px-3 text-sm font-semibold leading-none text-primary-foreground sm:inline-flex">Kayıt Ol</a> : null}
     </div>
   );
 }
