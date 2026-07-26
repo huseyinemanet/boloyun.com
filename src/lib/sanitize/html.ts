@@ -3,13 +3,19 @@ export function stripHtml(value: string) {
 }
 
 export function sanitizeSvgInput(value: string) {
-  const input = value.trim();
+  const input = value
+    .replace(/^\uFEFF/, "")
+    .replace(/^\s*<\?xml[\s\S]*?\?>/i, "")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .trim();
   if (!input || !/^<svg\b/i.test(input) || !/<\/svg>$/i.test(input)) return "";
   const allowedTags = new Set(["svg", "g", "path", "circle", "rect", "line", "polyline", "polygon", "ellipse", "title", "desc"]);
   const allowedAttributes = new Set([
     "xmlns", "viewbox", "width", "height", "fill", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin",
     "stroke-miterlimit", "stroke-dasharray", "stroke-dashoffset", "d", "cx", "cy", "r", "rx", "ry", "x", "y",
-    "x1", "y1", "x2", "y2", "points", "transform", "opacity", "fill-rule", "clip-rule", "role", "aria-hidden",
+    "x1", "y1", "x2", "y2", "points", "transform", "opacity", "fill-opacity", "stroke-opacity", "fill-rule",
+    "clip-rule", "vector-effect", "paint-order", "preserveaspectratio", "color", "data-color", "role", "aria-hidden",
+    "aria-label", "focusable",
   ]);
   const output: string[] = [];
   const stack: string[] = [];
@@ -47,10 +53,15 @@ function sanitizeAttributes(value: string, allowed: Set<string>) {
     const match = rest.match(pattern);
     if (!match) return null;
     const name = match[1].toLowerCase();
-    if (!allowed.has(name) || name.startsWith("on") || name.includes(":")) return null;
     const raw = match[2].slice(1, -1);
+    if (name.startsWith("on") || name.includes(":") || name === "style" || name === "href") return null;
+    if (!allowed.has(name)) {
+      rest = rest.slice(match[0].length);
+      continue;
+    }
     if (/url\s*\(|javascript:|data:|[<>`]/i.test(raw)) return null;
-    result.push(` ${name === "viewbox" ? "viewBox" : name}="${escapeAttribute(raw)}"`);
+    const outputName = name === "viewbox" ? "viewBox" : name === "preserveaspectratio" ? "preserveAspectRatio" : name;
+    result.push(` ${outputName}="${escapeAttribute(raw)}"`);
     rest = rest.slice(match[0].length);
   }
   return result.join("");

@@ -180,7 +180,7 @@ export function CategoryManager({ categories, initialEditingId }: CategoryManage
             </Button>
           ) : null}
         </div>
-        <CategoryForm key={editingCategory?.id ?? "new"} category={editingCategory} />
+        <CategoryForm key={editingCategory ? `${editingCategory.id}:${editingCategory.updated_at ?? ""}` : "new"} category={editingCategory} />
       </section>
 
       <section className="overflow-hidden rounded-md border border-border bg-card">

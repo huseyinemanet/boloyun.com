@@ -57,7 +57,7 @@ export function CategoryForm({ category }: { category?: CategoryRow }) {
         </Select>
       </label>
       <TextArea label="Açıklama" name="description" defaultValue={category?.description ?? ""} rows={3} />
-      <TextArea label="Icon SVG" name="icon_svg" defaultValue={category?.icon_svg ?? ""} rows={3} />
+      <TextArea label="Icon SVG" name="icon_svg" defaultValue={category?.icon_svg ?? ""} rows={3} error={state.fieldErrors.icon_svg} />
       <Field label="Icon URL" name="icon_url" defaultValue={category?.icon_url ?? ""} />
       <Field label="SEO title" name="seo_title" defaultValue={category?.seo_title ?? ""} />
       <TextArea label="SEO description" name="seo_description" defaultValue={category?.seo_description ?? ""} rows={3} />
@@ -133,11 +133,26 @@ function Field({
   );
 }
 
-function TextArea({ label, name, defaultValue, rows }: { label: string; name: string; defaultValue: string; rows: number }) {
+function TextArea({ label, name, defaultValue, rows, error }: { label: string; name: string; defaultValue: string; rows: number; error?: string }) {
+  const errorId = `${name}-error`;
+
   return (
     <label className="block text-sm font-bold">
       {label}
-      <Textarea name={name} autoComplete="off" defaultValue={defaultValue} rows={rows} className="mt-1 resize-y" />
+      <Textarea
+        name={name}
+        autoComplete="off"
+        defaultValue={defaultValue}
+        rows={rows}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? errorId : undefined}
+        className="mt-1 resize-y"
+      />
+      {error ? (
+        <span id={errorId} className="mt-1 block text-xs font-medium text-destructive">
+          {error}
+        </span>
+      ) : null}
     </label>
   );
 }

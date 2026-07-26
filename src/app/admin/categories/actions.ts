@@ -5,6 +5,7 @@ import { recordAdminAudit } from "@/lib/admin-audit";
 import { upsertAdminCategory } from "@/lib/db-categories";
 import { requireAdmin } from "@/lib/auth";
 import { invalidatePublicContent } from "@/lib/public-cache-invalidation";
+import { sanitizeSvgInput } from "@/lib/sanitize/html";
 
 export type CategoryFormState = {
   status: "idle" | "error" | "success";
@@ -12,6 +13,7 @@ export type CategoryFormState = {
   fieldErrors: {
     name?: string;
     slug?: string;
+    icon_svg?: string;
   };
 };
 
@@ -21,10 +23,15 @@ export async function saveCategoryAction(_previousState: CategoryFormState, form
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const slug = String(formData.get("slug") ?? "").trim();
+  const rawIconSvg = String(formData.get("icon_svg") ?? "");
+  const iconSvg = sanitizeSvgInput(rawIconSvg);
   const fieldErrors: CategoryFormState["fieldErrors"] = {};
 
   if (!name) fieldErrors.name = "Kategori adı gerekli.";
   if (!slug) fieldErrors.slug = "Slug gerekli.";
+  if (rawIconSvg.trim() && !iconSvg) {
+    fieldErrors.icon_svg = "SVG güvenli veya desteklenen biçimde değil. Geçerli bir <svg>…</svg> kodu yapıştırın.";
+  }
 
   if (Object.keys(fieldErrors).length > 0) {
     return {
@@ -35,6 +42,7 @@ export async function saveCategoryAction(_previousState: CategoryFormState, form
   }
 
   try {
+    formData.set("icon_svg", iconSvg);
     await upsertAdminCategory(formData);
     await recordAdminAudit({
       actorProfileId: admin.id,

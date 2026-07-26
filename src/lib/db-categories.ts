@@ -24,6 +24,7 @@ export type CategoryRow = {
   sort_order?: number | null;
   show_in_sidebar?: boolean | null;
   sidebar_sort_order?: number | null;
+  updated_at?: string | null;
 };
 
 export async function getAdminCategories(): Promise<CategoryRow[]> {
