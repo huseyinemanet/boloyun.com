@@ -93,12 +93,6 @@ type PublicGameDetailRpc = {
   tags?: unknown;
 };
 
-type PublicGamePageRpc = PublicGameDetailRpc & {
-  related_games?: GameRow[];
-  latest_category_games?: GameRow[];
-  popular_category_games?: GameRow[];
-};
-
 type GameSearchSuggestionRow = {
   id: string;
   title: string;
@@ -555,52 +549,22 @@ const getPublishedGameDetailBySlugCached = unstable_cache(async function getPubl
 export const getPublishedGameDetailBySlug = cache(getPublishedGameDetailBySlugCached);
 
 const getPublicGamePageBySlugCached = unstable_cache(async function getPublicGamePageBySlugCached(slug: string): Promise<PublicGamePageSnapshot | null> {
-  const supabase = createSupabaseServiceClient();
-  if (supabase) {
-    const { data, error } = await measuredQuery("games.public.page-rpc", supabase.rpc("get_public_game_page", { p_slug: slug }));
-    if (!error && data && typeof data === "object") {
-      const result = data as PublicGamePageRpc;
-      if (result.game) {
-        const game = mapGameRow(result.game);
-        const categories = prioritizeTaxonomy(mapTaxonomyItems(result.categories), game.primaryCategoryId);
-        const tags = mapTaxonomyItems(result.tags);
-        const primaryCategory = categories[0];
-        const [expandedRelatedGames, expandedLatestGames, expandedPopularGames] = await Promise.all([
-          getRelatedPublishedGames(game.id, 25, game.primaryCategoryId),
-          primaryCategory?.id ? getCategoryRecommendationGames(primaryCategory.id, game.id, "latest", 25) : Promise.resolve([]),
-          primaryCategory?.id ? getCategoryRecommendationGames(primaryCategory.id, game.id, "popular", 25) : Promise.resolve([]),
-        ]);
-        return {
-          game: {
-            ...game,
-            categories: categories.map((category) => category.slug),
-            tags: tags.map((tag) => tag.name),
-          },
-          categories,
-          tags,
-          relatedGames: expandedRelatedGames,
-          latestCategoryGames: expandedLatestGames,
-          popularCategoryGames: expandedPopularGames,
-        };
-      }
-    }
-  }
-
   const detail = await getPublishedGameDetailBySlug(slug);
   if (!detail) return null;
   const primaryCategory = detail.categories[0];
-  const [relatedGames, categoryGames] = await Promise.all([
+  const [relatedGames, latestCategoryGames, popularCategoryGames] = await Promise.all([
     getRelatedPublishedGames(detail.game.id, 25, detail.game.primaryCategoryId),
-    primaryCategory ? getPublishedGamesByCategorySlug(primaryCategory.slug, 60) : Promise.resolve([]),
+    primaryCategory?.id ? getCategoryRecommendationGames(primaryCategory.id, detail.game.id, "latest", 25) : Promise.resolve([]),
+    primaryCategory?.id ? getCategoryRecommendationGames(primaryCategory.id, detail.game.id, "popular", 25) : Promise.resolve([]),
   ]);
-  const withoutCurrent = categoryGames.filter((game) => game.id !== detail.game.id);
+
   return {
     ...detail,
     relatedGames,
-    latestCategoryGames: withoutCurrent.slice(0, 25),
-    popularCategoryGames: withoutCurrent.toSorted((left, right) => right.playCount - left.playCount).slice(0, 25),
+    latestCategoryGames,
+    popularCategoryGames,
   };
-}, ["public-game-page-snapshot-v3"], { revalidate: 3600, tags: ["games", "categories", "tags"] });
+}, ["public-game-page-snapshot-v4"], { revalidate: 3600, tags: ["games", "categories", "tags"] });
 
 export const getPublicGamePageBySlug = cache(getPublicGamePageBySlugCached);
 
