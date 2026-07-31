@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getRequestOrigin, publicUrlFromRequest } from "@/lib/request-origin";
-import { safeOAuthPath } from "@/lib/security/navigation";
+import { buildOAuthCallbackUrl, safeOAuthPath } from "@/lib/security/navigation";
 import { createSupabaseRouteClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await routeClient.supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${await getRequestOrigin()}/auth/callback?next=${encodeURIComponent(next)}`,
+      redirectTo: buildOAuthCallbackUrl(await getRequestOrigin(), next),
     },
   });
 

@@ -8,3 +8,9 @@ export function safeOAuthPath(value: unknown, fallback = "/") {
   const path = safeLocalPath(value, fallback);
   return path.split("?", 1)[0] === "/sifre-yenile" ? fallback : path;
 }
+
+export function buildOAuthCallbackUrl(origin: string, next: string) {
+  const callbackUrl = new URL("/auth/callback", origin);
+  if (next !== "/") callbackUrl.searchParams.set("next", next);
+  return callbackUrl.toString();
+}
