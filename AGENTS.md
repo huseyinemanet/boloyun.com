@@ -75,6 +75,23 @@ Do not reintroduce a serverless edge runtime, vendor-specific deploy path, or al
 9. The review queue is mandatory for imported content.
 10. Performance and playability beat decorative complexity.
 
+## Protected Game Surface Rules
+
+The public game catalog and discovery flow are protected product surfaces.
+
+1. Do not change game data, publication state, taxonomy relations, game queries, game cards, game grids, homepage game sections, game ordering, game limits, game routes, player behavior, or game-related cache/fallback behavior unless the project owner explicitly asks for a game-related change in the current request.
+2. Auth, session, header, profile, comments, ratings, favorites, ads, admin, infrastructure, performance, SEO, or styling tasks must not modify, gate, delay, replace, or remove the server-rendered public game lists.
+3. Viewer-dependent requests may wait for the viewer state, but public game discovery data must render independently of authentication state.
+4. Never replace a real database-backed game list with demo games, build-time fallback games, an empty state, skeletons, or a link-only call to action as an optimization.
+5. Preserve the homepage game sections and the `Tüm Oyunlar` card grid. A separate `/oyunlar` archive link is additive and must not replace homepage game cards.
+6. Do not couple public game retrieval or rendering to `/api/me`, Supabase Auth refresh, profile loading, or another personalized request.
+7. Before completing any non-game task, inspect the full diff for changes to public game routes, homepage game rendering, game data helpers, or game cache keys. Remove those changes unless they were explicitly requested.
+8. If a non-game fix genuinely requires touching a protected game surface, stop and obtain explicit approval before editing it. Explain exactly which game behavior or files would change.
+9. After any explicitly approved change to a protected game surface, verify both anonymous and authenticated behavior, confirm that homepage game cards are visible, and run a live DOM/card-count check after deployment.
+10. Game records in the database must never be permanently deleted. Do not hard-delete or `TRUNCATE` rows from `games`, and do not add code, admin actions, scripts, migrations, foreign-key cascades, cleanup jobs, deduplication flows, or reset commands that can permanently remove game records.
+11. When a game must no longer be public, preserve its database row and source metadata and use the existing publish/status/archive mechanism to hide it. Deactivation, rejection, cleanup, deduplication, or re-import work must remain reversible.
+12. Before any database migration or bulk game operation, verify that it contains no direct or cascading deletion path for existing game records.
+
 ## Tech Stack Rules
 
 Use this stack unless the project owner explicitly changes it:
@@ -373,6 +390,22 @@ supabase migration list
 ```
 
 After deployment, verify the migration appears remotely and run the relevant database smoke query.
+
+## Supabase Query Cost Guardrails
+
+Treat every public-page query, RPC, crawler query and scheduled database job as a production cost surface.
+
+1. Before adding or materially changing a high-frequency query or RPC, run `EXPLAIN (ANALYZE, BUFFERS)` with representative production-like cardinality. Record execution time, rows, loops, shared blocks and temp blocks; do not ship an unexplained temp read/write or unbounded scan on a request path.
+2. Check `pg_stat_statements` before and after database-sensitive deployments. Review at least `calls`, `total_exec_time`, `mean_exec_time`, `shared_blks_read`, `temp_blks_read` and `temp_blks_written`, ordered both by total cost and per-call cost.
+3. Never call `pg_stat_statements_reset()` without explicit owner approval. Historical counters are incident evidence and deployment baselines.
+4. Do not materialize, sort or aggregate unbounded `games`, `game_categories`, `game_tags` or recommendation sets during a public request. Use bounded indexed queries, existing cache layers or an explicitly approved precomputed design.
+5. Do not calculate RPC payload fields that the application discards, replaces or recomputes. Keep database contracts minimal; when rolling deploy compatibility requires old keys, return a cheap compatible value until all old containers are gone.
+6. Database and application rollouts must remain backward-compatible. Apply a compatible database migration first when the old production container must continue working, then deploy the application and remove obsolete contracts only in a later migration.
+7. Every regression fix for an expensive query must add an automated test that prevents the costly SQL shape or deprecated RPC call from returning.
+8. Before deployment, capture the affected statement counters. After deployment, exercise representative anonymous and authenticated routes, confirm counters over multiple calls, and monitor the 24-hour Disk I/O and timeout trend.
+9. A Supabase Disk I/O warning is a production incident. Identify the responsible statement from `pg_stat_statements`, query plans and logs before changing compute, disk or worker frequency.
+10. Do not purchase or enable a larger Supabase compute add-on as the first response. Optimize the measured hot path first; any paid capacity change requires explicit owner approval.
+11. If CI, migration verification, live route checks, authenticated checks or post-deploy counter checks are blocked or fail, report the work as incomplete. Do not claim production success from local tests or a migration alone.
 
 ## Auth and Profile Rules
 
@@ -731,6 +764,10 @@ Do not:
 12. Add paid infrastructure unless absolutely required and approved.
 13. Over-optimize before the first vertical slice works.
 14. Rebuild production deployment around a different hosting model without explicit approval.
+15. Touch protected game surfaces during an unrelated task.
+16. Make public game visibility depend on authentication, profile availability or personalized API success.
+17. Replace homepage game grids with fallback/demo content or navigation-only controls.
+18. Permanently delete database game records for cleanup, deduplication, unpublishing, re-importing or any other workflow.
 
 ## Guiding Principle
 
