@@ -17,5 +17,9 @@ test("admin MFA ekranı TOTP kurulum ve doğrulama akışını içerir", () => {
   assert.match(form, /mfa\.enroll/);
   assert.match(form, /factorType: "totp"/);
   assert.match(form, /mfa\.challengeAndVerify/);
+  assert.match(form, /<InputOTP/);
+  assert.match(form, /REGEXP_ONLY_DIGITS/);
+  assert.match(form, /maxLength=\{6\}/);
+  assert.doesNotMatch(form, /<Input\s/);
   assert.doesNotMatch(form, /dangerouslySetInnerHTML/);
 });

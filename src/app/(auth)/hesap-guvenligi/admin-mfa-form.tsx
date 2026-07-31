@@ -3,9 +3,15 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Enrollment = {
@@ -56,7 +62,7 @@ export function AdminMfaForm({ next, verifiedFactorId }: { next: string; verifie
   async function verify(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const factorId = verifiedFactorId ?? enrollment?.factorId;
-    if (!factorId || !/^\d{6,8}$/.test(code)) {
+    if (!factorId || !/^\d{6}$/.test(code)) {
       setError("Doğrulama uygulamasındaki geçerli kodu gir.");
       return;
     }
@@ -107,18 +113,32 @@ export function AdminMfaForm({ next, verifiedFactorId }: { next: string; verifie
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="admin-mfa-code">Doğrulama kodu</FieldLabel>
-          <Input
+          <InputOTP
             id="admin-mfa-code"
             name="code"
+            maxLength={6}
+            pattern={REGEXP_ONLY_DIGITS}
             value={code}
-            onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 8))}
+            onChange={setCode}
             inputMode="numeric"
             autoComplete="one-time-code"
-            minLength={6}
-            maxLength={8}
+            containerClassName="justify-center"
+            disabled={busy}
             required
             aria-invalid={Boolean(error)}
-          />
+          >
+            <InputOTPGroup>
+              {[0, 1, 2].map((index) => (
+                <InputOTPSlot key={index} index={index} aria-invalid={Boolean(error)} />
+              ))}
+            </InputOTPGroup>
+            <InputOTPSeparator />
+            <InputOTPGroup>
+              {[3, 4, 5].map((index) => (
+                <InputOTPSlot key={index} index={index} aria-invalid={Boolean(error)} />
+              ))}
+            </InputOTPGroup>
+          </InputOTP>
           <FieldDescription>Kod yaklaşık 30 saniyede bir yenilenir.</FieldDescription>
         </Field>
       </FieldGroup>
