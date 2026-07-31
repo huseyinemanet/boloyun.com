@@ -25,7 +25,7 @@ test("GitHub Actions immutable SHA değerlerine sabitlenmiştir", () => {
   assert.match(workflow, /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/);
   assert.match(workflow, /actions\/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c/);
   assert.doesNotMatch(workflow, /uses:\s+[^\s]+@v\d+/);
-  assert.match(workflow, /pnpm audit --prod --audit-level high/);
+  assert.match(workflow, /pnpm audit --audit-level high/);
 });
 
 test("üretim bağımlılık ağacı yamalı Sharp sürümünü zorlar ve shadcn CLI geliştirmede kalır", () => {
