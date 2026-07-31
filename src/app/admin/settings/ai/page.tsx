@@ -19,7 +19,7 @@ export default async function AiSettingsPage() {
   return (
     <div className="space-y-3 pb-24">
       <div>
-        <h2 className="text-lg font-semibold">AI Ayarları</h2>
+        <h2 className="text-lg font-semibold">Yapay Zekâ Ayarları</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Toplu çeviri ve AI içerik işlemlerinin kullandığı sağlayıcı ayarını buradan yönet.
         </p>

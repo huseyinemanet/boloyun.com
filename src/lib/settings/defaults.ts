@@ -4,7 +4,6 @@ export const DEFAULT_SETTINGS: SettingsDataMap = {
   general: {
     siteName: "Bol Oyun",
     maintenanceMode: false,
-    logoUrl: "/logo.svg",
     faviconUrl: "/favicon.ico",
   },
   appearance: {
@@ -55,20 +54,10 @@ export const DEFAULT_SETTINGS: SettingsDataMap = {
     commentsRequireApproval: true,
     blockedWords: [],
     dailyCommentLimit: 20,
-    ratingsEnabled: true,
-    favoritesEnabled: true,
   },
   integrations: { googleAnalyticsId: "", googleTagManagerId: "", clarityProjectId: "", metaPixelId: "", consentModeEnabled: true },
   media: {
-    thumbnailWidth: 400,
-    thumbnailHeight: 300,
-    thumbnailCrop: true,
-    mediumMaxWidth: 800,
-    mediumMaxHeight: 600,
-    largeMaxWidth: 1200,
-    largeMaxHeight: 900,
     organizeUploadsByDate: true,
-    defaultCoverUrl: "/images/default-game-cover.svg",
   },
   permalinks: {
     gameBase: "oyun",
@@ -76,7 +65,6 @@ export const DEFAULT_SETTINGS: SettingsDataMap = {
     tagBase: "etiket",
     pageBase: "sayfa",
     paginationBase: "sayfa",
-    redirectLegacyUrls: true,
   },
   security: {
     uploadMaxMb: 5,

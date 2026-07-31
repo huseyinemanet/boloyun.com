@@ -5,8 +5,10 @@ const TEMPLATE_VARIABLES = new Set(["site_adı", "oyun_adı", "kategori_adı", "
 const ALLOWED_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/x-icon", "image/vnd.microsoft.icon"]);
 const RESERVED_PATH_BASES = new Set(["", "admin", "api", "auth", "_next", "giris", "kayit", "profil", "rastgele", "arama", "kategoriler"]);
 const LEGACY_SETTINGS_KEYS: Partial<Record<SettingsSection, string[]>> = {
-  general: ["tagline", "description", "contactEmail", "locale", "timezone", "defaultCoverUrl", "registrationsEnabled"],
-  community: ["emailVerificationRequired"],
+  general: ["tagline", "description", "contactEmail", "locale", "timezone", "defaultCoverUrl", "registrationsEnabled", "logoUrl"],
+  community: ["emailVerificationRequired", "ratingsEnabled", "favoritesEnabled"],
+  media: ["thumbnailWidth", "thumbnailHeight", "thumbnailCrop", "mediumMaxWidth", "mediumMaxHeight", "largeMaxWidth", "largeMaxHeight", "defaultCoverUrl"],
+  permalinks: ["redirectLegacyUrls"],
 };
 
 export function validateSettingsSection<S extends SettingsSection>(section: S, input: unknown): SettingsDataMap[S] {
@@ -18,7 +20,6 @@ export function validateSettingsSection<S extends SettingsSection>(section: S, i
       return {
         siteName: text(value.siteName, "Site adı", 2, 80),
         maintenanceMode: boolean(value.maintenanceMode, "Bakım modu"),
-        logoUrl: assetUrl(value.logoUrl, "Logo"),
         faviconUrl: assetUrl(value.faviconUrl, "Favicon"),
       } as SettingsDataMap[S];
     case "appearance":
@@ -84,8 +85,6 @@ export function validateSettingsSection<S extends SettingsSection>(section: S, i
         commentsRequireApproval: boolean(value.commentsRequireApproval, "Yorum ön onayı"),
         blockedWords: stringArray(value.blockedWords, "Yasaklı kelimeler", 200, 80),
         dailyCommentLimit: integer(value.dailyCommentLimit, "Günlük yorum limiti", 1, 500),
-        ratingsEnabled: boolean(value.ratingsEnabled, "Puanlama"),
-        favoritesEnabled: boolean(value.favoritesEnabled, "Favoriler"),
       } as SettingsDataMap[S];
     }
     case "integrations":
@@ -98,15 +97,7 @@ export function validateSettingsSection<S extends SettingsSection>(section: S, i
       } as SettingsDataMap[S];
     case "media":
       return {
-        thumbnailWidth: integer(value.thumbnailWidth, "Küçük görsel genişliği", 80, 1200),
-        thumbnailHeight: integer(value.thumbnailHeight, "Küçük görsel yüksekliği", 80, 1200),
-        thumbnailCrop: boolean(value.thumbnailCrop, "Küçük görsel kırpma"),
-        mediumMaxWidth: integer(value.mediumMaxWidth, "Orta görsel genişliği", 120, 2400),
-        mediumMaxHeight: integer(value.mediumMaxHeight, "Orta görsel yüksekliği", 120, 2400),
-        largeMaxWidth: integer(value.largeMaxWidth, "Büyük görsel genişliği", 240, 4000),
-        largeMaxHeight: integer(value.largeMaxHeight, "Büyük görsel yüksekliği", 240, 4000),
         organizeUploadsByDate: boolean(value.organizeUploadsByDate, "Tarihe göre dosyalama"),
-        defaultCoverUrl: assetUrl(value.defaultCoverUrl, "Varsayılan oyun görseli"),
       } as SettingsDataMap[S];
     case "permalinks": {
       const permalinks = {
@@ -115,7 +106,6 @@ export function validateSettingsSection<S extends SettingsSection>(section: S, i
         tagBase: pathBase(value.tagBase, "Etiket bağlantı tabanı"),
         pageBase: pathBase(value.pageBase, "Sayfa bağlantı tabanı"),
         paginationBase: pathBase(value.paginationBase, "Sayfalama bağlantı tabanı"),
-        redirectLegacyUrls: boolean(value.redirectLegacyUrls, "Eski bağlantıları yönlendir"),
       };
       const uniqueBases = new Set([permalinks.gameBase, permalinks.categoryBase, permalinks.tagBase, permalinks.pageBase]);
       if (uniqueBases.size !== 4) throw new Error("Permalink tabanları birbirinden farklı olmalıdır.");

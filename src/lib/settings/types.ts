@@ -18,7 +18,6 @@ export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 export type GeneralSettings = {
   siteName: string;
   maintenanceMode: boolean;
-  logoUrl: string;
   faviconUrl: string;
 };
 
@@ -80,8 +79,6 @@ export type CommunitySettings = {
   commentsRequireApproval: boolean;
   blockedWords: string[];
   dailyCommentLimit: number;
-  ratingsEnabled: boolean;
-  favoritesEnabled: boolean;
 };
 
 export type IntegrationSettings = {
@@ -93,15 +90,7 @@ export type IntegrationSettings = {
 };
 
 export type MediaSettings = {
-  thumbnailWidth: number;
-  thumbnailHeight: number;
-  thumbnailCrop: boolean;
-  mediumMaxWidth: number;
-  mediumMaxHeight: number;
-  largeMaxWidth: number;
-  largeMaxHeight: number;
   organizeUploadsByDate: boolean;
-  defaultCoverUrl: string;
 };
 
 export type PermalinkSettings = {
@@ -110,7 +99,6 @@ export type PermalinkSettings = {
   tagBase: string;
   pageBase: string;
   paginationBase: string;
-  redirectLegacyUrls: boolean;
 };
 
 export type SecuritySettings = {

@@ -8,7 +8,6 @@ import { getSiteAssetPublicUrl } from "@/lib/site-assets";
 const acceptedInputMimeTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
 const limits = {
   avatar: { width: 4096, height: 4096, pixels: 16_000_000 },
-  logo: { width: 2400, height: 1200, pixels: 8_000_000 },
   favicon: { width: 512, height: 512, pixels: 1_000_000 },
   cover: { width: 3840, height: 2160, pixels: 16_000_000 },
 } as const;
@@ -37,7 +36,7 @@ export type StoredSiteAsset = {
   cacheControl: string;
 };
 
-export async function uploadSiteAsset(file: File, kind: "logo" | "favicon" | "cover" | "avatar", allowedMimeTypes: string[], maxMb: number, options: { organizeByDate?: boolean } = {}) {
+export async function uploadSiteAsset(file: File, kind: "favicon" | "cover" | "avatar", allowedMimeTypes: string[], maxMb: number, options: { organizeByDate?: boolean } = {}) {
   if (!isR2Configured()) throw new Error("Cloudflare R2 yapılandırılmamış.");
   if (!allowedMimeTypes.includes(file.type) || !acceptedInputMimeTypes.has(file.type)) throw new Error("Yalnızca PNG, JPEG veya WebP görseller yüklenebilir.");
   if (file.size < 1 || file.size > maxMb * 1024 * 1024) throw new Error(`Dosya en fazla ${maxMb} MB olabilir.`);

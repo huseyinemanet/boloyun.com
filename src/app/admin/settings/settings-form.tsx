@@ -14,7 +14,10 @@ import { IconVersionsFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconVers
 import { AdminCheckboxField } from "@/components/admin/admin-checkbox-field";
 import { SoundButton } from "@/components/audio/sound-button";
 import { SoundLink } from "@/components/audio/sound-link";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card as ShadcnCard, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -35,8 +38,8 @@ const sectionDescriptions: Record<SettingsSection, string> = {
   ads: "Global reklam davranışları; slot içerikleri ayrı Reklam Yönetimi’nde kalır.",
   community: "Üyelik, kullanıcı adı, yorum ve etkileşim kuralları.",
   integrations: "Analitik sağlayıcı kimlikleri ve servis bağlantılarının durumu.",
-  media: "Kapak görselleri, yükleme düzeni ve varsayılan medya tercihleri.",
-  permalinks: "Public oyun, kategori, etiket ve sayfa bağlantılarının temel yapısı.",
+  media: "Yüklenen dosyaların depoda nasıl düzenleneceğini yönet.",
+  permalinks: "Public oyun, kategori, etiket ve sayfa bağlantılarının yapısını yönet.",
   security: "Dosya yükleme ve oyun iframe domain güvenliği.",
   audio: "Site genelindeki tıklama sesini ve kullanılan ses dosyasını yönet.",
   system: "Uygulama sağlığı, servis durumu ve bakım işlemleri.",
@@ -110,15 +113,15 @@ export function SettingsForm({
       {error ? <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm font-semibold text-destructive">{error}</p> : null}
       {message ? <p role="status" className="rounded-md border border-success/30 bg-success/10 p-3 text-sm font-semibold text-success">{message}</p> : null}
 
-      <div className="sticky bottom-3 z-30 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card/95 p-3 shadow-xl backdrop-blur">
+      {record.section !== "system" ? <div className="sticky bottom-3 z-30 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card/95 p-3 shadow-xl backdrop-blur">
         <div>
           <p className="text-sm font-bold">{isDirty ? `${changeCount} değişiklik kaydedilmedi` : "Tüm değişiklikler kaydedildi"}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <SoundButton type="button" variant="outline" aria-label="Değişiklikleri Sıfırla" onClick={reset} disabled={!isDirty || pending}><IconUndo3FillDuo18 className="size-4" /><span className="hidden sm:inline">Değişiklikleri Sıfırla</span></SoundButton>
-          <SoundButton type="button" aria-label="Değişiklikleri Kaydet" onClick={save} disabled={!isDirty || pending || record.section === "system"}><IconSavedItemsFillDuo18 className="size-4" /><span className="hidden sm:inline">{pending ? "Kaydediliyor…" : "Değişiklikleri Kaydet"}</span></SoundButton>
+          <SoundButton type="button" aria-label="Değişiklikleri Kaydet" onClick={save} disabled={!isDirty || pending}><IconSavedItemsFillDuo18 className="size-4" /><span className="hidden sm:inline">{pending ? "Kaydediliyor…" : "Değişiklikleri Kaydet"}</span></SoundButton>
         </div>
-      </div>
+      </div> : null}
     </div>
   );
 }
@@ -149,17 +152,12 @@ function renderSection(
 
 function GeneralFields({ draft, update }: FieldsProps) {
   return <div className="grid gap-3 xl:grid-cols-2">
-    <Card title="Site bilgileri">
+    <Card title="Marka ve site bilgileri">
       <TextField label="Site adı" value={str(draft.siteName)} onChange={(value) => update("siteName", value)} />
+      <AssetField label="Favicon" value={str(draft.faviconUrl)} kind="favicon" onChange={(value) => update("faviconUrl", value)} />
     </Card>
     <Card title="Erişim">
       <ToggleField label="Bakım modu" description="Public sayfalar yerine bakım ekranını gösterir." checked={bool(draft.maintenanceMode)} onChange={(value) => update("maintenanceMode", value)} />
-    </Card>
-    <Card title="Marka görselleri" className="xl:col-span-2">
-      <div className="grid gap-3 md:grid-cols-2">
-        <AssetField label="Logo" value={str(draft.logoUrl)} kind="logo" onChange={(value) => update("logoUrl", value)} />
-        <AssetField label="Favicon" value={str(draft.faviconUrl)} kind="favicon" onChange={(value) => update("faviconUrl", value)} />
-      </div>
     </Card>
     <Card title="Oyun verilerini dışa aktar" className="xl:col-span-2">
       <p className="text-sm leading-6 text-muted-foreground">Tüm oyunları; Türkçe açıklamalar, nasıl oynanır metni, satır satır kontroller ve özellikler, oynatıcı URL’leri, kategori, etiket, SEO ve teknik alanlarla birlikte CSV olarak indirir.</p>
@@ -204,7 +202,7 @@ function AdFields({ draft, update }: FieldsProps) {
 }
 
 function CommunityFields({ draft, update }: FieldsProps) {
-  return <div className="grid gap-3 xl:grid-cols-2"><Card title="Üyelik"><ToggleField label="Yeni üyelikler" description="Kayıt sayfasını ve kayıt işlemini açar veya kapatır." checked={bool(draft.registrationsEnabled)} onChange={(v) => update("registrationsEnabled", v)} /><div className="grid grid-cols-2 gap-3"><NumberField label="Minimum kullanıcı adı" value={num(draft.usernameMinLength)} min={3} max={20} onChange={(v) => update("usernameMinLength", v)} /><NumberField label="Maksimum kullanıcı adı" value={num(draft.usernameMaxLength)} min={3} max={50} onChange={(v) => update("usernameMaxLength", v)} /></div><TextField label="Kullanıcı adı deseni" value={str(draft.usernamePattern)} onChange={(v) => update("usernamePattern", v)} /><NumberField label="Minimum yaş (0 = kapalı)" value={num(draft.minimumAge)} min={0} max={18} onChange={(v) => update("minimumAge", v)} /><ToggleField label="Profil fotoğrafı" checked={bool(draft.profilePhotoEnabled)} onChange={(v) => update("profilePhotoEnabled", v)} /></Card><Card title="Yorumlar ve etkileşim"><ToggleField label="Yorum sistemi" checked={bool(draft.commentsEnabled)} onChange={(v) => update("commentsEnabled", v)} /><ToggleField label="Yorumlar ön onaya düşsün" checked={bool(draft.commentsRequireApproval)} onChange={(v) => update("commentsRequireApproval", v)} /><ListField label="Yasaklı kelimeler" value={strings(draft.blockedWords)} onChange={(v) => update("blockedWords", v)} /><NumberField label="Günlük yorum limiti" value={num(draft.dailyCommentLimit)} min={1} max={500} onChange={(v) => update("dailyCommentLimit", v)} /><ToggleField label="Oyun reaksiyonları" checked={bool(draft.ratingsEnabled)} onChange={(v) => update("ratingsEnabled", v)} /><ToggleField label="Favoriler" checked={bool(draft.favoritesEnabled)} onChange={(v) => update("favoritesEnabled", v)} /></Card></div>;
+  return <div className="grid gap-3 xl:grid-cols-2"><Card title="Üyelik"><ToggleField label="Yeni üyelikler" description="Kayıt sayfasını ve kayıt işlemini açar veya kapatır." checked={bool(draft.registrationsEnabled)} onChange={(v) => update("registrationsEnabled", v)} /><div className="grid grid-cols-2 gap-3"><NumberField label="Minimum kullanıcı adı" value={num(draft.usernameMinLength)} min={3} max={20} onChange={(v) => update("usernameMinLength", v)} /><NumberField label="Maksimum kullanıcı adı" value={num(draft.usernameMaxLength)} min={3} max={50} onChange={(v) => update("usernameMaxLength", v)} /></div><TextField label="Kullanıcı adı deseni" value={str(draft.usernamePattern)} onChange={(v) => update("usernamePattern", v)} /><NumberField label="Minimum yaş (0 = kapalı)" value={num(draft.minimumAge)} min={0} max={18} onChange={(v) => update("minimumAge", v)} /><ToggleField label="Profil fotoğrafı" checked={bool(draft.profilePhotoEnabled)} onChange={(v) => update("profilePhotoEnabled", v)} /></Card><Card title="Yorumlar"><ToggleField label="Yorum sistemi" checked={bool(draft.commentsEnabled)} onChange={(v) => update("commentsEnabled", v)} /><ToggleField label="Yorumlar ön onaya düşsün" checked={bool(draft.commentsRequireApproval)} onChange={(v) => update("commentsRequireApproval", v)} /><ListField label="Yasaklı kelimeler" value={strings(draft.blockedWords)} onChange={(v) => update("blockedWords", v)} /><NumberField label="Günlük yorum limiti" value={num(draft.dailyCommentLimit)} min={1} max={500} onChange={(v) => update("dailyCommentLimit", v)} /><p className="text-xs leading-5 text-muted-foreground">Reaksiyonlar ve favoriler, Oyun Deneyimi bölümünden yönetilir.</p></Card></div>;
 }
 
 function IntegrationFields({ draft, update, status }: FieldsProps & { status: SystemStatus | null }) {
@@ -213,23 +211,9 @@ function IntegrationFields({ draft, update, status }: FieldsProps & { status: Sy
 
 function MediaFields({ draft, update }: FieldsProps) {
   return <div className="grid gap-3 xl:grid-cols-2">
-    <Card title="Görsel boyutları">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <NumberField label="Küçük görsel genişliği" value={num(draft.thumbnailWidth)} min={80} max={1200} onChange={(v) => update("thumbnailWidth", v)} />
-        <NumberField label="Küçük görsel yüksekliği" value={num(draft.thumbnailHeight)} min={80} max={1200} onChange={(v) => update("thumbnailHeight", v)} />
-      </div>
-      <ToggleField label="Küçük görseli tam ölçüye kırp" description="Kapak kartlarının düzgün görünmesi için önerilir." checked={bool(draft.thumbnailCrop)} onChange={(v) => update("thumbnailCrop", v)} />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <NumberField label="Orta görsel maksimum genişlik" value={num(draft.mediumMaxWidth)} min={120} max={2400} onChange={(v) => update("mediumMaxWidth", v)} />
-        <NumberField label="Orta görsel maksimum yükseklik" value={num(draft.mediumMaxHeight)} min={120} max={2400} onChange={(v) => update("mediumMaxHeight", v)} />
-        <NumberField label="Büyük görsel maksimum genişlik" value={num(draft.largeMaxWidth)} min={240} max={4000} onChange={(v) => update("largeMaxWidth", v)} />
-        <NumberField label="Büyük görsel maksimum yükseklik" value={num(draft.largeMaxHeight)} min={240} max={4000} onChange={(v) => update("largeMaxHeight", v)} />
-      </div>
-    </Card>
-    <Card title="Yükleme tercihleri">
+    <Card title="Dosya düzeni">
       <ToggleField label="Yüklemeleri ay/yıl klasörlerinde düzenle" description="Örn. uploads/2026/07/..." checked={bool(draft.organizeUploadsByDate)} onChange={(v) => update("organizeUploadsByDate", v)} />
-      <AssetField label="Varsayılan oyun kapak görseli" kind="cover" value={str(draft.defaultCoverUrl)} onChange={(v) => update("defaultCoverUrl", v)} />
-      <p className="text-xs leading-5 text-muted-foreground">Bu bölüm görsellerle ilgili kararları tek yerde toplar. R2/CDN bağlantı durumunu Entegrasyonlar ve Sistem bölümlerinde görebilirsin.</p>
+      <p className="text-xs leading-5 text-muted-foreground">Yeni yüklemelerin R2 içindeki klasör yapısını belirler. Mevcut dosyalar taşınmaz.</p>
     </Card>
   </div>;
 }
@@ -247,7 +231,6 @@ function PermalinkFields({ draft, update }: FieldsProps) {
       <TextField label="Etiket bağlantı tabanı" value={tagBase} onChange={(v) => update("tagBase", v)} />
       <TextField label="Statik sayfa bağlantı tabanı" value={pageBase} onChange={(v) => update("pageBase", v)} />
       <TextField label="Sayfalama tabanı" value={paginationBase} onChange={(v) => update("paginationBase", v)} />
-      <ToggleField label="Eski bağlantıları koru/yönlendir" description="Arama motorlarında eski URL’ler varsa açık kalması önerilir." checked={bool(draft.redirectLegacyUrls)} onChange={(v) => update("redirectLegacyUrls", v)} />
     </Card>
     <Card title="Önizleme">
       <PermalinkPreview label="Oyun" href={`/${gameBase}/ates-ve-su`} />
@@ -290,17 +273,28 @@ function HomepageSectionsEditor({ sections, setSections }: { sections: HomepageS
 
 const sectionTypeOptions: Array<[string, string]> = [["latest_games", "Yeni oyunlar"], ["popular_games", "Popüler oyunlar"], ["trending_games", "Trend oyunlar"], ["manual_games", "Manuel oyunlar"], ["category_based", "Kategori bazlı"], ["tag_based", "Etiket bazlı"], ["random_picks", "Rastgele seçimler"]];
 
-function Card({ title, children, className = "", actions }: { title: string; children: React.ReactNode; className?: string; actions?: React.ReactNode }) { return <section className={`rounded-md border border-border bg-card p-4 ${className}`}><div className="mb-3 flex items-center justify-between gap-3"><h3 className="font-semibold">{title}</h3>{actions}</div><div className="grid gap-3">{children}</div></section>; }
+function Card({ title, children, className = "", actions }: { title: string; children: React.ReactNode; className?: string; actions?: React.ReactNode }) {
+  return <ShadcnCard size="sm" className={className}>
+    <CardHeader>
+      <CardTitle><h3>{title}</h3></CardTitle>
+      {actions ? <CardAction>{actions}</CardAction> : null}
+    </CardHeader>
+    <CardContent className="grid gap-3">{children}</CardContent>
+  </ShadcnCard>;
+}
 function PermalinkPreview({ label, href }: { label: string; href: string }) { return <div className="rounded-md border border-border bg-background p-3"><p className="text-xs font-bold text-muted-foreground">{label}</p><p className="mt-1 break-all font-mono text-sm text-foreground">https://boloyun.com{href}</p></div>; }
-function StatusCard({ title, status = "Yapılandırılmadı" }: { title: string; status?: string }) { return <div className="rounded-md border border-border bg-card p-4"><p className="text-sm font-semibold">{title}</p><p className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-bold ${status === "Yapılandırıldı" || status === "Bağlı" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>{status}</p></div>; }
-function SystemCard({ title, value, icon }: { title: string; value: string; icon?: React.ReactNode }) { return <div className="rounded-md border border-border bg-card p-3"><div className="flex items-start justify-between gap-2"><p className="text-xs font-semibold text-muted-foreground">{title}</p>{icon ? <span className="text-primary/80">{icon}</span> : null}</div><p className="mt-1 text-lg font-semibold">{value}</p></div>; }
-function TextField({ label, value, onChange, type = "text", disabled = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; disabled?: boolean }) { return <label className="grid gap-1 text-sm font-bold">{label}<Input type={type} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} /></label>; }
-function TextAreaField({ label, value, onChange, rows = 4 }: { label: string; value: string; onChange: (value: string) => void; rows?: number }) { return <label className="grid gap-1 text-sm font-bold">{label}<Textarea value={value} rows={rows} onChange={(event) => onChange(event.target.value)} /></label>; }
-function NumberField({ label, value, onChange, min, max }: { label: string; value: number; onChange: (value: number) => void; min: number; max: number }) { return <label className="grid gap-1 text-sm font-bold">{label}<Input type="number" value={value} min={min} max={max} onChange={(event) => onChange(Number(event.target.value))} /></label>; }
-function SelectField({ label, value, options, onChange }: { label: string; value: string; options: Array<[string, string]>; onChange: (value: string) => void }) { return <label className="grid gap-1 text-sm font-bold">{label}<Select value={value} onValueChange={onChange}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{options.map(([key, text]) => <SelectItem key={key} value={key}>{text}</SelectItem>)}</SelectContent></Select></label>; }
+function StatusCard({ title, status = "Yapılandırılmadı" }: { title: string; status?: string }) {
+  const ready = status === "Yapılandırıldı" || status === "Bağlı";
+  return <ShadcnCard size="sm"><CardHeader><CardTitle><h3>{title}</h3></CardTitle></CardHeader><CardContent><Badge variant={ready ? "outline" : "secondary"} className={ready ? "border-success/30 bg-success/10 text-success" : undefined}>{status}</Badge></CardContent></ShadcnCard>;
+}
+function SystemCard({ title, value, icon }: { title: string; value: string; icon?: React.ReactNode }) { return <ShadcnCard size="sm"><CardHeader><CardTitle className="text-xs text-muted-foreground"><h3>{title}</h3></CardTitle>{icon ? <CardAction className="text-primary/80">{icon}</CardAction> : null}</CardHeader><CardContent><p className="text-lg font-semibold">{value}</p></CardContent></ShadcnCard>; }
+function TextField({ label, value, onChange, type = "text", disabled = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; disabled?: boolean }) { const id = useId(); return <Field><FieldLabel htmlFor={id}>{label}</FieldLabel><Input id={id} type={type} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} /></Field>; }
+function TextAreaField({ label, value, onChange, rows = 4 }: { label: string; value: string; onChange: (value: string) => void; rows?: number }) { const id = useId(); return <Field><FieldLabel htmlFor={id}>{label}</FieldLabel><Textarea id={id} value={value} rows={rows} onChange={(event) => onChange(event.target.value)} /></Field>; }
+function NumberField({ label, value, onChange, min, max }: { label: string; value: number; onChange: (value: number) => void; min: number; max: number }) { const id = useId(); return <Field><FieldLabel htmlFor={id}>{label}</FieldLabel><Input id={id} type="number" value={value} min={min} max={max} onChange={(event) => onChange(Number(event.target.value))} /></Field>; }
+function SelectField({ label, value, options, onChange }: { label: string; value: string; options: Array<[string, string]>; onChange: (value: string) => void }) { const id = useId(); return <Field><FieldLabel htmlFor={id}>{label}</FieldLabel><Select value={value} onValueChange={onChange}><SelectTrigger id={id} className="w-full"><SelectValue /></SelectTrigger><SelectContent>{options.map(([key, text]) => <SelectItem key={key} value={key}>{text}</SelectItem>)}</SelectContent></Select></Field>; }
 function ToggleField({ label, description, checked, onChange }: { label: string; description?: string; checked: boolean; onChange: (value: boolean) => void }) { return <AdminCheckboxField label={label} description={description} checked={checked} onCheckedChange={(value) => onChange(value === true)} />; }
 function SwitchField({ label, description, checked, onChange }: { label: string; description?: string; checked: boolean; onChange: (value: boolean) => void }) { const id = useId(); return <div className="flex items-center gap-4"><Switch id={id} checked={checked} onCheckedChange={onChange} /><label htmlFor={id} className="grid gap-1 text-sm"><span className="font-bold">{label}</span>{description ? <span className="text-xs font-medium leading-5 text-muted-foreground">{description}</span> : null}</label></div>; }
-function ListField({ label, value, onChange }: { label: string; value: string[]; onChange: (value: string[]) => void }) { return <label className="grid gap-1 text-sm font-bold">{label}<Textarea value={value.join("\n")} rows={5} onChange={(event) => onChange(event.target.value.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean))} /></label>; }
+function ListField({ label, value, onChange }: { label: string; value: string[]; onChange: (value: string[]) => void }) { const id = useId(); return <Field><FieldLabel htmlFor={id}>{label}</FieldLabel><Textarea id={id} value={value.join("\n")} rows={5} onChange={(event) => onChange(event.target.value.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean))} /></Field>; }
 
 function AudioUploadField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -393,7 +387,7 @@ function AudioUploadField({ value, onChange }: { value: string; onChange: (value
   </div>;
 }
 
-function AssetField({ label, value, kind, onChange }: { label: string; value: string; kind: "logo" | "favicon" | "cover"; onChange: (value: string) => void }) {
+function AssetField({ label, value, kind, onChange }: { label: string; value: string; kind: "favicon" | "cover"; onChange: (value: string) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -406,7 +400,7 @@ function useUnsavedChangesWarning(isDirty: boolean) {
 }
 
 function countChangedKeys(left: Draft, right: Draft) { return [...new Set([...Object.keys(left), ...Object.keys(right)])].filter((key) => JSON.stringify(left[key]) !== JSON.stringify(right[key])).length; }
-function sectionTitle(section: SettingsSection) { return ({ general: "Genel", appearance: "Görünüm ve Ana Sayfa", games: "Oyunlar", seo: "SEO", ads: "Reklamlar", community: "Üyelik ve Yorumlar", integrations: "Entegrasyonlar", media: "Media", permalinks: "Permalinks", security: "Güvenlik", audio: "Ses", system: "Sistem" } as const)[section]; }
+function sectionTitle(section: SettingsSection) { return ({ general: "Genel", appearance: "Görünüm ve Ana Sayfa", games: "Oyun Deneyimi", seo: "SEO", ads: "Reklamlar", community: "Üyelik ve Yorumlar", integrations: "Entegrasyonlar", media: "Dosya Yönetimi", permalinks: "Bağlantılar", security: "Güvenlik", audio: "Ses", system: "Sistem" } as const)[section]; }
 function str(value: unknown) { return typeof value === "string" ? value : ""; }
 function bool(value: unknown) { return value === true; }
 function num(value: unknown) { return typeof value === "number" ? value : 0; }

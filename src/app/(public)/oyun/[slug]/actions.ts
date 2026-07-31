@@ -46,8 +46,8 @@ export async function createCommentAction(formData: FormData) {
 }
 
 export async function reactToGameAction(formData: FormData) {
-  const { games, community } = await getPublicSettings();
-  if (!games.likesEnabled || !community.ratingsEnabled) throw new Error("Oyun reaksiyonları şu anda kapalı.");
+  const { games } = await getPublicSettings();
+  if (!games.likesEnabled) throw new Error("Oyun reaksiyonları şu anda kapalı.");
   const gameId = String(formData.get("game_id") ?? "");
   const slug = String(formData.get("slug") ?? "");
   const reaction = String(formData.get("reaction") ?? "");
@@ -67,8 +67,8 @@ export async function reactToGameAction(formData: FormData) {
 }
 
 export async function toggleFavoriteAction(formData: FormData) {
-  const { games, community } = await getPublicSettings();
-  if (!games.favoritesEnabled || !community.favoritesEnabled) throw new Error("Favoriler şu anda kapalı.");
+  const { games } = await getPublicSettings();
+  if (!games.favoritesEnabled) throw new Error("Favoriler şu anda kapalı.");
   const gameId = String(formData.get("game_id") ?? "");
   const slug = String(formData.get("slug") ?? "");
   const desired = formData.get("desired") === "true";

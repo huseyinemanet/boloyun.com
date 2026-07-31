@@ -142,8 +142,8 @@ export default async function GameDetailPage({ params }: Props) {
                     <LazyGameActions
                       gameId={game.id}
                       slug={game.slug}
-                      showVotes={settings.games.likesEnabled && settings.community.ratingsEnabled}
-                      showFavorite={settings.games.favoritesEnabled && settings.community.favoritesEnabled}
+                      showVotes={settings.games.likesEnabled}
+                      showFavorite={settings.games.favoritesEnabled}
                       showShare={settings.games.sharingEnabled}
                       title={game.title}
                     />

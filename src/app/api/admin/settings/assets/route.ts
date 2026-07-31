@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const file = formData.get("file");
     const kind = formData.get("kind");
     if (!(file instanceof File)) return NextResponse.json({ error: "Dosya seçilmedi." }, { status: 400 });
-    if (kind !== "logo" && kind !== "favicon" && kind !== "cover") return NextResponse.json({ error: "Geçersiz görsel alanı." }, { status: 400 });
+    if (kind !== "favicon" && kind !== "cover") return NextResponse.json({ error: "Geçersiz görsel alanı." }, { status: 400 });
     const [{ value: security }, { value: media }] = await Promise.all([
       getSettingsSection("security"),
       getSettingsSection("media"),

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { DEFAULT_SETTINGS } from "@/lib/settings/defaults";
 import { isGameSourceAllowed } from "@/lib/settings/game-security";
@@ -16,8 +17,17 @@ test("unknown setting fields are rejected", () => {
 });
 
 test("pruned legacy setting fields are ignored while reading existing records", () => {
-  assert.deepEqual(validateSettingsSection("general", { ...DEFAULT_SETTINGS.general, contactEmail: "iletisim@boloyun.com", timezone: "Europe/Istanbul", registrationsEnabled: false }), DEFAULT_SETTINGS.general);
-  assert.deepEqual(validateSettingsSection("community", { ...DEFAULT_SETTINGS.community, emailVerificationRequired: false }), DEFAULT_SETTINGS.community);
+  assert.deepEqual(validateSettingsSection("general", { ...DEFAULT_SETTINGS.general, contactEmail: "iletisim@boloyun.com", timezone: "Europe/Istanbul", registrationsEnabled: false, logoUrl: "/logo.svg" }), DEFAULT_SETTINGS.general);
+  assert.deepEqual(validateSettingsSection("community", { ...DEFAULT_SETTINGS.community, emailVerificationRequired: false, ratingsEnabled: false, favoritesEnabled: false }), DEFAULT_SETTINGS.community);
+  assert.deepEqual(validateSettingsSection("media", { ...DEFAULT_SETTINGS.media, thumbnailWidth: 400, thumbnailHeight: 300, thumbnailCrop: true, mediumMaxWidth: 800, mediumMaxHeight: 600, largeMaxWidth: 1200, largeMaxHeight: 900, defaultCoverUrl: "/images/default-game-cover.svg" }), DEFAULT_SETTINGS.media);
+  assert.deepEqual(validateSettingsSection("permalinks", { ...DEFAULT_SETTINGS.permalinks, redirectLegacyUrls: true }), DEFAULT_SETTINGS.permalinks);
+});
+
+test("ineffective settings migration preserves the effective game feature flags", async () => {
+  const sql = await readFile(new URL("../../../supabase/migrations/20260801120000_prune_ineffective_site_settings.sql", import.meta.url), "utf8");
+  assert.match(sql, /likesEnabled[\s\S]+ratingsEnabled/);
+  assert.match(sql, /favoritesEnabled[\s\S]+favoritesEnabled/);
+  assert.doesNotMatch(sql, /delete\s+from\s+public\.games|truncate\s+(table\s+)?public\.games/i);
 });
 
 test("SEO templates reject unknown variables and render known variables", () => {
