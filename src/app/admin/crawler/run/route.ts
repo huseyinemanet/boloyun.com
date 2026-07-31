@@ -4,6 +4,7 @@ import { getCurrentProfile } from "@/lib/auth";
 import { hasTrustedMutationOrigin } from "@/lib/request-security";
 import { parseCrawlerJobInput } from "@/import/crawler/config";
 import { enqueueCrawlerJob, getActiveCrawlerJob, getCrawlerJob, getLatestCrawlerJob } from "@/import/crawler/jobs";
+import { requestBackgroundWorkerWake } from "@/lib/background-worker-wake-client";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -42,6 +43,11 @@ export async function POST(request: Request) {
     }
 
     const job = await enqueueCrawlerJob(input);
+    await requestBackgroundWorkerWake().catch((error) => {
+      console.warn("[crawler] worker wake failed; queued job will be picked up by polling", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
     await recordAdminAudit({
       actorProfileId: profile.id,
       action: "crawler.enqueue",

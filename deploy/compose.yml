@@ -15,6 +15,7 @@ services:
       BOL_OYUN_PROCESS_ROLE: web
       BACKGROUND_WORKER_ENABLED: "false"
       AI_AUTOMATION_WORKER_ENABLED: "false"
+      BACKGROUND_WORKER_WAKE_URL: http://worker:3002/api/internal/worker/wake
     ports:
       - "127.0.0.1:3001:3000"
     volumes:
@@ -57,6 +58,8 @@ services:
       BOL_OYUN_PROCESS_ROLE: worker
       BACKGROUND_WORKER_ENABLED: "true"
       BACKGROUND_WORKER_IDLE_INTERVAL_MS: "15000"
+      BACKGROUND_WORKER_IDLE_BACKOFF_INTERVAL_MS: "60000"
+      BACKGROUND_WORKER_MAX_IDLE_INTERVAL_MS: "300000"
       AI_AUTOMATION_WORKER_ENABLED: "true"
     read_only: true
     tmpfs:
