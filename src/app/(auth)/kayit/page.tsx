@@ -5,6 +5,7 @@ import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui
 import { getPublicSettings } from "@/lib/db-settings";
 import { BotProtectionFields } from "@/components/security/bot-protection-fields";
 import { getCurrentProfile } from "@/lib/auth";
+import { AUTH_PASSWORD_MIN_LENGTH } from "@/lib/auth-password-policy";
 import { redirect } from "next/navigation";
 import { AuthCard, AuthMessage } from "../auth-card";
 import { ValidatedAuthForm, ValidatedInput } from "../validated-auth-form";
@@ -52,8 +53,8 @@ export default async function RegisterPage({ searchParams }: Props) {
             </Field>
             <Field>
               <FieldLabel htmlFor="register-password">Şifre</FieldLabel>
-              <ValidatedInput id="register-password" name="password" type="password" autoComplete="new-password" required minLength={8} serverInvalid={hasPasswordError} aria-describedby={hasPasswordError ? errorDescription : undefined} />
-              <FieldDescription>En az 8 karakter olmalı.</FieldDescription>
+              <ValidatedInput id="register-password" name="password" type="password" autoComplete="new-password" required minLength={AUTH_PASSWORD_MIN_LENGTH} serverInvalid={hasPasswordError} aria-describedby={hasPasswordError ? errorDescription : undefined} />
+              <FieldDescription>En az {AUTH_PASSWORD_MIN_LENGTH} karakter olmalı.</FieldDescription>
             </Field>
             <Field orientation="horizontal" className="items-center bg-transparent p-0">
               <Checkbox id="terms_accepted" name="terms_accepted" required aria-invalid={hasTermsError} aria-describedby={hasTermsError ? errorDescription : undefined} aria-label="Kullanım şartlarını ve gizlilik politikasını kabul ediyorum" />
@@ -83,7 +84,7 @@ export default async function RegisterPage({ searchParams }: Props) {
 
 function getRegisterError(error: string) {
   if (error === "config") return "Üyelik sistemi henüz yapılandırılmamış.";
-  if (error === "password") return "Şifre en az 8 karakter olmalı.";
+  if (error === "password") return `Şifre en az ${AUTH_PASSWORD_MIN_LENGTH} karakter olmalı.`;
   if (error === "terms") return "Kayıt olmak için kullanım şartlarını kabul etmelisin.";
   if (error === "username") return "Kullanıcı adı 3-29 karakter olmalı; harf, sayı, tire veya alt çizgi içerebilir.";
   if (error === "closed") return "Yeni üyelikler şu anda kapalı.";

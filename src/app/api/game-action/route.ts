@@ -1,16 +1,22 @@
 import { randomUUID } from "crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { consumeRateLimits, getClientIp } from "@/lib/abuse";
 import { getCurrentProfile } from "@/lib/auth";
 import { cacheHeaders } from "@/lib/cache-policy";
 import { isGameReaction, setGameReaction } from "@/lib/db-game-reactions";
 import { setProfileFavorite } from "@/lib/db-session-favorites";
+import { hasTrustedMutationOrigin } from "@/lib/request-security";
 
 const gameSessionCookie = "mini_game_session";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  if (!hasTrustedMutationOrigin(request)) {
+    return actionResponse({ error: "Geçersiz istek kaynağı." }, 403);
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -25,11 +31,24 @@ export async function POST(request: Request) {
   const profile = await getCurrentProfile();
 
   if (input.action === "favorite") {
-    if (!profile?.id) {
+    if (!profile?.id || profile.status !== "active") {
       return actionResponse(
-        { error: "Favorilere eklemek için giriş yapmalısın.", isLoggedIn: false },
-        401,
+        {
+          error: profile?.status === "blocked"
+            ? "Hesabın engellenmiş. Bu işlem kullanılamıyor."
+            : "Favorilere eklemek için giriş yapmalısın.",
+          isLoggedIn: false,
+        },
+        profile?.status === "blocked" ? 403 : 401,
       );
+    }
+
+    const rate = await consumeRateLimits([
+      { action: "game-favorite-user", subject: profile.id, limit: 60, windowSeconds: 3600 },
+      { action: "game-favorite-ip", subject: await getClientIp(), limit: 120, windowSeconds: 3600 },
+    ]);
+    if (!rate.allowed) {
+      return actionResponse({ error: "Çok sık favori işlemi yapıldı. Lütfen daha sonra tekrar dene." }, 429, rate.retryAfterSeconds);
     }
 
     const desired = Boolean(input.desired);
@@ -46,6 +65,14 @@ export async function POST(request: Request) {
       : null;
   if ((input.action === "reaction" || input.action === "vote") && isGameReaction(reaction)) {
     try {
+      const rate = await consumeRateLimits([
+        { action: "game-reaction-session", subject: sessionId, limit: 20, windowSeconds: 3600 },
+        { action: "game-reaction-ip", subject: await getClientIp(), limit: 60, windowSeconds: 3600 },
+      ]);
+      if (!rate.allowed) {
+        return actionResponse({ error: "Çok sık reaksiyon gönderildi. Lütfen daha sonra tekrar dene." }, 429, rate.retryAfterSeconds);
+      }
+
       const stats = await setGameReaction(gameId, sessionId, reaction);
       return actionResponse({
         ok: true,
@@ -69,8 +96,10 @@ export async function POST(request: Request) {
   return actionResponse({ error: "Geçersiz işlem." }, 400);
 }
 
-function actionResponse(value: unknown, status = 200) {
-  return NextResponse.json(value, { status, headers: cacheHeaders("privateNoStore") });
+function actionResponse(value: unknown, status = 200, retryAfterSeconds?: number) {
+  const headers = new Headers(cacheHeaders("privateNoStore"));
+  if (retryAfterSeconds) headers.set("Retry-After", String(retryAfterSeconds));
+  return NextResponse.json(value, { status, headers });
 }
 
 async function getOrCreateGameSession() {

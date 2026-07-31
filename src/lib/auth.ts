@@ -3,6 +3,7 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { normalizeSiteAssetUrl } from "@/lib/site-assets";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { adminMfaPath, isAdminMfaSatisfied } from "@/lib/security/admin-mfa";
 
 export type UserRole = "admin" | "member";
 export type UserStatus = "active" | "blocked";
@@ -86,7 +87,13 @@ export async function requireProfile() {
 
 export async function requireAdmin() {
   const profile = await getCurrentProfile();
-  if (profile?.role === "admin" && profile.status === "active") return profile;
+  if (profile?.role === "admin" && profile.status === "active") {
+    const supabase = await createSupabaseServerClient();
+    if (!supabase) redirect(adminMfaPath());
+    const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (!error && isAdminMfaSatisfied(data?.currentLevel)) return profile;
+    redirect(adminMfaPath());
+  }
 
   redirect("/giris?next=/admin");
 }

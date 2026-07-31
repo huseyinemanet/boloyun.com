@@ -3,6 +3,7 @@ import { hasTrustedMutationOrigin } from "@/lib/request-security";
 import { publicUrlFromRequest } from "@/lib/request-origin";
 import { createSupabaseRouteClient } from "@/lib/supabase/server";
 import { hasValidPasswordRecoveryCookie, PASSWORD_RECOVERY_COOKIE } from "@/lib/auth-recovery";
+import { meetsAuthPasswordMinimum } from "@/lib/auth-password-policy";
 
 export async function POST(request: NextRequest) {
   if (!hasTrustedMutationOrigin(request)) return redirectTo(request, "/sifre-yenile?error=form");
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const password = String(formData.get("password") ?? "");
   const passwordConfirmation = String(formData.get("password_confirmation") ?? "");
-  if (password.length < 8) return routeClient.applyTo(redirectTo(request, "/sifre-yenile?error=weak"));
+  if (!meetsAuthPasswordMinimum(password)) return routeClient.applyTo(redirectTo(request, "/sifre-yenile?error=weak"));
   if (password !== passwordConfirmation) return routeClient.applyTo(redirectTo(request, "/sifre-yenile?error=mismatch"));
 
   const { error } = await routeClient.supabase.auth.updateUser({ password });

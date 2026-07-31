@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasValidPasswordRecoveryCookie, PASSWORD_RECOVERY_COOKIE } from "@/lib/auth-recovery";
+import { AUTH_PASSWORD_MIN_LENGTH } from "@/lib/auth-password-policy";
 import { AuthCard, AuthMessage } from "../auth-card";
 import { ValidatedAuthForm, ValidatedInput } from "../validated-auth-form";
 
@@ -20,7 +21,7 @@ export default async function UpdatePasswordPage({ searchParams }: Props) {
   const canUpdatePassword = Boolean(user?.id && hasValidPasswordRecoveryCookie(recoveryCookie, user.id));
 
   return (
-    <AuthCard title="Yeni Şifre Belirle" description="Hesabın için en az 8 karakterli yeni bir şifre seç.">
+    <AuthCard title="Yeni Şifre Belirle" description={`Hesabın için en az ${AUTH_PASSWORD_MIN_LENGTH} karakterli yeni bir şifre seç.`}>
       {error ? <AuthMessage id="password-form-error" type="error">{getPasswordError(error)}</AuthMessage> : null}
       {canUpdatePassword && user ? (
           <ValidatedAuthForm action="/auth/update-password" className="mt-4">
@@ -28,12 +29,12 @@ export default async function UpdatePasswordPage({ searchParams }: Props) {
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="new-password">Yeni şifre</FieldLabel>
-                <ValidatedInput id="new-password" name="password" type="password" autoComplete="new-password" required minLength={8} serverInvalid={error === "weak" || error === "mismatch" || error === "form"} aria-describedby={error ? "password-form-error" : undefined} />
-                <FieldDescription>En az 8 karakter olmalı.</FieldDescription>
+                <ValidatedInput id="new-password" name="password" type="password" autoComplete="new-password" required minLength={AUTH_PASSWORD_MIN_LENGTH} serverInvalid={error === "weak" || error === "mismatch" || error === "form"} aria-describedby={error ? "password-form-error" : undefined} />
+                <FieldDescription>En az {AUTH_PASSWORD_MIN_LENGTH} karakter olmalı.</FieldDescription>
               </Field>
               <Field>
                 <FieldLabel htmlFor="new-password-confirmation">Yeni şifre tekrar</FieldLabel>
-                <ValidatedInput id="new-password-confirmation" name="password_confirmation" type="password" autoComplete="new-password" required minLength={8} serverInvalid={error === "mismatch" || error === "form"} aria-describedby={error ? "password-form-error" : undefined} />
+                <ValidatedInput id="new-password-confirmation" name="password_confirmation" type="password" autoComplete="new-password" required minLength={AUTH_PASSWORD_MIN_LENGTH} serverInvalid={error === "mismatch" || error === "form"} aria-describedby={error ? "password-form-error" : undefined} />
               </Field>
               <Field>
                 <Button className="h-10 w-full px-4 text-sm font-semibold">Şifreyi Güncelle</Button>
@@ -51,7 +52,7 @@ export default async function UpdatePasswordPage({ searchParams }: Props) {
 }
 
 function getPasswordError(error: string) {
-  if (error === "weak") return "Şifre en az 8 karakter olmalı.";
+  if (error === "weak") return `Şifre en az ${AUTH_PASSWORD_MIN_LENGTH} karakter olmalı.`;
   if (error === "mismatch") return "Yazdığın şifreler birbiriyle eşleşmiyor.";
   if (error === "form") return "Form gönderilemedi. Lütfen tekrar dene.";
   if (error === "config") return "Üyelik sistemi henüz yapılandırılmamış.";

@@ -25,6 +25,19 @@ test("GitHub Actions immutable SHA değerlerine sabitlenmiştir", () => {
   assert.match(workflow, /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/);
   assert.match(workflow, /actions\/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c/);
   assert.doesNotMatch(workflow, /uses:\s+[^\s]+@v\d+/);
+  assert.match(workflow, /pnpm audit --prod --audit-level high/);
+});
+
+test("üretim bağımlılık ağacı yamalı Sharp sürümünü zorlar ve shadcn CLI geliştirmede kalır", () => {
+  const packageJson = JSON.parse(readFileSync(path.join(process.cwd(), "package.json"), "utf8")) as {
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+  };
+  const workspace = readFileSync(path.join(process.cwd(), "pnpm-workspace.yaml"), "utf8");
+
+  assert.equal(packageJson.dependencies?.shadcn, undefined);
+  assert.equal(packageJson.devDependencies?.shadcn, "4.16.1");
+  assert.match(workspace, /'next>sharp': 0\.35\.3/);
 });
 
 test("Ruffle sabit npm sürümünden self-host edilir ve CSP genel HTTPS scriptine izin vermez", () => {

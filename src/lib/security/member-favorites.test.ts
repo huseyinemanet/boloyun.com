@@ -6,8 +6,20 @@ import test from "node:test";
 test("anonim ziyaretçi API üzerinden favori ekleyemez", () => {
   const route = readFileSync(path.join(process.cwd(), "src/app/api/game-action/route.ts"), "utf8");
 
-  assert.match(route, /if \(!profile\?\.id\)[\s\S]*?401/);
+  assert.match(route, /if \(!profile\?\.id \|\| profile\.status !== "active"\)[\s\S]*?401/);
   assert.doesNotMatch(route, /setSessionFavorite/);
+});
+
+test("oyun aksiyonu same-origin, aktif hesap ve oran sınırı uygular", () => {
+  const route = readFileSync(path.join(process.cwd(), "src/app/api/game-action/route.ts"), "utf8");
+
+  assert.match(route, /hasTrustedMutationOrigin\(request\)/);
+  assert.match(route, /profile\.status !== "active"/);
+  assert.match(route, /game-favorite-user/);
+  assert.match(route, /game-favorite-ip/);
+  assert.match(route, /game-reaction-session/);
+  assert.match(route, /game-reaction-ip/);
+  assert.match(route, /Retry-After/);
 });
 
 test("anonim favori durumu oturum çerezinden okunmaz", () => {

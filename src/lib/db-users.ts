@@ -222,6 +222,14 @@ export async function updateAdminUser(profileId: string, input: {
     throw new Error(`Kullanıcı güncellenemedi: ${error.message}`);
   }
   await updateAdminProfilesAtomic([profileId], input.role, input.status);
+  if (input.status !== existing.status) {
+    try {
+      await setAuthUserBlocked(existing.userId, input.status === "blocked");
+    } catch (authStatusError) {
+      await updateAdminProfilesAtomic([profileId], existing.role, existing.status);
+      throw authStatusError;
+    }
+  }
 }
 
 export async function updateAdminUsersStatus(ids: string[], status: UserStatus) {
@@ -229,7 +237,30 @@ export async function updateAdminUsersStatus(ids: string[], status: UserStatus) 
   if (!supabase) throw new Error("Supabase service client yok.");
   if (!ids.length) return;
 
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, user_id, status")
+    .in("id", ids);
+  if (error) throw new Error(`Kullanıcı durumları okunamadı: ${error.message}`);
+  const profiles = (data ?? []) as Array<{ id: string; user_id: string; status: UserStatus }>;
+
   await updateAdminProfilesAtomic(ids, null, status);
+  const authUpdated: typeof profiles = [];
+  try {
+    for (const profile of profiles) {
+      await setAuthUserBlocked(profile.user_id, status === "blocked");
+      authUpdated.push(profile);
+    }
+  } catch (authStatusError) {
+    for (const profile of authUpdated) {
+      await setAuthUserBlocked(profile.user_id, profile.status === "blocked").catch(() => undefined);
+    }
+    for (const previousStatus of ["active", "blocked"] as const) {
+      const profileIds = profiles.filter((profile) => profile.status === previousStatus).map((profile) => profile.id);
+      if (profileIds.length) await updateAdminProfilesAtomic(profileIds, null, previousStatus);
+    }
+    throw authStatusError;
+  }
 }
 
 export async function updateAdminUsersRole(ids: string[], role: UserRole) {
@@ -304,6 +335,15 @@ async function updateAdminProfilesAtomic(ids: string[], role: UserRole | null, s
     p_status: status,
   });
   if (error) throw new Error(error.message.includes("last active admin") ? "Son aktif yönetici kaldırılamaz." : `Kullanıcı yetkisi güncellenemedi: ${error.message}`);
+}
+
+async function setAuthUserBlocked(userId: string, blocked: boolean) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) throw new Error("Supabase service client yok.");
+  const { error } = await supabase.auth.admin.updateUserById(userId, {
+    ban_duration: blocked ? "876000h" : "none",
+  });
+  if (error) throw new Error(`Auth oturum durumu güncellenemedi: ${error.message}`);
 }
 
 async function upsertProfileForAuthUser(userId: string, values: Record<string, string>) {

@@ -1,3 +1,5 @@
+import { AUTH_PASSWORD_MIN_LENGTH } from "@/lib/auth-password-policy";
+
 export type AdminUserCreateRole = "admin" | "member";
 
 export type AdminUserCreateValues = {
@@ -43,7 +45,7 @@ export function validateAdminUserCreateValues(values: AdminUserCreateValues): Ad
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) errors.email = "Geçerli bir e-posta girin.";
 
   if (!values.password) errors.password = "Geçici şifre gerekli.";
-  else if (values.password.length < 8) errors.password = "Geçici şifre en az 8 karakter olmalı.";
+  else if (values.password.length < AUTH_PASSWORD_MIN_LENGTH) errors.password = `Geçici şifre en az ${AUTH_PASSWORD_MIN_LENGTH} karakter olmalı.`;
 
   return errors;
 }
