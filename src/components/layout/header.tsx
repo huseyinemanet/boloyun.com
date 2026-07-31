@@ -16,7 +16,7 @@ const sectionLinks = [
 
 export async function Header() {
   const settings = await getPublicSettings();
-  const showRegister = settings.general.registrationsEnabled && settings.community.registrationsEnabled;
+  const showRegister = settings.community.registrationsEnabled;
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">

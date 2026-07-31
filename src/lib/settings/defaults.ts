@@ -4,7 +4,6 @@ export const DEFAULT_SETTINGS: SettingsDataMap = {
   general: {
     siteName: "Bol Oyun",
     maintenanceMode: false,
-    registrationsEnabled: true,
     logoUrl: "/logo.svg",
     faviconUrl: "/favicon.ico",
   },

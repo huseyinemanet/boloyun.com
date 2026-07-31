@@ -18,8 +18,8 @@ export default async function RegisterPage({ searchParams }: Props) {
   const profile = await getCurrentProfile();
   if (profile) redirect("/profil");
 
-  const { general, community } = await getPublicSettings();
-  const registrationsEnabled = general.registrationsEnabled && community.registrationsEnabled;
+  const { community } = await getPublicSettings();
+  const registrationsEnabled = community.registrationsEnabled;
   const registerError = error ? getRegisterError(error) : "";
   const errorDescription = error ? "register-form-error" : undefined;
   const hasUsernameError = error === "username" || error === "form" || error === "create";

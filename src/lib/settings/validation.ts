@@ -5,7 +5,7 @@ const TEMPLATE_VARIABLES = new Set(["site_adı", "oyun_adı", "kategori_adı", "
 const ALLOWED_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/x-icon", "image/vnd.microsoft.icon"]);
 const RESERVED_PATH_BASES = new Set(["", "admin", "api", "auth", "_next", "giris", "kayit", "profil", "rastgele", "arama", "kategoriler"]);
 const LEGACY_SETTINGS_KEYS: Partial<Record<SettingsSection, string[]>> = {
-  general: ["tagline", "description", "contactEmail", "locale", "timezone", "defaultCoverUrl"],
+  general: ["tagline", "description", "contactEmail", "locale", "timezone", "defaultCoverUrl", "registrationsEnabled"],
   community: ["emailVerificationRequired"],
 };
 
@@ -18,7 +18,6 @@ export function validateSettingsSection<S extends SettingsSection>(section: S, i
       return {
         siteName: text(value.siteName, "Site adı", 2, 80),
         maintenanceMode: boolean(value.maintenanceMode, "Bakım modu"),
-        registrationsEnabled: boolean(value.registrationsEnabled, "Yeni üyelikler"),
         logoUrl: assetUrl(value.logoUrl, "Logo"),
         faviconUrl: assetUrl(value.faviconUrl, "Favicon"),
       } as SettingsDataMap[S];

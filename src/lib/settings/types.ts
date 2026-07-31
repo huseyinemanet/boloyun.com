@@ -18,7 +18,6 @@ export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 export type GeneralSettings = {
   siteName: string;
   maintenanceMode: boolean;
-  registrationsEnabled: boolean;
   logoUrl: string;
   faviconUrl: string;
 };

@@ -26,8 +26,8 @@ export async function POST(request: NextRequest) {
   const { data: currentUser } = await routeClient.supabase.auth.getUser();
   if (currentUser.user) return routeClient.applyTo(redirectTo(request, "/profil"));
 
-  const { general, community } = await getPublicSettings();
-  if (!general.registrationsEnabled || !community.registrationsEnabled) return redirectTo(request, "/kayit?error=closed");
+  const { community } = await getPublicSettings();
+  if (!community.registrationsEnabled) return redirectTo(request, "/kayit?error=closed");
 
   const email = String(formData.get("email") ?? "").trim().toLocaleLowerCase("tr-TR");
   const password = String(formData.get("password") ?? "");

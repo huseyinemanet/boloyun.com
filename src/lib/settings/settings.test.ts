@@ -16,7 +16,7 @@ test("unknown setting fields are rejected", () => {
 });
 
 test("pruned legacy setting fields are ignored while reading existing records", () => {
-  assert.deepEqual(validateSettingsSection("general", { ...DEFAULT_SETTINGS.general, contactEmail: "iletisim@boloyun.com", timezone: "Europe/Istanbul" }), DEFAULT_SETTINGS.general);
+  assert.deepEqual(validateSettingsSection("general", { ...DEFAULT_SETTINGS.general, contactEmail: "iletisim@boloyun.com", timezone: "Europe/Istanbul", registrationsEnabled: false }), DEFAULT_SETTINGS.general);
   assert.deepEqual(validateSettingsSection("community", { ...DEFAULT_SETTINGS.community, emailVerificationRequired: false }), DEFAULT_SETTINGS.community);
 });
 
