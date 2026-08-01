@@ -178,6 +178,14 @@ Sidebar rules:
 3. Category icons can be SVG upload, SVG code or fallback icon.
 4. Mobile must not use the fixed desktop sidebar. Use drawer, bottom nav or horizontal category chips.
 
+## Interaction Sound Rules
+
+1. Every enabled, user-initiated link or link-like navigation control must play the configured click sound exactly once before navigation.
+2. Reuse the existing `SoundLink`, `SoundAnchor`, `data-click-sound="true"` or `useClickSound()` paths instead of creating a separate audio implementation.
+3. Components that own navigation directly, including custom menus, selects and `router.push` flows, must call `playClickSound()` explicitly; do not rely on document-level delegated click handling when navigation can unmount the listener first.
+4. Disabled controls and links that do not navigate must not play the navigation sound.
+5. After adding or refactoring navigation, verify the sound behavior on both desktop links and mobile navigation controls and add a regression test for any custom navigation path.
+
 ## Game Player Rules
 
 Every game must have a `game_type`.

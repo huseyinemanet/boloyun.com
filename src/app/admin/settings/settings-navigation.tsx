@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SoundLink } from "@/components/audio/sound-link";
+import type { MouseEvent } from "react";
+import { useClickSound } from "@/components/audio/click-sound-provider";
 import {
   Select,
   SelectContent,
@@ -51,12 +53,34 @@ export const SETTINGS_NAVIGATION_GROUPS = [
 
 export function SettingsNavigation() {
   const pathname = usePathname();
+  const { playClickSound } = useClickSound();
   const activeKey = getActiveKey(pathname);
+
+  function navigateFromMobile(key: string) {
+    if (key === activeKey) return;
+    playClickSound();
+    window.setTimeout(() => window.location.assign(`/admin/settings/${key}`), 60);
+  }
+
+  function playNavigationSound(event: MouseEvent<HTMLAnchorElement>, href: string) {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.altKey ||
+      event.shiftKey ||
+      pathname === href
+    ) {
+      return;
+    }
+    playClickSound();
+  }
 
   return (
     <>
       <div className="xl:hidden">
-        <Select value={activeKey} onValueChange={(key) => window.location.assign(`/admin/settings/${key}`)}>
+        <Select value={activeKey} onValueChange={navigateFromMobile}>
           <SelectTrigger className="w-full" aria-label="Ayar bölümü seç">
             <SelectValue />
           </SelectTrigger>
@@ -80,17 +104,18 @@ export function SettingsNavigation() {
                 const href = `/admin/settings/${key}`;
                 const active = pathname === href;
                 return (
-                  <SoundLink
+                  <Link
                     key={key}
                     href={href}
                     aria-current={active ? "page" : undefined}
+                    onClick={(event) => playNavigationSound(event, href)}
                     className={cn(
                       "block rounded-md px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       active && "bg-accent font-semibold text-foreground",
                     )}
                   >
                     {label}
-                  </SoundLink>
+                  </Link>
                 );
               })}
             </div>
