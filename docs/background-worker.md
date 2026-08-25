@@ -52,18 +52,18 @@ BACKGROUND_WORKER_AI_LIMIT=5
 
 ## İlk production geçişi
 
-Production Compose ve deploy scripti repo dışında yaşadığı için bu mimariye geçerken deploy yardımcısı bir kez root yetkisiyle hazırlanmalıdır. Mevcut Compose dosyası ilk aday başarıyla doğrulanmadan değiştirilmez; böylece başarısız aday eski tek-servis düzenine dönebilir.
+Production Compose, deploy scripti ve imza public key'i repo dışında root-owned olarak yaşar. Bu dosyalar routine deploy artefaktından kurulmaz; ilk geçişte ve sonraki altyapı değişikliklerinde ayrı root/operator kanalı gerekir.
 
 Sıra önemlidir:
 
 1. `20260720200000_crawler_worker_queue.sql` migration'ını dry-run ile doğrulayın ve Supabase'e uygulayın.
 2. `INTERNAL_HEALTH_CHECK_TOKEN` değerini production env dosyasına ekleyin.
-3. Repodaki `deploy/server/boloyun-deploy` dosyasını `/usr/local/sbin/boloyun-deploy` konumuna executable olarak kurun.
-4. Mevcut `/opt/boloyun/compose.yml` dosyasını yerinde bırakın.
-5. Sonraki `main` deploy'unu çalıştırın. Aday app ve worker healthy olursa deploy scripti sürümlü `deploy/compose.yml` dosyasını atomik olarak kurar.
+3. Ed25519 keypair üretin; private key'i yalnız GitHub `VPS_DEPLOY_SIGNING_PRIVATE_KEY` secret'ına, public key'i root-owned `/etc/boloyun/deploy-signing-public.pem` konumuna kurun.
+4. Repodaki `deploy/compose.yml` dosyasını root-owned `/opt/boloyun/compose.yml`, `deploy/server/boloyun-deploy` dosyasını executable `/usr/local/sbin/boloyun-deploy` olarak bağımsız root kanalıyla kurun.
+5. Sonraki `main` deploy'unu çalıştırın. Root helper yalnız imzalı image manifestini kabul eder ve sabit Compose ile aday app/worker servislerini başlatır.
 6. İki container'ın da healthy olduğunu doğrulayın.
 
-İlk geçişten sonra GitHub Actions her image ile sürümlü Compose ve deploy scriptini de VPS&apos;ye gönderir. Deploy scripti aday iki servisi başlatır; app ve worker sağlık kontrolleri geçerse yeni runtime dosyalarını kalıcı konumlarına atomik olarak kurar. Başarısız adayda önceki image ve Compose düzenine geri döner.
+İlk geçişten sonra GitHub Actions yalnız image arşivi, manifest ve Ed25519 imzasını VPS&apos;ye gönderir. Deploy helper dosyaları root-owned staging alanına kopyalar; imza, manifest, SHA-256 ve image ID doğrulamasından sonra sabit Compose ile aday servisleri başlatır. Başarısız adayda aynı sabit Compose ile önceki image'a geri döner.
 
 ## Doğrulama
 

@@ -3,16 +3,34 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-test("service role secret Docker katmanına veya build arg'a yazılmaz", () => {
+test("service role secret production image build sürecine hiç girmez", () => {
   const dockerfile = readFileSync(path.join(process.cwd(), "Dockerfile"), "utf8");
   const workflow = readFileSync(path.join(process.cwd(), ".github/workflows/quality.yml"), "utf8");
 
   assert.doesNotMatch(dockerfile, /^(ARG|ENV) SUPABASE_SERVICE_ROLE_KEY/m);
   assert.doesNotMatch(workflow, /--build-arg SUPABASE_SERVICE_ROLE_KEY/);
-  assert.match(dockerfile, /--mount=type=secret,id=supabase_service_role_key,required=true/);
+  assert.doesNotMatch(dockerfile, /SUPABASE_SERVICE_ROLE_KEY|supabase_service_role_key/);
+  assert.doesNotMatch(workflow, /SUPABASE_SERVICE_ROLE_KEY|supabase_service_role_key/);
   assert.match(dockerfile, /BOL_OYUN_PREBUILD_FALLBACK=1/);
-  assert.match(dockerfile, /SUPABASE_SERVICE_ROLE_KEY="\$\(cat \/run\/secrets\/supabase_service_role_key\)" pnpm build/);
-  assert.match(workflow, /secrets: \|\n\s+supabase_service_role_key=\$\{\{ secrets\.SUPABASE_SERVICE_ROLE_KEY \}\}/);
+});
+
+test("routine deploy yalnız imzalı image paketini taşır", () => {
+  const workflow = readFileSync(path.join(process.cwd(), ".github/workflows/quality.yml"), "utf8");
+  const deploy = readFileSync(path.join(process.cwd(), "deploy/server/boloyun-deploy"), "utf8");
+  const compose = readFileSync(path.join(process.cwd(), "deploy/compose.yml"), "utf8");
+
+  assert.match(workflow, /VPS_DEPLOY_SIGNING_PRIVATE_KEY/);
+  assert.match(workflow, /openssl pkeyutl -sign -rawin/);
+  assert.match(workflow, /boloyun-\$\{\{ github\.sha \}\}\.manifest/);
+  assert.match(workflow, /boloyun-\$\{\{ github\.sha \}\}\.sig/);
+  assert.doesNotMatch(workflow, /boloyun-compose-|boloyun-deploy-\$\{GITHUB_SHA\}/);
+  assert.match(deploy, /openssl pkeyutl -verify -pubin/);
+  assert.ok(deploy.indexOf("pkeyutl -verify") < deploy.indexOf("docker load"));
+  assert.ok(deploy.indexOf("actual_archive_sha256") < deploy.indexOf("docker load"));
+  assert.doesNotMatch(deploy, /candidate_compose|candidate_deploy|install .*\/usr\/local\/sbin\/boloyun-deploy/);
+  assert.match(deploy, /-f "\$compose_file"/);
+  assert.match(compose, /pull_policy: never/g);
+  assert.match(compose, /user: "1001:1001"/g);
 });
 
 test("GitHub Actions immutable SHA değerlerine sabitlenmiştir", () => {

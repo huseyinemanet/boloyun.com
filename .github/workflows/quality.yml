@@ -46,8 +46,6 @@ jobs:
             NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
             NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
             SITE_URL=https://boloyun.com
-          secrets: |
-            supabase_service_role_key=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           cache-from: type=gha,scope=production-image
           cache-to: type=gha,mode=max,scope=production-image
 
@@ -72,22 +70,33 @@ jobs:
             NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
             NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
             SITE_URL=https://boloyun.com
-          secrets: |
-            supabase_service_role_key=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           cache-from: type=gha,scope=production-image
       - name: Package production image
+        env:
+          DEPLOY_SIGNING_PRIVATE_KEY: ${{ secrets.VPS_DEPLOY_SIGNING_PRIVATE_KEY }}
         run: |
-          docker save "${IMAGE_NAME}" | gzip -1 > "boloyun-${GITHUB_SHA}.tar.gz"
-          cp deploy/compose.yml "boloyun-compose-${GITHUB_SHA}.yml"
-          cp deploy/server/boloyun-deploy "boloyun-deploy-${GITHUB_SHA}"
+          set -Eeuo pipefail
+          key_file="${RUNNER_TEMP}/boloyun-deploy-signing-private.pem"
+          trap 'rm -f "$key_file"' EXIT
+          install -m 600 /dev/null "$key_file"
+          printf '%s\n' "$DEPLOY_SIGNING_PRIVATE_KEY" > "$key_file"
+          archive="boloyun-${GITHUB_SHA}.tar.gz"
+          manifest="boloyun-${GITHUB_SHA}.manifest"
+          signature="boloyun-${GITHUB_SHA}.sig"
+          docker save "${IMAGE_NAME}" | gzip -1 > "$archive"
+          archive_sha256="$(sha256sum "$archive" | cut -d' ' -f1)"
+          image_id="$(docker image inspect --format '{{.Id}}' "${IMAGE_NAME}")"
+          printf 'schema_version=1\nrevision=%s\nimage_tag=%s\nimage_id=%s\narchive_name=%s\narchive_sha256=%s\n' \
+            "$GITHUB_SHA" "$IMAGE_NAME" "$image_id" "$archive" "$archive_sha256" > "$manifest"
+          openssl pkeyutl -sign -rawin -inkey "$key_file" -in "$manifest" -out "$signature"
       - name: Store production image
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: production-image-${{ github.sha }}
           path: |
             boloyun-${{ github.sha }}.tar.gz
-            boloyun-compose-${{ github.sha }}.yml
-            boloyun-deploy-${{ github.sha }}
+            boloyun-${{ github.sha }}.manifest
+            boloyun-${{ github.sha }}.sig
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
@@ -107,7 +116,7 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: production-image-${{ github.sha }}
-          path: /tmp/boloyun-deploy-artifact
+          path: /tmp/boloyun-release-artifact
       - name: Configure production SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
@@ -121,9 +130,9 @@ jobs:
       - name: Upload production image
         run: |
           scp -o BatchMode=yes \
-            "/tmp/boloyun-deploy-artifact/boloyun-${GITHUB_SHA}.tar.gz" \
-            "/tmp/boloyun-deploy-artifact/boloyun-compose-${GITHUB_SHA}.yml" \
-            "/tmp/boloyun-deploy-artifact/boloyun-deploy-${GITHUB_SHA}" \
+            "/tmp/boloyun-release-artifact/boloyun-${GITHUB_SHA}.tar.gz" \
+            "/tmp/boloyun-release-artifact/boloyun-${GITHUB_SHA}.manifest" \
+            "/tmp/boloyun-release-artifact/boloyun-${GITHUB_SHA}.sig" \
             "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/${{ secrets.VPS_USER }}/"
       - name: Deploy and verify production
         run: ssh -o BatchMode=yes "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "sudo -n /usr/local/sbin/boloyun-deploy '${GITHUB_SHA}'"

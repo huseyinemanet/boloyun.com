@@ -5,6 +5,7 @@ readonly project_dir="/opt/boloyun"
 readonly compose_file="$project_dir/compose.yml"
 readonly runtime_env="$project_dir/.env.production"
 readonly state_file="$project_dir/.deploy.env"
+readonly public_key="/etc/boloyun/deploy-signing-public.pem"
 readonly deploy_user="boloyun-deploy"
 readonly container_name="boloyun-app"
 readonly worker_container_name="boloyun-worker"
@@ -15,17 +16,75 @@ if [[ ! "$revision" =~ ^[0-9a-f]{40}$ ]]; then
   exit 2
 fi
 
-archive="/home/$deploy_user/boloyun-$revision.tar.gz"
-candidate_compose="/home/$deploy_user/boloyun-compose-$revision.yml"
-candidate_deploy="/home/$deploy_user/boloyun-deploy-$revision"
-if [[ ! -f "$archive" || ! -f "$candidate_compose" || ! -f "$candidate_deploy" ]]; then
-  echo "Deployment image or runtime configuration is missing." >&2
-  exit 3
+incoming_archive="/home/$deploy_user/boloyun-$revision.tar.gz"
+incoming_manifest="/home/$deploy_user/boloyun-$revision.manifest"
+incoming_signature="/home/$deploy_user/boloyun-$revision.sig"
+for input in "$incoming_archive" "$incoming_manifest" "$incoming_signature"; do
+  if [[ ! -f "$input" || -L "$input" ]]; then
+    echo "Signed deployment artifact is missing or invalid." >&2
+    exit 3
+  fi
+done
+for root_file in "$compose_file" "$runtime_env" "$public_key"; do
+  if [[ ! -f "$root_file" || -L "$root_file" || "$(stat -c '%U:%G' "$root_file")" != "root:root" ]]; then
+    echo "Root-owned production configuration is missing or invalid: $root_file" >&2
+    exit 4
+  fi
+done
+
+staging_dir="$(mktemp -d "$project_dir/.deploy-staging.XXXXXX")"
+chmod 700 "$staging_dir"
+archive="$staging_dir/boloyun-$revision.tar.gz"
+manifest="$staging_dir/boloyun-$revision.manifest"
+signature="$staging_dir/boloyun-$revision.sig"
+candidate_state=""
+rollback_state=""
+cleanup() {
+  if [[ -n "$candidate_state" ]]; then rm -f -- "$candidate_state"; fi
+  if [[ -n "$rollback_state" ]]; then rm -f -- "$rollback_state"; fi
+  rm -rf -- "$staging_dir"
+  rm -f -- "$incoming_archive" "$incoming_manifest" "$incoming_signature"
+}
+trap cleanup EXIT
+install -o root -g root -m 600 "$incoming_archive" "$archive"
+install -o root -g root -m 600 "$incoming_manifest" "$manifest"
+install -o root -g root -m 600 "$incoming_signature" "$signature"
+
+if ! openssl pkeyutl -verify -pubin -inkey "$public_key" -rawin -in "$manifest" -sigfile "$signature" >/dev/null; then
+  echo "Deployment signature is invalid." >&2
+  exit 7
 fi
-if [[ ! -f "$compose_file" || ! -f "$runtime_env" ]]; then
-  echo "Production Compose or environment file is missing." >&2
-  exit 4
+
+mapfile -t manifest_lines < "$manifest"
+if [[ "${#manifest_lines[@]}" -ne 6 \
+  || "${manifest_lines[0]}" != "schema_version=1" \
+  || "${manifest_lines[1]}" != revision=* \
+  || "${manifest_lines[2]}" != image_tag=* \
+  || "${manifest_lines[3]}" != image_id=* \
+  || "${manifest_lines[4]}" != archive_name=* \
+  || "${manifest_lines[5]}" != archive_sha256=* ]]; then
+  echo "Deployment manifest is invalid." >&2
+  exit 8
 fi
+manifest_revision="${manifest_lines[1]#revision=}"
+manifest_image_tag="${manifest_lines[2]#image_tag=}"
+manifest_image_id="${manifest_lines[3]#image_id=}"
+manifest_archive_name="${manifest_lines[4]#archive_name=}"
+manifest_archive_sha256="${manifest_lines[5]#archive_sha256=}"
+if [[ "$manifest_revision" != "$revision" \
+  || "$manifest_image_tag" != "boloyun:$revision" \
+  || ! "$manifest_image_id" =~ ^sha256:[0-9a-f]{64}$ \
+  || "$manifest_archive_name" != "boloyun-$revision.tar.gz" \
+  || ! "$manifest_archive_sha256" =~ ^[0-9a-f]{64}$ ]]; then
+  echo "Deployment manifest does not match the requested revision." >&2
+  exit 9
+fi
+actual_archive_sha256="$(sha256sum "$archive" | cut -d' ' -f1)"
+if [[ "$actual_archive_sha256" != "$manifest_archive_sha256" ]]; then
+  echo "Deployment archive checksum is invalid." >&2
+  exit 10
+fi
+
 install -d -o 1001 -g 1001 -m 750 "$project_dir/cache"
 
 read_state() {
@@ -51,36 +110,8 @@ if [[ -z "$health_token" ]]; then
   exit 6
 fi
 
-bash -n "$candidate_deploy"
-
 container_status() {
   docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$1" 2>/dev/null || true
-}
-
-wait_until_app_healthy() {
-  local app_status
-  for _ in $(seq 1 18); do
-    app_status="$(container_status "$container_name")"
-    if [[ "$app_status" == "healthy" ]]; then
-      if curl --fail --silent --show-error --max-time 10 -H "Authorization: Bearer $health_token" http://127.0.0.1:3001/api/ready >/dev/null; then return 0; fi
-    fi
-    if [[ "$app_status" == "unhealthy" || "$app_status" == "exited" || "$app_status" == "dead" ]]; then return 1; fi
-    sleep 5
-  done
-  return 1
-}
-
-wait_until_legacy_app_healthy() {
-  local app_status
-  for _ in $(seq 1 18); do
-    app_status="$(container_status "$container_name")"
-    if [[ "$app_status" == "healthy" ]]; then
-      if curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3001/robots.txt >/dev/null; then return 0; fi
-    fi
-    if [[ "$app_status" == "unhealthy" || "$app_status" == "exited" || "$app_status" == "dead" ]]; then return 1; fi
-    sleep 5
-  done
-  return 1
 }
 
 wait_until_healthy() {
@@ -91,8 +122,7 @@ wait_until_healthy() {
     if [[ "$app_status" == "healthy" && "$worker_status" == "healthy" ]]; then
       if curl --fail --silent --show-error --max-time 10 -H "Authorization: Bearer $health_token" http://127.0.0.1:3001/api/ready >/dev/null; then return 0; fi
     fi
-    if [[ "$app_status" == "unhealthy" || "$app_status" == "exited" || "$app_status" == "dead" ]]; then return 1; fi
-    if [[ "$worker_status" == "unhealthy" || "$worker_status" == "exited" || "$worker_status" == "dead" ]]; then return 1; fi
+    if [[ "$app_status" =~ ^(unhealthy|exited|dead)$ || "$worker_status" =~ ^(unhealthy|exited|dead)$ ]]; then return 1; fi
     sleep 5
   done
   return 1
@@ -105,22 +135,26 @@ if [[ -n "$current_revision" && ! "$current_revision" =~ ^[0-9a-f]{40}$ ]]; then
   exit 5
 fi
 
-echo "Loading image for $revision"
+echo "Loading verified image for $revision"
 gzip -dc "$archive" | docker load
-docker image inspect "boloyun:$revision" >/dev/null
+actual_image_id="$(docker image inspect --format '{{.Id}}' "boloyun:$revision")"
+if [[ "$actual_image_id" != "$manifest_image_id" ]]; then
+  echo "Loaded image identity does not match the signed manifest." >&2
+  docker image rm "boloyun:$revision" >/dev/null 2>&1 || true
+  exit 11
+fi
 
 candidate_state="$(mktemp "$project_dir/.deploy.candidate.XXXXXX")"
 printf 'IMAGE_TAG=%s\n' "$revision" > "$candidate_state"
 chmod 600 "$candidate_state"
-docker compose --project-directory "$project_dir" --env-file "$candidate_state" -f "$candidate_compose" config >/dev/null
+docker compose --project-directory "$project_dir" --env-file "$candidate_state" -f "$compose_file" config >/dev/null
 
 echo "Starting candidate $revision"
-if docker compose --project-directory "$project_dir" --env-file "$candidate_state" -f "$candidate_compose" up -d --no-deps app worker \
+if docker compose --project-directory "$project_dir" --env-file "$candidate_state" -f "$compose_file" up -d --no-deps app worker \
   && wait_until_healthy; then
-  install -o root -g root -m 640 "$candidate_compose" "$compose_file"
-  install -o root -g root -m 755 "$candidate_deploy" /usr/local/sbin/boloyun-deploy
   write_state "$revision" "$current_revision"
-  rm -f "$candidate_state" "$archive" "$candidate_compose" "$candidate_deploy"
+  rm -f "$candidate_state"
+  candidate_state=""
   if [[ -n "$older_revision" && "$older_revision" != "$current_revision" && "$older_revision" != "$revision" ]]; then
     docker image rm "boloyun:$older_revision" >/dev/null 2>&1 || true
   fi
@@ -133,18 +167,14 @@ if [[ -n "$current_revision" ]]; then
   rollback_state="$(mktemp "$project_dir/.deploy.rollback.XXXXXX")"
   printf 'IMAGE_TAG=%s\n' "$current_revision" > "$rollback_state"
   chmod 600 "$rollback_state"
-  if docker compose --project-directory "$project_dir" --env-file "$rollback_state" -f "$compose_file" config --services | grep -qx worker; then
-    docker compose --project-directory "$project_dir" --env-file "$rollback_state" -f "$compose_file" up -d --no-deps app worker
-    wait_until_healthy || echo "Rollback services did not become healthy." >&2
-  else
-    docker rm -f "$worker_container_name" >/dev/null 2>&1 || true
-    docker compose --project-directory "$project_dir" --env-file "$rollback_state" -f "$compose_file" up -d --no-deps app
-    wait_until_legacy_app_healthy || echo "Rollback container did not become healthy." >&2
-  fi
+  docker compose --project-directory "$project_dir" --env-file "$rollback_state" -f "$compose_file" up -d --no-deps app worker
+  wait_until_healthy || echo "Rollback services did not become healthy." >&2
   rm -f "$rollback_state"
+  rollback_state=""
 else
-  docker compose --project-directory "$project_dir" --env-file "$candidate_state" -f "$candidate_compose" down || true
+  docker compose --project-directory "$project_dir" --env-file "$candidate_state" -f "$compose_file" down || true
 fi
-rm -f "$candidate_state" "$archive" "$candidate_compose" "$candidate_deploy"
+rm -f "$candidate_state"
+candidate_state=""
 docker image rm "boloyun:$revision" >/dev/null 2>&1 || true
 exit 1

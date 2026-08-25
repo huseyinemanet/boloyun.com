@@ -223,7 +223,6 @@ Docker image build:
 docker build \
   --build-arg NEXT_PUBLIC_SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL" \
   --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY" \
-  --build-arg SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY" \
   --build-arg SITE_URL="https://boloyun.com" \
   --tag boloyun:local \
   .
@@ -397,15 +396,17 @@ VPS_HOST
 VPS_USER
 VPS_SSH_PRIVATE_KEY
 VPS_SSH_KNOWN_HOSTS
+VPS_DEPLOY_SIGNING_PRIVATE_KEY
 
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY
 ```
 
-Bot koruma, obje deposu/CDN, AI sağlayıcısı ve diğer runtime secret'ları sunucuda `/opt/boloyun/.env.production` içinde tutulur. GitHub Actions image'i build eder, VPS'ye yükler ve deploy scriptini çalıştırır.
+Bot koruma, Supabase service secret'ı, obje deposu/CDN, AI sağlayıcısı ve diğer runtime secret'ları yalnız sunucuda `/opt/boloyun/.env.production` içinde tutulur. GitHub Actions image'i ayrıcalıklı runtime secret'ı olmadan build eder.
 
-`SUPABASE_SERVICE_ROLE_KEY` image katmanına yazılmaz; build sırasında yalnız BuildKit secret mount ile geçici olarak erişilir ve production runtime değeri VPS `.env.production` dosyasından okunur.
+Routine deploy yalnız image arşivi, sabit alanlı manifest ve manifestin Ed25519 imzasını gönderir. Deploy hesabı Compose veya root helper sağlayamaz. İmza private key'i yalnız `VPS_DEPLOY_SIGNING_PRIVATE_KEY` Actions secret'ında; public key root-owned `/etc/boloyun/deploy-signing-public.pem` dosyasında tutulur. `/opt/boloyun/compose.yml` ve `/usr/local/sbin/boloyun-deploy` yalnız ayrı root bakım adımıyla güncellenir.
+
+İlk kurulumda Ed25519 keypair güvenli bir operatör ortamında oluşturulur; private key GitHub secret'a, public key `root:root` sahiplik ve en fazla `0644` moduyla VPS'ye kurulur. Private key deploy kullanıcısına veya VPS dosya sistemine kopyalanmaz. Root helper imzayı, revision/image kimliğini ve SHA-256 değerini doğrulamadan `docker load` çalıştırmaz.
 
 Deploy sonrası temel doğrulama:
 

@@ -3,6 +3,8 @@ name: boloyun
 services:
   app:
     image: boloyun:${IMAGE_TAG:?IMAGE_TAG is required}
+    pull_policy: never
+    user: "1001:1001"
     container_name: boloyun-app
     restart: unless-stopped
     init: true
@@ -46,6 +48,8 @@ services:
 
   worker:
     image: boloyun:${IMAGE_TAG:?IMAGE_TAG is required}
+    pull_policy: never
+    user: "1001:1001"
     container_name: boloyun-worker
     restart: unless-stopped
     init: true
