@@ -12,6 +12,7 @@ import {
   normalizeAdminUserCreateRole,
   validateAdminUserCreateValues,
 } from "@/lib/admin-user-create-validation";
+import { redirectForAdminRouteError, type AdminRouteError } from "@/lib/security/admin-route-client";
 
 type FormState = {
   message: string;
@@ -72,7 +73,8 @@ export function UserCreateForm() {
           return;
         }
 
-        const result = await response.json().catch(() => null) as Partial<FormState> | null;
+        const result = await response.json().catch(() => null) as (Partial<FormState> & AdminRouteError) | null;
+        if (redirectForAdminRouteError(response, result)) return;
         toast.error(result?.message || "Kullanıcı oluşturulamadı.");
         setState({
           message: result?.message || "Kullanıcı oluşturulamadı.",

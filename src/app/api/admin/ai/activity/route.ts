@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentProfile } from "@/lib/auth";
+import { authorizeAdminRoute } from "@/lib/security/admin-route-access";
 import {
   getTranslationAutomation,
   getTranslationStats,
@@ -12,11 +12,9 @@ const DEFAULT_ACTIVITY_LIMIT = 50;
 const MAX_ACTIVITY_LIMIT = 100;
 
 export async function GET(request: Request) {
+  const access = await authorizeAdminRoute(request, { continuePath: "/admin/ai" });
+  if (!access.allowed) return access.response;
   try {
-    const profile = await getCurrentProfile();
-    if (!profile) return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
-    if (profile.role !== "admin" || profile.status !== "active") return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 });
-
     const url = new URL(request.url);
     const requestedLimit = Number(url.searchParams.get("limit") ?? DEFAULT_ACTIVITY_LIMIT);
     const activityLimit = Number.isFinite(requestedLimit)

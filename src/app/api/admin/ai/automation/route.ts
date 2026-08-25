@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
 import { getTranslationStats, runTranslationAutomationTick } from "@/lib/ai/db-ai";
 import { hasTrustedMutationOrigin } from "@/lib/request-security";
 import { hasValidBearerSecret } from "@/lib/security/secret-comparison";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { authorizeAdminRoute } from "@/lib/security/admin-route-access";
 
 export async function POST(request: Request) {
   const secret = process.env.AI_TRANSLATION_CRON_SECRET;
@@ -11,7 +11,9 @@ export async function POST(request: Request) {
   let adminId: string | null = null;
   if (!isCron) {
     if (!hasTrustedMutationOrigin(request)) return NextResponse.json({ error: "Geçersiz istek kaynağı." }, { status: 403 });
-    adminId = (await requireAdmin()).id;
+    const access = await authorizeAdminRoute(request, { continuePath: "/admin/ai" });
+    if (!access.allowed) return access.response;
+    adminId = access.admin.id;
   }
 
   const body = await request.json().catch(() => null) as { source?: unknown; limit?: unknown } | null;

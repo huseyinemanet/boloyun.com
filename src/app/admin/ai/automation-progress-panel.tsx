@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 import type { AiTranslationAutomation, AiTranslationJob, AiTranslationStats } from "@/lib/ai/types";
+import { redirectForAdminRouteError, type AdminRouteError } from "@/lib/security/admin-route-client";
 
 type AutomationProgressPanelProps = {
   automation: AiTranslationAutomation;
@@ -70,7 +71,8 @@ export function AutomationProgressPanel({ automation: initialAutomation, stats: 
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ enabled }),
       });
-      const payload = await response.json().catch(() => null) as (DashboardSnapshot & { error?: string; message?: string }) | null;
+      const payload = await response.json().catch(() => null) as (DashboardSnapshot & AdminRouteError) | null;
+      if (redirectForAdminRouteError(response, payload)) return;
       if (!response.ok || payload?.error) throw new Error(payload?.error || `HTTP ${response.status}`);
 
       if (payload?.automation) setAutomation(payload.automation);
@@ -231,7 +233,8 @@ async function kickAutomationOnce() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ source: "admin-start", limit: 5 }),
     });
-    const payload = await response.json().catch(() => null) as DashboardSnapshot | null;
+    const payload = await response.json().catch(() => null) as (DashboardSnapshot & AdminRouteError) | null;
+    if (redirectForAdminRouteError(response, payload)) return;
     if (payload?.automation || payload?.stats) {
       window.dispatchEvent(new CustomEvent("ai-translation:dashboard", { detail: payload }));
     }

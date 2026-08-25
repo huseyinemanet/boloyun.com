@@ -1,6 +1,6 @@
 import { inspectCover, MAX_COVER_BYTES } from "./cover-file";
 import { uploadCoverObject } from "./r2-cover-store";
-import { safeExternalFetch } from "@/import/security/safe-fetch";
+import { safeExternalRequest, type SafeExternalResponse } from "@/import/security/safe-fetch";
 
 const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -15,12 +15,12 @@ export type MirroredCover = {
 
 export async function mirrorGameCover(sourceUrl: string): Promise<MirroredCover> {
   const source = validateSourceUrl(sourceUrl);
-  const response = await fetchWithRetry(source, { method: "GET", redirect: "follow" });
+  const response = await fetchWithRetry(source, "GET", MAX_COVER_BYTES);
   if (!response.ok) throw new Error(`Kapak indirilemedi: HTTP ${response.status}.`);
-  const bytes = await readLimitedBody(response);
+  const bytes = response.bytes;
   const inspected = inspectCover(bytes, response.headers.get("content-type"));
   const publicUrl = await uploadCoverObject({ key: inspected.key, bytes, contentType: inspected.contentType });
-  const verification = await fetchWithRetry(publicUrl, { method: "HEAD", redirect: "follow" });
+  const verification = await fetchWithRetry(publicUrl, "HEAD", 0);
   if (!verification.ok) throw new Error(`CDN doğrulaması başarısız: HTTP ${verification.status}.`);
   const verifiedType = verification.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
   if (verifiedType && verifiedType !== inspected.contentType) throw new Error("CDN içerik türü yüklenen dosyayla eşleşmiyor.");
@@ -34,44 +34,17 @@ export async function mirrorGameCover(sourceUrl: string): Promise<MirroredCover>
   };
 }
 
-async function readLimitedBody(response: Response) {
-  const length = Number(response.headers.get("content-length"));
-  if (Number.isFinite(length) && length > MAX_COVER_BYTES) throw new Error("Kapak dosyası 5 MB sınırını aşıyor.");
-  if (!response.body) throw new Error("Kapak yanıtının gövdesi yok.");
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.length;
-    if (total > MAX_COVER_BYTES) {
-      await reader.cancel();
-      throw new Error("Kapak dosyası 5 MB sınırını aşıyor.");
-    }
-    chunks.push(value);
-  }
-  const bytes = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return bytes;
-}
-
 export function isCdnCoverUrl(value: string) {
   const base = process.env.R2_PUBLIC_BASE_URL?.replace(/\/$/, "");
   return Boolean(base && value.startsWith(`${base}/covers/`));
 }
 
-async function fetchWithRetry(url: string, init: RequestInit, attempts = 3) {
+async function fetchWithRetry(url: string, method: "GET" | "HEAD", maxResponseBytes: number, attempts = 3): Promise<SafeExternalResponse> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      const response = await safeExternalFetch(url, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+      const response = await safeExternalRequest(url, { method, timeoutMs: REQUEST_TIMEOUT_MS, maxResponseBytes });
       if ((response.status === 429 || response.status >= 500) && attempt < attempts) {
-        await response.body?.cancel();
         await new Promise((resolve) => setTimeout(resolve, attempt * 500));
         continue;
       }

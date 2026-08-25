@@ -1,18 +1,17 @@
 import { NextResponse } from "next/server";
 import { recordAdminAudit } from "@/lib/admin-audit";
-import { getCurrentProfile } from "@/lib/auth";
 import { hasTrustedMutationOrigin } from "@/lib/request-security";
 import { parseCrawlerJobInput } from "@/import/crawler/config";
 import { enqueueCrawlerJob, getActiveCrawlerJob, getCrawlerJob, getLatestCrawlerJob } from "@/import/crawler/jobs";
 import { requestBackgroundWorkerWake } from "@/lib/background-worker-wake-client";
+import { authorizeAdminRoute } from "@/lib/security/admin-route-access";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const profile = await getCurrentProfile();
-  if (!profile) return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
-  if (profile.role !== "admin" || profile.status !== "active") return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 });
+  const access = await authorizeAdminRoute(request, { continuePath: "/admin/crawler" });
+  if (!access.allowed) return access.response;
 
   const jobId = new URL(request.url).searchParams.get("jobId");
   const job = jobId ? await getCrawlerJob(jobId) : await getLatestCrawlerJob();
@@ -21,17 +20,16 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const profile = await getCurrentProfile();
-  if (!profile) return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
-  if (profile.role !== "admin" || profile.status !== "active") return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 });
   if (!hasTrustedMutationOrigin(request)) return NextResponse.json({ error: "Geçersiz istek kaynağı." }, { status: 403 });
+  const access = await authorizeAdminRoute(request, { continuePath: "/admin/crawler" });
+  if (!access.allowed) return access.response;
 
   const parsedBody = await request.json().catch(() => null);
   if (!isRecord(parsedBody)) return NextResponse.json({ error: "Geçersiz JSON gövdesi." }, { status: 400 });
 
   let input: ReturnType<typeof parseCrawlerJobInput>;
   try {
-    input = parseCrawlerJobInput(parsedBody, profile.id);
+    input = parseCrawlerJobInput(parsedBody, access.admin.id);
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Geçersiz crawler ayarı." }, { status: 400 });
   }
@@ -49,7 +47,7 @@ export async function POST(request: Request) {
       });
     });
     await recordAdminAudit({
-      actorProfileId: profile.id,
+      actorProfileId: access.admin.id,
       action: "crawler.enqueue",
       targetType: "crawler_job",
       targetIds: [job.id],

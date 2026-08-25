@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { AiTranslationActivity, AiTranslationAutomation, AiTranslationJob, AiTranslationStats } from "@/lib/ai/types";
+import { redirectForAdminRouteError } from "@/lib/security/admin-route-client";
 
 type ActivityPayload = {
   stats?: AiTranslationStats;
@@ -16,6 +17,8 @@ type ActivityPayload = {
   activityLimit?: number;
   serverTime: string;
   error?: string;
+  code?: string;
+  continueUrl?: string;
 };
 
 type RealtimeActivityPanelProps = {
@@ -131,8 +134,9 @@ export function RealtimeActivityPanel({ initialStats, initialJobs, initialActivi
       const abortTimeout = setTimeout(() => controller.abort(), 6000);
       try {
         const response = await fetch(`/api/admin/ai/activity?limit=${LOG_LIMIT}`, { cache: "no-store", signal: controller.signal });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const next = await response.json() as ActivityPayload;
+        if (redirectForAdminRouteError(response, next)) return;
+        if (!response.ok) throw new Error(next.error || `HTTP ${response.status}`);
         if (next.error) throw new Error(next.error);
         if (!Array.isArray(next.jobs) || !Array.isArray(next.activity) || typeof next.activityTotal !== "number") {
           throw new Error("Aktivite yanıtı eksik döndü.");

@@ -1,7 +1,7 @@
-import { getCurrentProfile } from "@/lib/auth";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { GAME_EXPORT_SELECT, gameExportCsvHeader, gameExportCsvRow, gameExportFilename, type GameExportRow } from "@/lib/game-export-csv";
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
+import { authorizeAdminRoute } from "@/lib/security/admin-route-access";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -9,9 +9,8 @@ export const runtime = "nodejs";
 const PAGE_SIZE = 500;
 
 export async function GET(request: Request) {
-  const profile = await getCurrentProfile();
-  if (!profile) return Response.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
-  if (profile.role !== "admin" || profile.status !== "active") return Response.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 });
+  const access = await authorizeAdminRoute(request, { mode: "redirect", continuePath: "/admin/settings/system" });
+  if (!access.allowed) return access.response;
 
   const supabase = createSupabaseServiceClient();
   if (!supabase) return Response.json({ error: "Veritabanı bağlantısı yapılandırılmamış." }, { status: 503 });
@@ -57,7 +56,7 @@ export async function GET(request: Request) {
 
           if (!request.signal.aborted) controller.close();
           await recordAdminAudit({
-            actorProfileId: profile.id,
+            actorProfileId: access.admin.id,
             action: "game.export",
             targetType: "game",
             details: { format: "csv", exportedCount },

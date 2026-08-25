@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { createAdminUser } from "@/lib/db-users";
 import { normalizeAdminUserCreateValues, validateAdminUserCreateValues } from "@/lib/admin-user-create-validation";
 import { hasTrustedMutationOrigin } from "@/lib/request-security";
+import { authorizeAdminRoute } from "@/lib/security/admin-route-access";
 
 export async function POST(request: Request) {
   if (!hasTrustedMutationOrigin(request)) return NextResponse.json({ message: "Geçersiz istek kaynağı." }, { status: 403 });
-  const admin = await requireAdmin();
+  const access = await authorizeAdminRoute(request, { continuePath: "/admin/users/new" });
+  if (!access.allowed) return access.response;
   const body = await request.json().catch(() => ({}));
   const input = body && typeof body === "object" && !Array.isArray(body) ? body as Record<string, unknown> : {};
   const values = normalizeAdminUserCreateValues(input);
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
     });
 
     await recordAdminAudit({
-      actorProfileId: admin.id,
+      actorProfileId: access.admin.id,
       action: "user.create",
       targetType: "auth_user",
       details: { authUserId, role: values.role },

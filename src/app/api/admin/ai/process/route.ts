@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
 import { processTranslationJob } from "@/lib/ai/db-ai";
 import { hasTrustedMutationOrigin } from "@/lib/request-security";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { authorizeAdminRoute } from "@/lib/security/admin-route-access";
 
 export async function POST(request: Request) {
   if (!hasTrustedMutationOrigin(request)) return NextResponse.json({ error: "Geçersiz istek kaynağı." }, { status: 403 });
-  const admin = await requireAdmin();
+  const access = await authorizeAdminRoute(request, { continuePath: "/admin/ai" });
+  if (!access.allowed) return access.response;
   const body = await request.json().catch(() => null) as { jobId?: unknown; limit?: unknown } | null;
   const jobId = typeof body?.jobId === "string" ? body.jobId : "";
   if (!jobId) return NextResponse.json({ error: "Çeviri işi eksik." }, { status: 400 });
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
     console.log("[ai-translation] api.process.start", { jobId, limit });
     const job = await processTranslationJob(jobId, { limit });
     await recordAdminAudit({
-      actorProfileId: admin.id,
+      actorProfileId: access.admin.id,
       action: "ai.translation_job_process",
       targetType: "ai_translation_job",
       targetIds: [jobId],

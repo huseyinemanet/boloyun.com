@@ -1,7 +1,7 @@
 import { getRequiredSupabaseServiceClient } from "@/import/db/game-imports";
 import { isCdnCoverUrl, mirrorGameCover } from "./mirror-cover";
 import { assertCoverR2Configured } from "./r2-cover-store";
-import { safeExternalFetch } from "@/import/security/safe-fetch";
+import { safeExternalRequest } from "@/import/security/safe-fetch";
 
 export type CoverSyncStatus = "pending" | "syncing" | "synced" | "failed" | "rolled_back";
 
@@ -31,7 +31,7 @@ export async function auditGameCovers(options: { limit?: number; concurrency: nu
       return { id: row.id, status: "invalid" as const, error: "CDN URL veya R2 anahtarı eksik." };
     }
     try {
-      const response = await safeExternalFetch(row.thumbnail_url, { method: "HEAD", signal: AbortSignal.timeout(15_000) });
+      const response = await safeExternalRequest(row.thumbnail_url, { method: "HEAD", timeoutMs: 15_000, maxResponseBytes: 0 });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const contentType = response.headers.get("content-type") ?? "";
       if (!contentType.startsWith("image/")) throw new Error(`Geçersiz içerik türü: ${contentType || "yok"}`);

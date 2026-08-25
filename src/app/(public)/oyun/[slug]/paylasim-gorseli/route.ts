@@ -1,7 +1,7 @@
-import sharp from "sharp";
 import { getPublicGamePageBySlug } from "@/lib/games/public-queries";
 import { absoluteUrl } from "@/lib/seo/metadata";
 import { getPublicSettings } from "@/lib/db-settings";
+import { createRemoteSocialImage, SocialImageBusyError } from "@/lib/security/social-image";
 
 export const revalidate = 3600;
 
@@ -26,20 +26,7 @@ export async function GET(_request: Request, { params }: Context) {
   );
 
   try {
-    const source = await fetch(sourceUrl, {
-      signal: AbortSignal.timeout(10_000),
-      next: { revalidate: 3600 },
-    });
-
-    if (!source.ok) {
-      throw new Error(`Kapak görseli alınamadı (${source.status}).`);
-    }
-
-    const input = Buffer.from(await source.arrayBuffer());
-    const image = await sharp(input)
-      .resize(1200, 630, { fit: "cover", position: "centre" })
-      .jpeg({ quality: 88, progressive: true })
-      .toBuffer();
+    const image = await createRemoteSocialImage(sourceUrl, 1200, 630);
 
     return new Response(new Uint8Array(image), {
       headers: {
@@ -48,7 +35,14 @@ export async function GET(_request: Request, { params }: Context) {
         "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800",
       },
     });
-  } catch {
-    return Response.redirect(absoluteUrl(settings.seo.openGraphImageUrl, settings.seo.canonicalDomain), 307);
+  } catch (error) {
+    return new Response(null, {
+      status: 307,
+      headers: {
+        Location: absoluteUrl("/opengraph-image", settings.seo.canonicalDomain),
+        "Cache-Control": "public, max-age=60, s-maxage=300",
+        ...(error instanceof SocialImageBusyError ? { "Retry-After": "1" } : {}),
+      },
+    });
   }
 }

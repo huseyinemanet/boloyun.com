@@ -1,21 +1,19 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { getCurrentProfile } from "@/lib/auth";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { reorderAdminCategories } from "@/lib/db-categories";
 import { invalidatePublicContent } from "@/lib/public-cache-invalidation";
 import { hasTrustedMutationOrigin } from "@/lib/request-security";
+import { authorizeAdminRoute } from "@/lib/security/admin-route-access";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function POST(request: Request) {
-  const admin = await getCurrentProfile();
-  if (admin?.role !== "admin" || admin.status !== "active") {
-    return NextResponse.json({ message: "Bu işlem için yönetici girişi gerekli." }, { status: 401 });
-  }
   if (!hasTrustedMutationOrigin(request)) {
     return NextResponse.json({ message: "Geçersiz istek kaynağı." }, { status: 403 });
   }
+  const access = await authorizeAdminRoute(request, { continuePath: "/admin/categories" });
+  if (!access.allowed) return access.response;
 
   const body = await request.json().catch(() => null);
   const categoryIds = body && typeof body === "object" && "categoryIds" in body
@@ -37,7 +35,7 @@ export async function POST(request: Request) {
     revalidatePath("/admin/categories");
     invalidatePublicContent({ kind: "categories" });
     await recordAdminAudit({
-      actorProfileId: admin.id,
+      actorProfileId: access.admin.id,
       action: "category.reorder",
       targetType: "category",
       details: { categoryCount: categoryIds.length },

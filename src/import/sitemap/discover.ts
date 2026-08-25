@@ -30,12 +30,16 @@ export async function discoverGameUrls(
     if (signal?.aborted) throw new Error("Crawler işlemi iptal edildi.");
     processedSitemaps += 1;
     if (processedSitemaps > maxSitemaps) throw new Error("Sitemap sayısı güvenli sınırı aşıyor.");
-    const response = await safeExternalFetch(nextUrl, { signal });
+    const response = await safeExternalRequest(nextUrl, {
+      signal,
+      timeoutMs: 20_000,
+      maxResponseBytes: 5 * 1024 * 1024,
+    });
     if (!response.ok) {
       throw new Error(`Sitemap okunamadi: ${nextUrl}`);
     }
 
-    const xml = await readExternalText(response, 5 * 1024 * 1024);
+    const xml = new TextDecoder().decode(response.bytes);
 
     if (xml.includes("<sitemapindex")) {
       for (const sitemap of readSitemapLocs(xml)) {
@@ -97,4 +101,4 @@ function readUrlItems(xml: string) {
     };
   }).filter((item) => item.loc);
 }
-import { readExternalText, safeExternalFetch } from "@/import/security/safe-fetch";
+import { safeExternalRequest } from "@/import/security/safe-fetch";

@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { groupSidebarCategories, moveItem, moveItemById, orderItemsById } from "@/lib/category-order";
 import { cn } from "@/lib/utils";
 import type { CategoryRow } from "@/lib/db-categories";
+import { redirectForAdminRouteError, type AdminRouteError } from "@/lib/security/admin-route-client";
 import { CategoryForm } from "./category-form";
 
 type CategoryManagerProps = {
@@ -121,7 +122,8 @@ export function CategoryManager({ categories, initialEditingId }: CategoryManage
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ categoryIds: groupedIds }),
       });
-      const result = await response.json().catch(() => ({})) as { message?: string };
+      const result = await response.json().catch(() => ({})) as AdminRouteError;
+      if (redirectForAdminRouteError(response, result)) return;
       if (!response.ok) throw new Error(result.message || "Kategori sırası kaydedilemedi.");
       toast.success(result.message || "Kategori sırası kaydedildi.");
       router.refresh();
@@ -148,7 +150,8 @@ export function CategoryManager({ categories, initialEditingId }: CategoryManage
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ visible }),
       });
-      const result = await response.json().catch(() => ({})) as { message?: string };
+      const result = await response.json().catch(() => ({})) as AdminRouteError;
+      if (redirectForAdminRouteError(response, result)) return;
       if (!response.ok) throw new Error(result.message || "Kategori menü ayarı kaydedilemedi.");
       toast.success(result.message || "Kategori menü ayarı kaydedildi.");
       router.refresh();

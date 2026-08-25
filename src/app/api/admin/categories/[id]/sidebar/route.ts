@@ -1,22 +1,20 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { recordAdminAudit } from "@/lib/admin-audit";
-import { getCurrentProfile } from "@/lib/auth";
 import { setAdminCategorySidebarVisibility } from "@/lib/db-categories";
 import { invalidatePublicContent } from "@/lib/public-cache-invalidation";
 import { hasTrustedMutationOrigin } from "@/lib/request-security";
+import { authorizeAdminRoute } from "@/lib/security/admin-route-access";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 type Context = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: Context) {
-  const admin = await getCurrentProfile();
-  if (admin?.role !== "admin" || admin.status !== "active") {
-    return NextResponse.json({ message: "Bu işlem için yönetici girişi gerekli." }, { status: 401 });
-  }
   if (!hasTrustedMutationOrigin(request)) {
     return NextResponse.json({ message: "Geçersiz istek kaynağı." }, { status: 403 });
   }
+  const access = await authorizeAdminRoute(request, { continuePath: "/admin/categories" });
+  if (!access.allowed) return access.response;
 
   const { id } = await params;
   const body = await request.json().catch(() => null);
@@ -33,7 +31,7 @@ export async function PATCH(request: Request, { params }: Context) {
     revalidatePath("/admin/categories");
     invalidatePublicContent({ kind: "categories", categorySlug: slug });
     await recordAdminAudit({
-      actorProfileId: admin.id,
+      actorProfileId: access.admin.id,
       action: "category.sidebar_visibility.update",
       targetType: "category",
       targetIds: [id],

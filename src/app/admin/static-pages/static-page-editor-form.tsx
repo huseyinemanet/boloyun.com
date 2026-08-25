@@ -17,6 +17,7 @@ import {
   validateAdminStaticPageValues,
 } from "@/lib/admin-static-page-validation";
 import { StaticPageContentEditor } from "./static-page-content-editor";
+import { redirectForAdminRouteError, type AdminRouteError } from "@/lib/security/admin-route-client";
 
 export type StaticPageEditorInitialValues = AdminStaticPageValues & {
   canonical_url: string;
@@ -74,7 +75,8 @@ export function StaticPageEditorForm({ initialValues, mode = "edit" }: StaticPag
         return;
       }
 
-      const result = await response.json().catch(() => null) as Partial<FormState> | null;
+      const result = await response.json().catch(() => null) as (Partial<FormState> & AdminRouteError) | null;
+      if (redirectForAdminRouteError(response, result)) return;
       setState({
         message: result?.message || "Sayfa kaydedilemedi.",
         fieldErrors: result?.fieldErrors ?? {},

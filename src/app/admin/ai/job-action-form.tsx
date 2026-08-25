@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { redirectForAdminRouteError } from "@/lib/security/admin-route-client";
 import type { AiActionState } from "./actions";
 
 type ProcessTranslationJobState = {
@@ -14,6 +15,8 @@ type ProcessTranslationJobState = {
   processed?: number;
   failed?: number;
   continued?: boolean;
+  code?: string;
+  continueUrl?: string;
   job?: {
     status: string;
     completed: number;
@@ -132,6 +135,7 @@ function ProcessJobActionForm({ jobId, jobStatus }: { jobId: string; jobStatus: 
               clearTimeout(abortTimeout);
             }
             const state = await readProcessResponse(response);
+            if (redirectForAdminRouteError(response, state)) return;
             if (!response.ok && isTransientStatus(response.status)) {
               transientFailures += 1;
               const retryDelay = transientRetryDelay(transientFailures);

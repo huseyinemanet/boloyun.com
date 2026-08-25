@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
 import { parseImportIntent, runImportWorkflow, type ImportIntent } from "@/import/admin/import-workflow";
-import { getCurrentProfile } from "@/lib/auth";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { publicUrlFromRequest } from "@/lib/request-origin";
 import { hasTrustedMutationOrigin } from "@/lib/request-security";
+import { authorizeAdminRoute } from "@/lib/security/admin-route-access";
 
 type Context = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, { params }: Context) {
   const { id } = await params;
-  const profile = await getCurrentProfile();
-  if (profile?.role !== "admin" || profile.status !== "active") return NextResponse.redirect(publicUrlFromRequest(request, `/giris?next=/admin/imports/${id}`), 303);
   if (!hasTrustedMutationOrigin(request)) return NextResponse.json({ error: "Geçersiz istek kaynağı." }, { status: 403 });
+  const access = await authorizeAdminRoute(request, { mode: "redirect", continuePath: `/admin/imports/${id}` });
+  if (!access.allowed) return access.response;
 
   let intent: ImportIntent = "save";
   try {
@@ -19,7 +19,7 @@ export async function POST(request: Request, { params }: Context) {
     intent = parseImportIntent(formData.get("intent"));
     const workflow = await runImportWorkflow(id, intent, formData);
     await recordAdminAudit({
-      actorProfileId: profile.id,
+      actorProfileId: access.admin.id,
       action: `import.${intent}`,
       targetType: "game_import",
       targetIds: [id],

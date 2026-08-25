@@ -26,6 +26,7 @@ import type { HomepageSectionInput } from "@/lib/db-homepage-sections";
 import type { SettingsRecord, SettingsSection } from "@/lib/settings/types";
 import { renderSeoTemplate } from "@/lib/settings/validation";
 import type { SystemStatus } from "@/lib/system-status";
+import { redirectForAdminRouteError, type AdminRouteError } from "@/lib/security/admin-route-client";
 import { clearSettingsCacheAction, saveSettingsAction } from "./actions";
 
 type Draft = Record<string, unknown>;
@@ -334,7 +335,8 @@ function AudioUploadField({ value, onChange }: { value: string; onChange: (value
 
     try {
       const response = await fetch("/api/admin/settings/audio", { method: "POST", body });
-      const result = await response.json() as { url?: string; error?: string };
+      const result = await response.json() as AdminRouteError & { url?: string };
+      if (redirectForAdminRouteError(response, result)) return;
       if (!response.ok || !result.url) throw new Error(result.error || "Ses dosyası yüklenemedi.");
       onChange(result.url);
       toast.success("Ses dosyası R2’ye yüklendi.");
@@ -391,7 +393,7 @@ function AssetField({ label, value, kind, onChange }: { label: string; value: st
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  async function upload(file?: File) { if (!file) return; setUploading(true); setError(null); const body = new FormData(); body.set("file", file); body.set("kind", kind); try { const response = await fetch("/api/admin/settings/assets", { method: "POST", body }); const result = await response.json() as { url?: string; error?: string }; if (!response.ok || !result.url) throw new Error(result.error || "Dosya yüklenemedi."); onChange(result.url); toast.success(`${label} R2’ye yüklendi.`); } catch (caught) { const message = errorMessage(caught); setError(message); toast.error(message); } finally { setUploading(false); if (inputRef.current) inputRef.current.value = ""; } }
+  async function upload(file?: File) { if (!file) return; setUploading(true); setError(null); const body = new FormData(); body.set("file", file); body.set("kind", kind); try { const response = await fetch("/api/admin/settings/assets", { method: "POST", body }); const result = await response.json() as AdminRouteError & { url?: string }; if (redirectForAdminRouteError(response, result)) return; if (!response.ok || !result.url) throw new Error(result.error || "Dosya yüklenemedi."); onChange(result.url); toast.success(`${label} R2’ye yüklendi.`); } catch (caught) { const message = errorMessage(caught); setError(message); toast.error(message); } finally { setUploading(false); if (inputRef.current) inputRef.current.value = ""; } }
   return <div className="grid gap-2"><TextField label={label} value={value} onChange={onChange} /><input ref={inputRef} type="file" className="hidden" accept="image/png,image/jpeg,image/webp,image/x-icon,image/vnd.microsoft.icon" onChange={(event) => upload(event.target.files?.[0])} /><SoundButton type="button" variant="outline" disabled={uploading} onClick={() => inputRef.current?.click()}><IconCloudUploadFillDuo18 className="size-4" />{uploading ? "Yükleniyor…" : "R2’ye Yükle"}</SoundButton>{error ? <p className="text-xs font-semibold text-destructive">{error}</p> : null}</div>;
 }
 

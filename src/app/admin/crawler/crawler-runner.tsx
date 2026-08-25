@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { redirectForAdminRouteError, type AdminRouteError } from "@/lib/security/admin-route-client";
 import { IconBadgeCheckFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBadgeCheckFillDuo18";
 import { IconBrainNodesFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconBrainNodesFillDuo18";
 import { IconCircleWarningFillDuo18 } from "nucleo-ui-fill-duo-18/components/IconCircleWarningFillDuo18";
@@ -86,7 +87,8 @@ export function CrawlerRunner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const result = await response.json().catch(() => null) as { error?: string; job?: CrawlerJob } | null;
+      const result = await response.json().catch(() => null) as (AdminRouteError & { job?: CrawlerJob }) | null;
+      if (redirectForAdminRouteError(response, result)) return;
       if (!response.ok || !result?.job) throw new Error(result?.error || `Crawler başlatılamadı (HTTP ${response.status}).`);
       notifiedJobId.current = null;
       setJob(result.job);
@@ -184,7 +186,8 @@ export function CrawlerRunner() {
 async function fetchCrawlerJob(jobId?: string) {
   const suffix = jobId ? `?jobId=${encodeURIComponent(jobId)}` : "";
   const response = await fetch(`/admin/crawler/run${suffix}`, { cache: "no-store" });
-  const result = await response.json().catch(() => null) as { error?: string; job?: CrawlerJob | null } | null;
+  const result = await response.json().catch(() => null) as (AdminRouteError & { job?: CrawlerJob | null }) | null;
+  if (redirectForAdminRouteError(response, result)) return null;
   if (!response.ok) throw new Error(result?.error || `Crawler durumu okunamadı (HTTP ${response.status}).`);
   return result?.job ?? null;
 }
