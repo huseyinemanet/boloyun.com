@@ -152,8 +152,8 @@ Temel değişkenler:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_...
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
 
 AI_PROVIDER=
 AI_API_KEY=
@@ -401,6 +401,8 @@ VPS_DEPLOY_SIGNING_PRIVATE_KEY
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 ```
+
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` tarihsel adı geriye uyumluluk için korunur; değeri modern `sb_publishable_...` anahtarıdır. Benzer biçimde sunucudaki `SUPABASE_SERVICE_ROLE_KEY` değişkeni modern `sb_secret_...` değerini taşır.
 
 Bot koruma, Supabase service secret'ı, obje deposu/CDN, AI sağlayıcısı ve diğer runtime secret'ları yalnız sunucuda `/opt/boloyun/.env.production` içinde tutulur. GitHub Actions image'i ayrıcalıklı runtime secret'ı olmadan build eder.
 
