@@ -27,10 +27,12 @@ export type StaticPageRow = {
   updated_at?: string | null;
 };
 
+export const STATIC_PAGE_SELECT = "id, title, slug, content, content_json, seo_title, seo_description, status, og_image_url, is_indexable, created_at, updated_at";
+
 const getPublishedStaticPageCached = unstable_cache(async function getPublishedStaticPage(slug: string): Promise<StaticPageRow | null> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return null;
-  const { data, error } = await supabase.from("static_pages").select("*").eq("slug", slug).eq("status", "published").maybeSingle();
+  const { data, error } = await supabase.from("static_pages").select(STATIC_PAGE_SELECT).eq("slug", slug).eq("status", "published").maybeSingle();
   if (error || !data) return null;
   return normalizeStaticPage(data as StaticPageRow);
 }, ["published-static-page"], { revalidate: 3600, tags: ["static-pages"] });
@@ -40,7 +42,7 @@ export const getPublishedStaticPage = getPublishedStaticPageCached;
 export async function getAdminStaticPages() {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return [] as StaticPageRow[];
-  const { data, error } = await supabase.from("static_pages").select("*").order("title");
+  const { data, error } = await supabase.from("static_pages").select(STATIC_PAGE_SELECT).order("title");
   if (error || !data) return [] as StaticPageRow[];
   return (data as StaticPageRow[]).map(normalizeStaticPage);
 }
@@ -48,7 +50,7 @@ export async function getAdminStaticPages() {
 export async function getAdminStaticPage(id: string) {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return null;
-  const { data, error } = await supabase.from("static_pages").select("*").eq("id", id).maybeSingle();
+  const { data, error } = await supabase.from("static_pages").select(STATIC_PAGE_SELECT).eq("id", id).maybeSingle();
   if (error || !data) return null;
   return normalizeStaticPage(data as StaticPageRow);
 }

@@ -1,5 +1,7 @@
 import { createSupabaseServiceClient } from "@/lib/supabase/client";
 import { isTagIndexable } from "@/lib/seo/audit";
+import { unstable_cache } from "next/cache";
+import { CATALOG_TTL, MAX_CATALOG_PAGE } from "@/lib/catalog-policy";
 
 export type SitemapRecord = {
   path: string;
@@ -19,7 +21,7 @@ type SlugRow = {
   thumbnail_url?: string | null;
 };
 
-export async function getCoreSitemapRecords(): Promise<SitemapRecord[]> {
+export const getCoreSitemapRecords = unstable_cache(async function getCoreSitemapRecords(): Promise<SitemapRecord[]> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return [];
 
@@ -34,9 +36,9 @@ export async function getCoreSitemapRecords(): Promise<SitemapRecord[]> {
     ...tags.map((row) => record("tag", `/etiket/${row.slug}`, row.updated_at)),
     ...staticPages.map((row) => record("static", `/sayfa/${row.slug}`, row.updated_at)),
   ];
-}
+}, ["core-sitemap-records-v1"], { revalidate: CATALOG_TTL.sitemap, tags: ["games", "categories", "tags", "static-pages"] });
 
-export async function getGameSitemapCount() {
+export const getGameSitemapCount = unstable_cache(async function getGameSitemapCount() {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return 0;
   const { count, error } = await supabase
@@ -45,10 +47,11 @@ export async function getGameSitemapCount() {
     .eq("status", "published")
     .eq("is_indexable", true)
     .eq("is_broken", false);
-  return error ? 0 : count ?? 0;
-}
+  if (error) throw new Error(`Sitemap sayısı okunamadı: ${error.message}`);
+  return count ?? 0;
+}, ["game-sitemap-count-v1"], { revalidate: CATALOG_TTL.sitemap, tags: ["games"] });
 
-export async function getGameSitemapPage(page: number, pageSize: number): Promise<SitemapRecord[]> {
+const getGameSitemapPageCached = unstable_cache(async function getGameSitemapPage(page: number, pageSize: number): Promise<SitemapRecord[]> {
   const supabase = createSupabaseServiceClient();
   if (!supabase || !Number.isInteger(page) || page < 0) return [];
   const from = page * pageSize;
@@ -61,23 +64,30 @@ export async function getGameSitemapPage(page: number, pageSize: number): Promis
     .order("updated_at", { ascending: false })
     .order("slug", { ascending: true })
     .range(from, from + pageSize - 1);
-  if (error) return [];
+  if (error) throw new Error(`Sitemap okunamadı: ${error.message}`);
   return ((data ?? []) as SlugRow[]).map((row) => ({
     ...record("game", `/oyun/${row.slug}`, row.updated_at),
     imageUrl: row.thumbnail_url,
   }));
+}, ["game-sitemap-page-v1"], { revalidate: CATALOG_TTL.sitemap, tags: ["games"] });
+
+export async function getGameSitemapPage(page: number, pageSize: number): Promise<SitemapRecord[]> {
+  if (!Number.isSafeInteger(page) || page < 0 || page > MAX_CATALOG_PAGE) return [];
+  if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 1000) return [];
+  return getGameSitemapPageCached(page, pageSize);
 }
 
 async function fetchCategories() {
   const modern = await fetchAll("categories", "slug, updated_at, is_indexable", { status: "active", indexable: true });
   if (!modern.error) return modern.rows;
   const legacy = await fetchAll("categories", "slug, updated_at", { status: "active" });
+  if (legacy.error) throw new Error(`Sitemap kategorileri okunamadı: ${legacy.error}`);
   return legacy.rows;
 }
 
 async function fetchIndexableTags() {
   const result = await fetchAll("tags", "id, slug, updated_at, seo_title, seo_description, is_indexable", { status: "active", indexable: true });
-  if (result.error) return [] as SlugRow[];
+  if (result.error) throw new Error(`Sitemap etiketleri okunamadı: ${result.error}`);
   const counts = await countPublishedTagGames(result.rows.flatMap((tag) => tag.id ? [tag.id] : []));
   const checked = result.rows.map((tag) => {
     if (!tag.id) return null;
@@ -95,6 +105,7 @@ async function fetchStaticPages() {
   const modern = await fetchAll("static_pages", "slug, updated_at, is_indexable", { status: "published", indexable: true });
   if (!modern.error) return modern.rows;
   const legacy = await fetchAll("static_pages", "slug, updated_at", { status: "published" });
+  if (legacy.error) throw new Error(`Sitemap sayfaları okunamadı: ${legacy.error}`);
   return legacy.rows;
 }
 
@@ -130,13 +141,13 @@ async function countPublishedTagGames(tagIds: string[]) {
   const counts = new Map<string, number>();
   if (!supabase || tagIds.length === 0) return counts;
   for (let index = 0; index < tagIds.length; index += 500) {
-    const { data, error } = await supabase
-      .from("game_tags")
-      .select("tag_id, game_id, games!inner(id)")
-      .in("tag_id", tagIds.slice(index, index + 500))
-      .eq("games.status", "published");
-    if (error) continue;
-    for (const row of data ?? []) counts.set(row.tag_id, (counts.get(row.tag_id) ?? 0) + 1);
+    const { data, error } = await supabase.rpc("get_tag_published_counts", {
+      p_tag_ids: tagIds.slice(index, index + 500),
+    });
+    if (error) throw new Error(`Sitemap etiket sayıları okunamadı: ${error.message}`);
+    for (const row of (data ?? []) as Array<{ tag_id: string; published_count: number }>) {
+      counts.set(row.tag_id, Number(row.published_count));
+    }
   }
   return counts;
 }

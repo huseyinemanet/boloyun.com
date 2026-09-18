@@ -1,5 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
+import { createEgressFetch } from "@/lib/supabase/egress-fetch";
 
 export type SupabaseBrowserConfig = {
   url: string;
@@ -30,6 +31,9 @@ export function createSupabaseServiceClient() {
   }
 
   return createClient(url, serviceKey, {
+    ...(process.env.SUPABASE_EGRESS_LOG === "1" ? {
+      global: { fetch: createEgressFetch(fetch, (measurement) => console.info(JSON.stringify(measurement))) },
+    } : {}),
     auth: {
       persistSession: false,
     },

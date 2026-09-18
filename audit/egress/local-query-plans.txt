@@ -1,0 +1,60 @@
+PostgreSQL 18 synthetic fixture: 26000 games, 156000 category links, 260000 tag links. Not production.
+REVOKE
+GRANT
+     role      | games_select
+---------------+--------------
+ anon          | f
+ authenticated | f
+ service_role  | t
+(3 rows)
+
+                                                                              QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.42..575.44 rows=251 width=32) (actual time=0.020..0.518 rows=251.00 loops=1)
+   Buffers: shared hit=317
+   ->  Index Only Scan using game_categories_pkey on game_categories  (cost=0.42..10520.34 rows=4592 width=32) (actual time=0.019..0.510 rows=251.00 loops=1)
+         Index Cond: (category_id = ANY ('{c4ca4238-a0b9-2382-0dcc-509a6f75849b,c81e728d-9d4c-2f63-6f06-7f89cc14862c,eccbc87e-4b5c-e2fe-2830-8fd9f2a7baf3}'::uuid[]))
+         Heap Fetches: 251
+         Index Searches: 1
+         Buffers: shared hit=317
+ Planning:
+   Buffers: shared hit=80 read=2
+ Planning Time: 0.301 ms
+ Execution Time: 0.528 ms
+(11 rows)
+
+                                                                                 QUERY PLAN
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=1547.78..1548.40 rows=251 width=32) (actual time=0.465..0.477 rows=251.00 loops=1)
+   Buffers: shared hit=283
+   ->  Sort  (cost=1547.78..1549.72 rows=778 width=32) (actual time=0.464..0.469 rows=251.00 loops=1)
+         Sort Key: game_id, tag_id
+         Sort Method: top-N heapsort  Memory: 55kB
+         Buffers: shared hit=283
+         ->  Bitmap Heap Scan on game_tags  (cost=43.28..1512.88 rows=778 width=32) (actual time=0.077..0.393 rows=780.00 loops=1)
+               Recheck Cond: (tag_id = ANY ('{c4ca4238-a0b9-2382-0dcc-509a6f75849b,c81e728d-9d4c-2f63-6f06-7f89cc14862c,eccbc87e-4b5c-e2fe-2830-8fd9f2a7baf3}'::uuid[]))
+               Heap Blocks: exact=265
+               Buffers: shared hit=280
+               ->  Bitmap Index Scan on game_tags_tag_id_game_id_idx  (cost=0.00..43.09 rows=778 width=0) (actual time=0.060..0.060 rows=780.00 loops=1)
+                     Index Cond: (tag_id = ANY ('{c4ca4238-a0b9-2382-0dcc-509a6f75849b,c81e728d-9d4c-2f63-6f06-7f89cc14862c,eccbc87e-4b5c-e2fe-2830-8fd9f2a7baf3}'::uuid[]))
+                     Index Searches: 3
+                     Buffers: shared hit=15
+ Planning:
+   Buffers: shared hit=40
+ Planning Time: 0.098 ms
+ Execution Time: 0.487 ms
+(18 rows)
+
+                                                                      QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.29..2.90 rows=48 width=24) (actual time=0.013..0.018 rows=48.00 loops=1)
+   Buffers: shared hit=1 read=2
+   ->  Index Only Scan using games_created_at_id_idx on games  (cost=0.29..1417.79 rows=26000 width=24) (actual time=0.013..0.016 rows=48.00 loops=1)
+         Heap Fetches: 48
+         Index Searches: 1
+         Buffers: shared hit=1 read=2
+ Planning:
+   Buffers: shared hit=70 read=2
+ Planning Time: 0.137 ms
+ Execution Time: 0.021 ms
+(10 rows)

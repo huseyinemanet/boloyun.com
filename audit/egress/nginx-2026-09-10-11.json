@@ -1,0 +1,489 @@
+{
+  "10/Sep/2026": {
+    "requests": 47801,
+    "bytes": 1987047740,
+    "route_counts": {
+      "/oyun": 31352,
+      "/logo.svg": 6307,
+      "/_next": 5049,
+      "/etiket": 3429,
+      "/kategori": 757,
+      "/oyunlar": 54,
+      "/sitemaps": 11,
+      "/": 21,
+      "/api": 33,
+      "/sitemap.xml": 39,
+      "/sitemap-games-3.xml": 1,
+      "/sitemap-games-2.xml": 1,
+      "/sitemap-boards.xml": 3,
+      "/sitemap-topics.xml": 3,
+      "/favicon.ico": 9,
+      "/robots.txt": 2,
+      "/sitemap-static.xml": 1,
+      "/sounds": 3,
+      "/sitemap-games-6.xml": 2,
+      "/sitemap-games-1.xml": 2,
+      "/sitemap-games-4.xml": 1,
+      "/sitemap-games-5.xml": 2,
+      "/sitemap-games.xml": 1,
+      "/sitemap-media.xml": 1,
+      "/sitemap-tags.xml": 2,
+      "/.well-known": 353,
+      "/giris": 1,
+      "/_debugbar": 1,
+      "/debugbar": 1,
+      "/debug": 1,
+      "/wp-json": 2,
+      "/wp": 109,
+      "/wordpress": 110,
+      "/blog": 110,
+      "/.env": 1,
+      "/.git": 2,
+      "/.env.backup": 1,
+      "/.env.old": 1,
+      "/.env.save": 1,
+      "/.env.bak": 1,
+      "/.env.prod": 1,
+      "/.env.production": 1,
+      "/.env.staging": 1,
+      "/.env.local": 1,
+      "/.env.live": 1,
+      "/.env.dev": 1,
+      "/.env.stage": 1,
+      "/config": 1,
+      "/app": 1,
+      "/application": 1,
+      "/functions": 1,
+      "/thumbnails": 1,
+      "/http:": 8
+    },
+    "unique_games": 17783,
+    "top_routes": [
+      [
+        "/logo.svg",
+        6307
+      ],
+      [
+        "/_next/image",
+        4808
+      ],
+      [
+        "/.well-known/acme-challenge/_5k8DkOCxWTBGxDOJR59oEV_093B2kjaD3rKYAd86jZL7kDLZr007GbX6f4MsFHY",
+        192
+      ],
+      [
+        "/.well-known/acme-challenge/xJm_rvDce32Jg_5jQn0st3tzNCQeO8YJF9c3YYrtpKLX__n3qH5MDUf6fzfxFSLs",
+        161
+      ],
+      [
+        "/sitemap.xml",
+        39
+      ],
+      [
+        "/oyunlar/",
+        35
+      ],
+      [
+        "/wordpress",
+        30
+      ],
+      [
+        "/blog",
+        30
+      ],
+      [
+        "/wp",
+        29
+      ],
+      [
+        "/api/me",
+        24
+      ],
+      [
+        "/",
+        21
+      ],
+      [
+        "/wp/wp-json/batch/v1",
+        20
+      ],
+      [
+        "/wordpress/wp-json/batch/v1",
+        20
+      ],
+      [
+        "/blog/wp-json/batch/v1",
+        20
+      ],
+      [
+        "/wp/",
+        18
+      ]
+    ],
+    "top_agents": [
+      [
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ClaudeBot/1.0; +claudebot@anthropic.com)",
+        20365
+      ],
+      [
+        "Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; Bytespider; spider-feedback@bytedance.com)",
+        8414
+      ],
+      [
+        "Mozilla/5.0 (compatible; SemrushBot/7~bl; +http://www.semrush.com/bot.html)",
+        4116
+      ],
+      [
+        "Mozilla/5.0 (compatible; MJ12bot/v1.4.8; http://mj12bot.com/)",
+        2015
+      ],
+      [
+        "Mozilla/5.0 (compatible; SERankingBacklinksBot/1.0; +https://seranking.com/backlinks-crawler)",
+        1938
+      ],
+      [
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Amazonbot/0.1; +https://developer.amazon.com/support/amazonbot) Chrome/119.0.6045.214 Safari/537.36",
+        1404
+      ],
+      [
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Amzn-SearchBot/0.1) Chrome/119.0.6045.214 Safari/537.36",
+        786
+      ],
+      [
+        "Mozilla/5.0 (compatible; AhrefsBot/7.0; +http://ahrefs.com/robot/)",
+        654
+      ],
+      [
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        588
+      ],
+      [
+        "Mozilla/5.0 (compatible; crawler)",
+        538
+      ],
+      [
+        "Mozilla/5.0 (compatible; DotBot/1.2; +https://opensiteexplorer.org/dotbot; help@moz.com)",
+        528
+      ],
+      [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36 Edg/152.0.0.0",
+        478
+      ]
+    ],
+    "top_ip_hashes": [
+      [
+        "91042e12dfb2",
+        20365
+      ],
+      [
+        "c00717581eed",
+        1938
+      ],
+      [
+        "20e218400375",
+        528
+      ],
+      [
+        "f86a03f74a1c",
+        341
+      ],
+      [
+        "6e6efd4dcd12",
+        332
+      ],
+      [
+        "a7b0464c37fd",
+        239
+      ],
+      [
+        "b71c8bc2825f",
+        238
+      ],
+      [
+        "f1615a90e3f9",
+        231
+      ]
+    ],
+    "top_minutes": [
+      [
+        "10/Sep/2026:19:19",
+        405
+      ],
+      [
+        "10/Sep/2026:23:13",
+        389
+      ],
+      [
+        "10/Sep/2026:19:51",
+        377
+      ],
+      [
+        "10/Sep/2026:17:59",
+        355
+      ],
+      [
+        "10/Sep/2026:13:35",
+        352
+      ],
+      [
+        "10/Sep/2026:20:40",
+        308
+      ],
+      [
+        "10/Sep/2026:18:30",
+        289
+      ],
+      [
+        "10/Sep/2026:19:11",
+        267
+      ]
+    ],
+    "statuses": {
+      "200": 40388,
+      "206": 4200,
+      "304": 2107,
+      "404": 791,
+      "499": 144,
+      "502": 51,
+      "301": 22,
+      "444": 3,
+      "308": 91,
+      "202": 2,
+      "503": 2
+    }
+  },
+  "11/Sep/2026": {
+    "requests": 81148,
+    "bytes": 4112124942,
+    "route_counts": {
+      "/oyun": 54940,
+      "/logo.svg": 4535,
+      "/etiket": 11106,
+      "/kategori": 1776,
+      "/.well-known": 61,
+      "/sitemaps": 23,
+      "/oyunlar": 272,
+      "/_next": 8118,
+      "/sitemap.xml": 59,
+      "/api": 12,
+      "/": 38,
+      "/favicon.ico": 6,
+      "/http:": 76,
+      "/sitemap-media.xml": 3,
+      "/sitemap-games-4.xml": 4,
+      "/sitemap-games-2.xml": 2,
+      "/sitemap-games.xml": 4,
+      "/sitemap-tags.xml": 4,
+      "/sitemap-topics.xml": 5,
+      "/sitemap-games-1.xml": 3,
+      "/sitemap-static.xml": 4,
+      "/sitemap-games-3.xml": 2,
+      "/sitemap-games-6.xml": 2,
+      "/sitemap-games-5.xml": 1,
+      "/sitemap-boards.xml": 4,
+      "/sitemap_index.xml": 1,
+      "/.stripe": 1,
+      "/sayfa": 9,
+      "/rastgele": 2,
+      "/wp-json": 38,
+      "/index.php": 12,
+      "/blog": 6,
+      "/wordpress": 6,
+      "/giris": 2,
+      "/thumbnails": 11
+    },
+    "unique_games": 23289,
+    "top_routes": [
+      [
+        "/_next/image",
+        7813
+      ],
+      [
+        "/logo.svg",
+        4535
+      ],
+      [
+        "/oyunlar/",
+        206
+      ],
+      [
+        "/oyun/klasik-top-patlatma",
+        74
+      ],
+      [
+        "/sitemap.xml",
+        59
+      ],
+      [
+        "/oyun/uzay-savunmasi",
+        56
+      ],
+      [
+        "/oyun/sehir-yarisi",
+        49
+      ],
+      [
+        "/oyun/penalti-ustasi",
+        47
+      ],
+      [
+        "http://www.boloyun.com/products.asp",
+        42
+      ],
+      [
+        "/",
+        38
+      ],
+      [
+        "/.well-known/acme-challenge/_5k8DkOCxWTBGxDOJR59oEV_093B2kjaD3rKYAd86jZL7kDLZr007GbX6f4MsFHY",
+        34
+      ],
+      [
+        "/.well-known/acme-challenge/xJm_rvDce32Jg_5jQn0st3tzNCQeO8YJF9c3YYrtpKLX__n3qH5MDUf6fzfxFSLs",
+        27
+      ],
+      [
+        "/wp-json/batch/v1",
+        20
+      ],
+      [
+        "/_next/static/chunks/1hf8o-eljjmc0.js",
+        16
+      ],
+      [
+        "/_next/static/chunks/3a5784z65mazz.js",
+        16
+      ]
+    ],
+    "top_agents": [
+      [
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ClaudeBot/1.0; +claudebot@anthropic.com)",
+        62778
+      ],
+      [
+        "Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; Bytespider; spider-feedback@bytedance.com)",
+        6088
+      ],
+      [
+        "panscient.com",
+        2718
+      ],
+      [
+        "Mozilla/5.0 (compatible; MJ12bot/v1.4.8; http://mj12bot.com/)",
+        1631
+      ],
+      [
+        "Mozilla/5.0 (compatible; SERankingBacklinksBot/1.0; +https://seranking.com/backlinks-crawler)",
+        1609
+      ],
+      [
+        "serpstatbot/2.1 (advanced backlink tracking bot; https://serpstatbot.com/; abuse@serpstatbot.com)",
+        703
+      ],
+      [
+        "Mozilla/5.0 (compatible; SemrushBot/7~bl; +http://www.semrush.com/bot.html)",
+        638
+      ],
+      [
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Amzn-SearchBot/0.1) Chrome/119.0.6045.214 Safari/537.36",
+        624
+      ],
+      [
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Amazonbot/0.1; +https://developer.amazon.com/support/amazonbot) Chrome/119.0.6045.214 Safari/537.36",
+        606
+      ],
+      [
+        "Mozilla/5.0 (compatible; crawler)",
+        481
+      ],
+      [
+        "Mozilla/5.0 (compatible; Baiduspider-render/2.0; +http://www.baidu.com/search/spider.html)",
+        341
+      ],
+      [
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm) Chrome/116.0.1938.76 Safari/537.36",
+        291
+      ]
+    ],
+    "top_ip_hashes": [
+      [
+        "91042e12dfb2",
+        37497
+      ],
+      [
+        "e4476cf207ce",
+        6479
+      ],
+      [
+        "9405176ada5f",
+        6176
+      ],
+      [
+        "0bc930c475e7",
+        4837
+      ],
+      [
+        "51c54b6746ef",
+        4835
+      ],
+      [
+        "825c5d464105",
+        2718
+      ],
+      [
+        "c00717581eed",
+        1609
+      ],
+      [
+        "96959433ed19",
+        1301
+      ]
+    ],
+    "top_minutes": [
+      [
+        "11/Sep/2026:04:28",
+        274
+      ],
+      [
+        "11/Sep/2026:00:31",
+        273
+      ],
+      [
+        "11/Sep/2026:20:25",
+        269
+      ],
+      [
+        "11/Sep/2026:04:29",
+        256
+      ],
+      [
+        "11/Sep/2026:15:27",
+        241
+      ],
+      [
+        "11/Sep/2026:01:23",
+        230
+      ],
+      [
+        "11/Sep/2026:03:42",
+        230
+      ],
+      [
+        "11/Sep/2026:08:20",
+        230
+      ]
+    ],
+    "statuses": {
+      "200": 75407,
+      "206": 3020,
+      "304": 1517,
+      "404": 528,
+      "502": 150,
+      "499": 411,
+      "301": 100,
+      "444": 1,
+      "307": 2,
+      "308": 12
+    }
+  }
+}

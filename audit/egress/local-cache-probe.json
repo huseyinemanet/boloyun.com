@@ -1,0 +1,139 @@
+{
+  "environment": "Node v24.21.0, Next standalone, synthetic local HTTP fixture; not production. Shared cache entries may already be warm.",
+  "results": [
+    {
+      "route": "/api/search?q=470440cc-d60b-471f-87cf-511d9361fb2f",
+      "samples": [
+        {
+          "status": 200,
+          "bytes": 187,
+          "dbRequests": 1,
+          "dbEndpoints": [
+            "/rest/v1/rpc/search_published_games"
+          ],
+          "nextCache": null,
+          "cacheControl": "public, max-age=60, s-maxage=300, stale-while-revalidate=3600",
+          "notFound": false
+        },
+        {
+          "status": 200,
+          "bytes": 187,
+          "dbRequests": 0,
+          "dbEndpoints": [],
+          "nextCache": null,
+          "cacheControl": "public, max-age=60, s-maxage=300, stale-while-revalidate=3600",
+          "notFound": false
+        }
+      ]
+    },
+    {
+      "route": "/arama?q=470440cc-d60b-471f-87cf-511d9361fb2f",
+      "samples": [
+        {
+          "status": 200,
+          "bytes": 43316,
+          "dbRequests": 2,
+          "dbEndpoints": [
+            "/rest/v1/rpc/get_public_shell_snapshot",
+            "/rest/v1/rpc/search_published_games"
+          ],
+          "nextCache": null,
+          "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+          "notFound": false
+        },
+        {
+          "status": 200,
+          "bytes": 43181,
+          "dbRequests": 0,
+          "dbEndpoints": [],
+          "nextCache": null,
+          "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+          "notFound": false
+        }
+      ]
+    },
+    {
+      "route": "/oyun/egress-470440cc-d60b-471f-87cf-511d9361fb2f",
+      "samples": [
+        {
+          "status": 200,
+          "bytes": 109075,
+          "dbRequests": 8,
+          "dbEndpoints": [
+            "/rest/v1/rpc/get_public_game_detail",
+            "/rest/v1/rpc/get_public_shell_snapshot",
+            "/rest/v1/game_categories",
+            "/rest/v1/game_tags",
+            "/rest/v1/games",
+            "/rest/v1/comments",
+            "/rest/v1/comments",
+            "/rest/v1/comments"
+          ],
+          "nextCache": "MISS",
+          "cacheControl": "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
+          "notFound": false
+        },
+        {
+          "status": 200,
+          "bytes": 109075,
+          "dbRequests": 0,
+          "dbEndpoints": [],
+          "nextCache": "HIT",
+          "cacheControl": "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
+          "notFound": false
+        }
+      ]
+    },
+    {
+      "route": "/oyun/missing-470440cc-d60b-471f-87cf-511d9361fb2f",
+      "samples": [
+        {
+          "status": 200,
+          "bytes": 59316,
+          "dbRequests": 1,
+          "dbEndpoints": [
+            "/rest/v1/rpc/get_public_game_detail"
+          ],
+          "nextCache": "MISS",
+          "cacheControl": "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
+          "notFound": true
+        },
+        {
+          "status": 200,
+          "bytes": 59316,
+          "dbRequests": 0,
+          "dbEndpoints": [],
+          "nextCache": "HIT",
+          "cacheControl": "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
+          "notFound": true
+        }
+      ]
+    },
+    {
+      "route": "/sitemaps/games/120",
+      "samples": [
+        {
+          "status": 200,
+          "bytes": 392,
+          "dbRequests": 2,
+          "dbEndpoints": [
+            "/rest/v1/rpc/get_public_shell_snapshot",
+            "/rest/v1/games"
+          ],
+          "nextCache": null,
+          "cacheControl": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
+          "notFound": false
+        },
+        {
+          "status": 200,
+          "bytes": 392,
+          "dbRequests": 0,
+          "dbEndpoints": [],
+          "nextCache": null,
+          "cacheControl": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
+          "notFound": false
+        }
+      ]
+    }
+  ]
+}

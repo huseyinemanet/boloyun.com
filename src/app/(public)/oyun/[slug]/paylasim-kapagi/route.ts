@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import { getPublicSettings } from "@/lib/db-settings";
-import { getPublicGamePageBySlug } from "@/lib/games/public-queries";
+import { getPublishedGameDetailBySlug } from "@/lib/games/public-queries";
 import { absoluteUrl } from "@/lib/seo/metadata";
 
 export const revalidate = 3600;
@@ -12,7 +12,7 @@ type Context = {
 export async function GET(_request: Request, { params }: Context) {
   const { slug } = await params;
   const [detail, settings] = await Promise.all([
-    getPublicGamePageBySlug(slug),
+    getPublishedGameDetailBySlug(slug),
     getPublicSettings(),
   ]);
 

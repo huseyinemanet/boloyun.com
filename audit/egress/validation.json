@@ -1,0 +1,20 @@
+{
+  "observedAt": "2026-09-18",
+  "node": "24.21.0",
+  "baseline": "beecc1a565b36f01f84dcdb4b1a59d9c47ffed79",
+  "typecheck": "passed",
+  "lint": "passed",
+  "tests": {
+    "total": 219,
+    "failed": 0
+  },
+  "build": "passed, BOL_OYUN_PREBUILD_FALLBACK=1",
+  "bundleBudget": "passed",
+  "nginxSyntax": "passed on production Nginx binary using isolated temporary config; no reload",
+  "sql": "local PostgreSQL18 synthetic fixture; not Supabase production",
+  "productionChanges": false,
+  "liveDatabaseChecks": "blocked: project INACTIVE, minimal SQL timed out",
+  "projectUsage": "blocked: dashboard sign-in required",
+  "authenticatedLiveChecks": "not run",
+  "monitoring72Hours": "not started"
+}

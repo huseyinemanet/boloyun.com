@@ -5,11 +5,14 @@ import { getPublicSettings } from "@/lib/db-settings";
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const { seo } = await getPublicSettings();
   return {
-    rules: {
+    rules: [{
       userAgent: "*",
       allow: "/",
-      disallow: seo.robotsDisallow,
-    },
+      disallow: [...new Set([...seo.robotsDisallow, "/api/", "/arama", "/*?*sort=", "/*?*tag="])],
+    }, {
+      userAgent: ["ClaudeBot", "Bytespider", "SemrushBot", "AhrefsBot", "MJ12bot", "DotBot", "SERankingBacklinksBot", "serpstatbot", "panscient.com"],
+      disallow: "/",
+    }],
     sitemap: seo.sitemapEnabled ? absoluteUrl("/sitemap.xml", seo.canonicalDomain) : undefined,
     host: seo.canonicalDomain || SITE_URL,
   };

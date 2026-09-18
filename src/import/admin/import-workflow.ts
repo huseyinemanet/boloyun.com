@@ -1,3 +1,4 @@
+import { IMPORT_DETAIL_SELECT } from "@/import/db/game-imports";
 import "server-only";
 
 import { generateGameContent } from "@/import/ai/generate-game-content";
@@ -88,7 +89,7 @@ async function updateWithVersion(id: string, expected: string, values: Record<st
     .update({ ...values, updated_at: updatedAt })
     .eq("id", id)
     .eq("updated_at", expected)
-    .select("*")
+    .select(IMPORT_DETAIL_SELECT)
     .maybeSingle();
   if (error) throw new Error(`Import güncellenemedi: ${error.message}`);
   if (!data) throw new Error("Bu kayıt başka bir yönetici tarafından değiştirildi. Sayfayı yenileyip tekrar deneyin.");

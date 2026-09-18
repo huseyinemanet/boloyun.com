@@ -27,6 +27,8 @@ export type CategoryRow = {
   updated_at?: string | null;
 };
 
+export const CATEGORY_SELECT = "id, name, slug, description, icon_svg, icon_url, status, seo_title, seo_description, og_image_url, is_indexable, sort_order, show_in_sidebar, sidebar_sort_order, updated_at";
+
 export async function getAdminCategories(): Promise<CategoryRow[]> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
@@ -46,7 +48,7 @@ export async function getAdminCategories(): Promise<CategoryRow[]> {
 
   const { data, error } = await supabase
     .from("categories")
-    .select("*")
+    .select(CATEGORY_SELECT)
     .order("sidebar_sort_order", { ascending: true })
     .order("name", { ascending: true })
     .order("id", { ascending: true });
