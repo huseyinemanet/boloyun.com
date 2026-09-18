@@ -1,0 +1,261 @@
+{
+  "counts": {
+    "games|categories|tags": 85809,
+    "games|categories": 3262,
+    "comments": 79737,
+    "tags": 8912,
+    "games": 19678,
+    "(none)": 2009,
+    "games|tags": 12770,
+    "categories": 177,
+    "ads|public-shell": 7,
+    "unreadable": 3,
+    "site-settings|public-shell": 3,
+    "static-pages": 7,
+    "categories|public-shell": 1,
+    "public-shell|site-settings|categories|ads": 2,
+    "homepage-sections|games|categories|tags": 1
+  },
+  "disk_bytes": {
+    "games|categories|tags": 1573530013,
+    "games|categories": 51890266,
+    "comments": 8745213,
+    "tags": 3421332,
+    "games": 411398354,
+    "(none)": 51350943,
+    "games|tags": 85739849,
+    "categories": 22169,
+    "ads|public-shell": 854,
+    "site-settings|public-shell": 8336,
+    "static-pages": 812,
+    "categories|public-shell": 127,
+    "public-shell|site-settings|categories|ads": 302,
+    "homepage-sections|games|categories|tags": 163982
+  },
+  "shapes": {
+    "games|categories|tags": {
+      "top_keys": [
+        "kind",
+        "data",
+        "revalidate",
+        "tags"
+      ],
+      "data_keys": [
+        "headers",
+        "body",
+        "status",
+        "url"
+      ],
+      "revalidate": 3600,
+      "body_bytes": 3546
+    },
+    "games|categories": {
+      "top_keys": [
+        "kind",
+        "data",
+        "revalidate",
+        "tags"
+      ],
+      "data_keys": [
+        "headers",
+        "body",
+        "status",
+        "url"
+      ],
+      "revalidate": 3600,
+      "body_bytes": 20132
+    },
+    "comments": {
+      "top_keys": [
+        "kind",
+        "data",
+        "revalidate",
+        "tags"
+      ],
+      "data_keys": [
+        "headers",
+        "body",
+        "status",
+        "url"
+      ],
+      "revalidate": 3600,
+      "body_bytes": 2
+    },
+    "tags": {
+      "top_keys": [
+        "kind",
+        "data",
+        "revalidate",
+        "tags"
+      ],
+      "data_keys": [
+        "headers",
+        "body",
+        "status",
+        "url"
+      ],
+      "revalidate": 600,
+      "body_bytes": 4
+    },
+    "games": {
+      "top_keys": [
+        "kind",
+        "data",
+        "revalidate",
+        "tags"
+      ],
+      "data_keys": [
+        "headers",
+        "body",
+        "status",
+        "url"
+      ],
+      "revalidate": 3600,
+      "body_bytes": 4
+    },
+    "(none)": {
+      "top_keys": [
+        "kind",
+        "data",
+        "revalidate",
+        "tags"
+      ],
+      "data_keys": [
+        "headers",
+        "body",
+        "status",
+        "url"
+      ],
+      "revalidate": 3600,
+      "body_bytes": 10264
+    },
+    "games|tags": {
+      "top_keys": [
+        "kind",
+        "data",
+        "revalidate",
+        "tags"
+      ],
+      "data_keys": [
+        "headers",
+        "body",
+        "status",
+        "url"
+      ],
+      "revalidate": 3600,
+      "body_bytes": 19907
+    },
+    "categories": {
+      "top_keys": [
+        "kind",
+        "data",
+        "revalidate",
+        "tags"
+      ],
+      "data_keys": [
+        "headers",
+        "body",
+        "status",
+        "url"
+      ],
+      "revalidate": 3600,
+      "body_bytes": 4
+    },
+    "ads|public-shell": {
+      "top_keys": [
+        "kind",
+        "data",
+        "revalidate",
+        "tags"
+      ],
+      "data_keys": [
+        "headers",
+        "body",
+        "status",
+        "url"
+      ],
+      "revalidate": 3600,
+      "body_bytes": 4
+    },
+    "site-settings|public-shell": {
+      "top_keys": [
+        "kind",
+        "data",
+        "revalidate",
+        "tags"
+      ],
+      "data_keys": [
+        "headers",
+        "body",
+        "status",
+        "url"
+      ],
+      "revalidate": 3600,
+      "body_bytes": 2401
+    },
+    "static-pages": {
+      "top_keys": [
+        "kind",
+        "data",
+        "revalidate",
+        "tags"
+      ],
+      "data_keys": [
+        "headers",
+        "body",
+        "status",
+        "url"
+      ],
+      "revalidate": 3600,
+      "body_bytes": 4
+    },
+    "categories|public-shell": {
+      "top_keys": [
+        "kind",
+        "data",
+        "revalidate",
+        "tags"
+      ],
+      "data_keys": [
+        "headers",
+        "body",
+        "status",
+        "url"
+      ],
+      "revalidate": 3600,
+      "body_bytes": 2
+    },
+    "public-shell|site-settings|categories|ads": {
+      "top_keys": [
+        "kind",
+        "data",
+        "revalidate",
+        "tags"
+      ],
+      "data_keys": [
+        "headers",
+        "body",
+        "status",
+        "url"
+      ],
+      "revalidate": 3600,
+      "body_bytes": 4
+    },
+    "homepage-sections|games|categories|tags": {
+      "top_keys": [
+        "kind",
+        "data",
+        "revalidate",
+        "tags"
+      ],
+      "data_keys": [
+        "headers",
+        "body",
+        "status",
+        "url"
+      ],
+      "revalidate": 3600,
+      "body_bytes": 149789
+    }
+  }
+}

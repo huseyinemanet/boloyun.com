@@ -20,9 +20,20 @@ export async function POST(request: NextRequest) {
     return redirectTo(request, "/giris?error=form");
   }
 
+  const next = safeLocalPath(formData.get("next"));
+  try {
+    return await signIn(request, formData, next);
+  } catch {
+    // Fail closed when the shared rate limiter or Auth cannot be reached.
+    // Never log credentials, email addresses, tokens or provider response bodies.
+    console.error("[auth/signin] login dependency unavailable");
+    return redirectTo(request, `/giris?error=unavailable&next=${encodeURIComponent(next)}`);
+  }
+}
+
+async function signIn(request: NextRequest, formData: FormData, next: string) {
   const email = String(formData.get("email") ?? "").trim().toLocaleLowerCase("tr-TR");
   const password = String(formData.get("password") ?? "");
-  const next = safeLocalPath(formData.get("next"));
   const rate = await consumeRateLimits([
     { action: "auth_login_ip", subject: await getClientIp(), limit: 20, windowSeconds: 900 },
     { action: "auth_login_email", subject: email, limit: 10, windowSeconds: 900 },
@@ -35,6 +46,9 @@ export async function POST(request: NextRequest) {
   const routeClient = await createSupabaseRouteClient();
   if (!routeClient.supabase) return redirectTo(request, "/giris?error=config");
   const { data, error } = await routeClient.supabase.auth.signInWithPassword({ email, password });
+  if (error && (error.name === "AuthRetryableFetchError" || error.status === 0 || error.status === 429 || (error.status ?? 0) >= 500)) {
+    return routeClient.applyTo(redirectTo(request, `/giris?error=unavailable&next=${encodeURIComponent(next)}`));
+  }
   if (error || !data.user) return routeClient.applyTo(redirectTo(request, `/giris?error=invalid&next=${encodeURIComponent(next)}`));
 
   try {
@@ -55,5 +69,7 @@ export async function POST(request: NextRequest) {
 }
 
 function redirectTo(request: NextRequest, path: string) {
-  return NextResponse.redirect(publicUrlFromRequest(request, path), 303);
+  const response = NextResponse.redirect(publicUrlFromRequest(request, path), 303);
+  response.headers.set("Cache-Control", "private, no-store");
+  return response;
 }

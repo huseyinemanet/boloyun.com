@@ -87,8 +87,8 @@ export const getAdminAdManagerData = cache(async function getAdminAdManagerData(
   await ensureDefaultAdSlots();
 
   const [{ data: slots, error: slotsError }, { data: ads, error: adsError }] = await Promise.all([
-    supabase.from("ad_slots").select("*").order("page_type", { ascending: true }).order("position", { ascending: true }),
-    supabase.from("ads").select("*").order("priority", { ascending: false }).order("updated_at", { ascending: false }),
+    supabase.from("ad_slots").select("id, key, name, description, page_type, position, is_active, created_at, updated_at").order("page_type", { ascending: true }).order("position", { ascending: true }),
+    supabase.from("ads").select("id, slot_id, name, ad_code, is_active, show_desktop, show_mobile, start_at, end_at, priority, created_at, updated_at").order("priority", { ascending: false }).order("updated_at", { ascending: false }),
   ]);
 
   if (slotsError) throw new Error(`Reklam slotları okunamadı: ${slotsError.message}`);

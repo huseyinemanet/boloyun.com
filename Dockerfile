@@ -45,9 +45,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Next standalone tracing preserves sharp's package links but can omit the
 # payload of its platform-specific optional packages. Copy those native
 # packages explicitly and fail the image build if libvips cannot be loaded.
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.pnpm/@img+sharp-linux-x64@0.35.3 ./node_modules/.pnpm/@img+sharp-linux-x64@0.35.3
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@1.3.2 ./node_modules/.pnpm/@img+sharp-libvips-linux-x64@1.3.2
-RUN node -e "require('/app/node_modules/.pnpm/sharp@0.35.3_@types+node@24.13.3/node_modules/sharp')"
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.pnpm/@img+sharp-linux-x64@0.35.4 ./node_modules/.pnpm/@img+sharp-linux-x64@0.35.4
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@1.3.3 ./node_modules/.pnpm/@img+sharp-libvips-linux-x64@1.3.3
+RUN node -e "require('/app/node_modules/.pnpm/sharp@0.35.4_@types+node@24.13.3/node_modules/sharp')"
 USER nextjs
 EXPOSE 3000
 CMD ["node", "server.js"]

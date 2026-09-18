@@ -62,6 +62,7 @@ function GoogleLogo({ className }: { className?: string }) {
 }
 
 function getLoginError(error: string) {
+  if (error === "unavailable") return "Giriş hizmeti geçici olarak kullanılamıyor. Lütfen daha sonra tekrar dene.";
   if (error === "blocked") return "Hesabın engellenmiş. Yardım için site yönetimiyle iletişime geç.";
   if (error === "config") return "Üyelik sistemi henüz yapılandırılmamış.";
   if (error === "google") return "Google ile giriş başlatılamadı. Lütfen tekrar dene.";

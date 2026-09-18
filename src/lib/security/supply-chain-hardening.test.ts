@@ -55,7 +55,8 @@ test("üretim bağımlılık ağacı yamalı Sharp sürümünü zorlar ve shadcn
 
   assert.equal(packageJson.dependencies?.shadcn, undefined);
   assert.equal(packageJson.devDependencies?.shadcn, "4.16.1");
-  assert.match(workspace, /'next>sharp': 0\.35\.3/);
+  assert.equal(packageJson.dependencies?.sharp, "0.35.4");
+  assert.match(workspace, /'next>sharp': 0\.35\.4/);
 });
 
 test("Ruffle sabit npm sürümünden self-host edilir ve CSP genel HTTPS scriptine izin vermez", () => {

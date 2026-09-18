@@ -249,7 +249,7 @@ export async function getAdminGameById(id: string): Promise<Game | null> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return fallbackGames.find((game) => game.id === id) ?? null;
 
-  const { data, error } = await supabase.from("games").select("*").eq("id", id).maybeSingle();
+  const { data, error } = await supabase.from("games").select("id, title, slug, short_description, long_description, how_to_play, controls, features, developer, thumbnail_url, thumbnail_source_url, thumbnail_r2_key, thumbnail_sync_status, thumbnail_sync_error, thumbnail_synced_at, game_type, embed_url, swf_url, html5_url, external_url, source_url, source_domain, status, rating_avg, rating_count, likes_count, dislikes_count, play_count, favorite_count, popularity_score, seo_title, seo_description, primary_category_id, og_image_url, is_indexable, is_broken").eq("id", id).maybeSingle();
   if (error || !data) return null;
 
   return mapGameRow(data as unknown as GameRow);

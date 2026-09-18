@@ -29,11 +29,15 @@ test("uygulama oyun detayını hafif RPC'den alır ve önerileri ayrı sorgularl
   );
 
   assert.match(gamePageFlow, /getPublishedGameDetailBySlug\(slug\)/);
-  assert.match(gamePageFlow, /getRelatedPublishedGames\(detail\.game\.id, 25/);
-  assert.match(gamePageFlow, /getCategoryRecommendationGames\(primaryCategory\.id, detail\.game\.id, "latest", 25\)/);
-  assert.match(gamePageFlow, /getCategoryRecommendationGames\(primaryCategory\.id, detail\.game\.id, "popular", 25\)/);
+  assert.match(gamePageFlow, /getRelatedPublishedGames\(detail\.game\.id, 12/);
+  assert.match(gamePageFlow, /getCategoryRecommendationGames\(primaryCategory\.id, detail\.game\.id, "latest", 12\)/);
+  assert.match(gamePageFlow, /getCategoryRecommendationGames\(primaryCategory\.id, detail\.game\.id, "popular", 12\)/);
   assert.doesNotMatch(gamePageFlow, /get_public_game_page/);
-  assert.match(gamePageFlow, /public-game-page-snapshot-v4/);
+  assert.match(gamePageFlow, /public-game-page-snapshot-v5/);
+  assert.match(gamePageFlow, /settings\.similarGameStrategy === "taxonomy" \? getRelatedPublishedGames/);
+  assert.match(gamePageFlow, /settings\.similarGameStrategy === "category" && primaryCategory/);
+  assert.match(gamePageFlow, /settings\.similarGameStrategy === "popular" && primaryCategory/);
+  assert.match(gamePageFlow, /"site-settings"/);
 });
 
 test("oyun sayfası benzer oyunları erişilebilir karuselde gösterir", () => {

@@ -1,4 +1,4 @@
-import { getPublicGamePageBySlug } from "@/lib/games/public-queries";
+import { getPublishedGameDetailBySlug } from "@/lib/games/public-queries";
 import { absoluteUrl } from "@/lib/seo/metadata";
 import { getPublicSettings } from "@/lib/db-settings";
 import { createRemoteSocialImage, SocialImageBusyError } from "@/lib/security/social-image";
@@ -12,7 +12,7 @@ type Context = {
 export async function GET(_request: Request, { params }: Context) {
   const { slug } = await params;
   const [detail, settings] = await Promise.all([
-    getPublicGamePageBySlug(slug),
+    getPublishedGameDetailBySlug(slug),
     getPublicSettings(),
   ]);
 

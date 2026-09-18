@@ -6,6 +6,7 @@ import { getPublishedGamesByIds } from "@/lib/games/public-queries";
 import { isTagIndexable } from "@/lib/seo/audit";
 import { slugify } from "@/lib/slug/slugify";
 import { measuredQuery } from "@/lib/query-observability";
+import { catalogPagination } from "@/lib/catalog-policy";
 
 export type TagRow = {
   id: string;
@@ -19,6 +20,8 @@ export type TagRow = {
   is_indexable?: boolean | null;
   updated_at?: string | null;
 };
+
+export const TAG_SELECT = "id, name, slug, description, status, seo_title, seo_description, og_image_url, is_indexable, updated_at";
 
 export type PublicTag = TagRow & {
   publishedGameCount: number;
@@ -38,7 +41,7 @@ const getPublicTagBySlugCached = unstable_cache(async function getPublicTagBySlu
     const supabase = createSupabaseServiceClient();
     if (!supabase) return null;
 
-    const { data, error } = await supabase.from("tags").select("*").eq("slug", slug).eq("status", "active").maybeSingle();
+    const { data, error } = await supabase.from("tags").select(TAG_SELECT).eq("slug", slug).eq("status", "active").maybeSingle();
     if (error || !data) return null;
 
     const publishedGameCount = await getPublishedGameCountForTag(data.id as string);
@@ -111,7 +114,8 @@ export const getPublishedGamesByTagSlugPage = cache(async function getPublishedG
   page: number;
   perPage: number;
 }) {
-  return getPublishedGamesByTagSlugPageCached(slug, page, perPage);
+  const safe = catalogPagination(page, perPage);
+  return getPublishedGamesByTagSlugPageCached(slug, safe.page, safe.perPage);
 });
 
 function mapPublicTagFromRpc(tag: PublicTagPageRpc["tag"], publishedGameCount: number): PublicTag | null {
@@ -134,7 +138,7 @@ export async function getAdminTagsPage({ page, perPage, query = "" }: { page: nu
 
   const from = (page - 1) * perPage;
   const to = from + perPage - 1;
-  let request = supabase.from("tags").select("*", { count: "exact" }).order("name").range(from, to);
+  let request = supabase.from("tags").select(TAG_SELECT, { count: "exact" }).order("name").range(from, to);
   if (query.trim()) request = request.ilike("name", `%${query.trim().replaceAll("%", "\\%").replaceAll("_", "\\_")}%`);
   const { data, error, count } = await request;
   if (error || !data) return { items: [] as PublicTag[], total: 0 };
@@ -162,7 +166,7 @@ export async function getAdminTagsPage({ page, perPage, query = "" }: { page: nu
 export async function getAdminTagById(id: string) {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return null;
-  const { data, error } = await supabase.from("tags").select("*").eq("id", id).maybeSingle();
+  const { data, error } = await supabase.from("tags").select(TAG_SELECT).eq("id", id).maybeSingle();
   if (error || !data) return null;
   const tag = data as TagRow;
   const publishedGameCount = await getPublishedGameCountForTag(tag.id);

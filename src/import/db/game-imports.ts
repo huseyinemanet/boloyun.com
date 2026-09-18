@@ -55,9 +55,14 @@ export type ScrapedGameImport = {
   ai_categories_tr: string[] | null;
   ai_tags_tr: string[] | null;
   error_message: string | null;
-  raw_html_snapshot: string | null;
+  raw_html_snapshot?: string | null;
   published_game_id: string | null;
 };
+
+export const IMPORT_DETAIL_SELECT = "id, created_at, updated_at, source_url, source_domain, import_status, original_title, original_description, original_how_to_play, original_controls, original_developer, original_categories, original_tags, thumbnail_url, detected_game_type, detected_embed_url, detected_swf_url, detected_html5_url, detected_external_url, ai_title_tr, ai_short_description_tr, ai_long_description_tr, ai_how_to_play_tr, ai_controls_tr, ai_features_tr, ai_developer_tr, ai_seo_title_tr, ai_seo_description_tr, ai_categories_tr, ai_tags_tr, error_message, published_game_id";
+
+export type ImportListItem = Pick<ScrapedGameImport, "id" | "updated_at" | "source_url" | "source_domain" | "import_status" | "original_title" | "ai_title_tr" | "thumbnail_url" | "error_message">;
+const IMPORT_LIST_SELECT = "id, updated_at, source_url, source_domain, import_status, original_title, ai_title_tr, thumbnail_url, error_message";
 
 export type AdminImportFilter = "review" | "needs_fix" | "failed" | "approved" | "rejected";
 
@@ -328,7 +333,7 @@ export async function getPublishableImports(limit: number) {
   const supabase = getRequiredSupabaseServiceClient();
   const { data, error } = await supabase
     .from("game_imports")
-    .select("*")
+    .select(IMPORT_DETAIL_SELECT)
     .in("import_status", ["scraped", "pending_review", "ai_generated"])
     .order("created_at", { ascending: true })
     .limit(limit);
@@ -365,7 +370,7 @@ export async function getImportById(id: string) {
   const supabase = getRequiredSupabaseServiceClient();
   const { data, error } = await supabase
     .from("game_imports")
-    .select("*")
+    .select(IMPORT_DETAIL_SELECT)
     .eq("id", id)
     .single();
 
@@ -380,7 +385,7 @@ export async function getAdminImports(limit: number) {
   const supabase = getRequiredSupabaseServiceClient();
   const { data, error } = await supabase
     .from("game_imports")
-    .select("*")
+    .select(IMPORT_DETAIL_SELECT)
     .in("import_status", ["scraped", "ai_generated", "pending_review", "needs_fix", "failed"])
     .order("updated_at", { ascending: false })
     .limit(limit);
@@ -412,10 +417,11 @@ export async function getAdminImportsPage({ cursor, direction, perPage, filter =
   filter?: AdminImportFilter;
 }) {
   const supabase = getRequiredSupabaseServiceClient();
+  perPage = Number.isFinite(perPage) ? Math.min(100, Math.max(1, Math.floor(perPage))) : 50;
   const ascending = direction === "previous";
   let query = supabase
     .from("game_imports")
-    .select("*")
+    .select(IMPORT_LIST_SELECT)
     .order("updated_at", { ascending })
     .order("id", { ascending })
     .limit(perPage + 1);
@@ -429,7 +435,7 @@ export async function getAdminImportsPage({ cursor, direction, perPage, filter =
   }
 
   const hasMore = (data?.length ?? 0) > perPage;
-  const items = ((data ?? []).slice(0, perPage) as ScrapedGameImport[]);
+  const items = ((data ?? []).slice(0, perPage) as ImportListItem[]);
   if (ascending) items.reverse();
   return {
     items,

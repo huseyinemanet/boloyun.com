@@ -8,6 +8,8 @@ import { allowPublicDemoData, publicDataUnavailable } from "@/lib/public-data-gu
 import type { Game, GameSearchSuggestion } from "@/types/game";
 import { normalizePublicCategoryRow, type CategoryRow } from "@/lib/db-categories";
 import { measuredQuery } from "@/lib/query-observability";
+import { boundedInteger, catalogPagination, CATALOG_TTL, normalizeSearchQuery } from "@/lib/catalog-policy";
+import { getPublicSettings } from "@/lib/db-settings";
 import { mergePrebuildSlugs, PUBLIC_PREBUILD_LIMITS } from "@/lib/prebuild-policy";
 import {
   mapGameRow,
@@ -106,8 +108,23 @@ type PublicGameSearchRpc = {
   total?: number | string | null;
 };
 
+// Share bounded candidate pools across games with the same taxonomy. Exclude the
+// current game after the cache lookup; including it in the key defeats reuse.
+const getRelatedCandidateLinksCached = unstable_cache(async (kind: "category" | "tag", idKey: string): Promise<GameRelationRow[]> => {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase || !idKey) return [];
+  const table = kind === "category" ? "game_categories" : "game_tags";
+  const column = kind === "category" ? "category_id" : "tag_id";
+  const { data, error } = await measuredQuery(`games.related.pool.${kind}`, supabase
+    .from(table).select(`game_id, ${column}`).in(column, idKey.split(","))
+    .order("game_id").order(column).limit(251));
+  if (error) throw publicDataUnavailable("Benzer oyun adayları", error.message);
+  return (data ?? []) as unknown as GameRelationRow[];
+}, ["related-candidate-pool-v1"], { revalidate: CATALOG_TTL.detail, tags: ["games", "categories", "tags"] });
+
 
 const getPublishedGamesCached = unstable_cache(async function getPublishedGames(limit = 60): Promise<Game[]> {
+  limit = boundedInteger(limit, 60, 60);
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
     if (!allowPublicDemoData()) {
@@ -277,7 +294,7 @@ export async function getRandomPublishedGameSlug(excludeSlug?: string): Promise<
   return data;
 }
 
-export async function getPublishedGamesPage({ page, perPage }: { page: number; perPage: number }): Promise<{ items: Game[]; total: number }> {
+const getPublishedGamesPageCached = unstable_cache(async function getPublishedGamesPageCached(page: number, perPage: number): Promise<{ items: Game[]; total: number }> {
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
     const published = fallbackGames.filter((game) => game.status === "published");
@@ -295,9 +312,11 @@ export async function getPublishedGamesPage({ page, perPage }: { page: number; p
     .select(publicGameCardSelect, { count: "exact" })
     .eq("status", "published")
     .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
     .range(from, to));
 
   if (error || !data) {
+    if (error && !allowPublicDemoData()) throw publicDataUnavailable("Oyun arşivi", error.message);
     return { items: [], total: 0 };
   }
 
@@ -305,9 +324,15 @@ export async function getPublishedGamesPage({ page, perPage }: { page: number; p
     items: (data as unknown as GameRow[]).map(mapGameRow),
     total: count ?? 0,
   };
+}, ["published-game-archive-v1"], { revalidate: CATALOG_TTL.list, tags: ["games"] });
+
+export async function getPublishedGamesPage(input: { page: number; perPage: number }) {
+  const { page, perPage } = catalogPagination(input.page, input.perPage);
+  return getPublishedGamesPageCached(page, perPage);
 }
 
 const getRelatedPublishedGamesCached = unstable_cache(async function getRelatedPublishedGames(gameId: string, limit = 4, primaryCategoryId?: string): Promise<Game[]> {
+  limit = boundedInteger(limit, 4, 12);
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
     const currentGame = fallbackGames.find((game) => game.id === gameId);
@@ -335,17 +360,17 @@ const getRelatedPublishedGamesCached = unstable_cache(async function getRelatedP
 
   const [relatedByCategory, relatedByTag] = await Promise.all([
     categoryIds.length
-      ? measuredQuery("games.related.by-category", supabase.from("game_categories").select("game_id, category_id").in("category_id", categoryIds).neq("game_id", gameId).limit(1000))
-      : Promise.resolve({ data: [] as GameRelationRow[] }),
+      ? getRelatedCandidateLinksCached("category", normalizeGameIds(categoryIds).join(","))
+      : Promise.resolve([] as GameRelationRow[]),
     tagIds.length
-      ? measuredQuery("games.related.by-tag", supabase.from("game_tags").select("game_id, tag_id").in("tag_id", tagIds).neq("game_id", gameId).limit(1000))
-      : Promise.resolve({ data: [] as GameRelationRow[] }),
+      ? getRelatedCandidateLinksCached("tag", normalizeGameIds(tagIds).join(","))
+      : Promise.resolve([] as GameRelationRow[]),
   ]);
 
   const scoredIds = rankRelatedGameCandidates({
     primaryCategoryId,
-    categoryLinks: ((relatedByCategory.data ?? []) as GameRelationRow[]).flatMap((row) => row.category_id ? [{ gameId: row.game_id, taxonomyId: row.category_id }] : []),
-    tagLinks: ((relatedByTag.data ?? []) as GameRelationRow[]).flatMap((row) => row.tag_id ? [{ gameId: row.game_id, taxonomyId: row.tag_id }] : []),
+    categoryLinks: relatedByCategory.filter((row) => row.game_id !== gameId).slice(0, 250).flatMap((row) => row.category_id ? [{ gameId: row.game_id, taxonomyId: row.category_id }] : []),
+    tagLinks: relatedByTag.filter((row) => row.game_id !== gameId).slice(0, 250).flatMap((row) => row.tag_id ? [{ gameId: row.game_id, taxonomyId: row.tag_id }] : []),
   }).slice(0, limit * 6);
 
   const relatedGames = scoredIds.length
@@ -365,10 +390,11 @@ const getRelatedPublishedGamesCached = unstable_cache(async function getRelatedP
     return (await getPopularPublishedGames(limit + 1)).filter((game) => game.id !== gameId).slice(0, limit);
   }
   return [];
-}, ["related-published-games-v2"], { revalidate: 3600, tags: ["games", "categories", "tags"] });
+}, ["related-published-games-v3"], { revalidate: CATALOG_TTL.detail, tags: ["games", "categories", "tags"] });
 export const getRelatedPublishedGames = cache(getRelatedPublishedGamesCached);
 
 const getPublishedGamesByCategorySlugCached = unstable_cache(async function getPublishedGamesByCategorySlug(slug: string, limit = 60): Promise<Game[]> {
+  limit = boundedInteger(limit, 60, 60);
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
     return fallbackGames.filter((game) => game.status === "published" && game.categories.includes(slug)).slice(0, limit);
@@ -460,7 +486,8 @@ export const getPublishedGamesByCategorySlugPage = cache(async function getPubli
   page: number;
   perPage: number;
 }): Promise<{ items: Game[]; total: number; category: CategoryRow | null }> {
-  return getPublishedGamesByCategorySlugPageCached(slug, page, perPage);
+  const safe = catalogPagination(page, perPage);
+  return getPublishedGamesByCategorySlugPageCached(slug, safe.page, safe.perPage);
 });
 
 const getPublishedGameBySlugCached = unstable_cache(async function getPublishedGameBySlug(slug: string): Promise<Game | null> {
@@ -477,11 +504,12 @@ const getPublishedGameBySlugCached = unstable_cache(async function getPublishedG
     .maybeSingle());
 
   if (error || !data) {
+    if (error && !allowPublicDemoData()) throw publicDataUnavailable("Oyun detayı", error.message);
     return fallbackGames.find((game) => game.slug === slug) ?? null;
   }
 
   return mapGameRow(data as unknown as GameRow);
-}, ["published-game-by-slug"], { revalidate: 3600, tags: ["games"] });
+}, ["published-game-by-slug"], { revalidate: CATALOG_TTL.detail, tags: ["games"] });
 export const getPublishedGameBySlug = cache(getPublishedGameBySlugCached);
 
 const getPublishedGameDetailBySlugCached = unstable_cache(async function getPublishedGameDetailBySlug(slug: string): Promise<GameDetail | null> {
@@ -502,6 +530,8 @@ const getPublishedGameDetailBySlugCached = unstable_cache(async function getPubl
 
   if (!rpcError && rpcData && typeof rpcData === "object") {
     const result = rpcData as PublicGameDetailRpc;
+    // A successful RPC with no game is a real 404, not a reason to refetch.
+    if (!result.game) return null;
     if (result.game) {
       const game = mapGameRow(result.game);
       const categories = prioritizeTaxonomy(mapTaxonomyItems(result.categories), game.primaryCategoryId);
@@ -517,6 +547,10 @@ const getPublishedGameDetailBySlugCached = unstable_cache(async function getPubl
         tags,
       };
     }
+  }
+
+  if (rpcError && !["PGRST202", "42883"].includes(rpcError.code) && !allowPublicDemoData()) {
+    throw publicDataUnavailable("Oyun detayı", rpcError.message);
   }
 
   const game = await getPublishedGameBySlug(slug);
@@ -545,17 +579,19 @@ const getPublishedGameDetailBySlugCached = unstable_cache(async function getPubl
     categories,
     tags,
   };
-}, ["published-game-detail"], { revalidate: 3600, tags: ["games", "categories", "tags"] });
+}, ["published-game-detail"], { revalidate: CATALOG_TTL.detail, tags: ["games", "categories", "tags"] });
 export const getPublishedGameDetailBySlug = cache(getPublishedGameDetailBySlugCached);
 
 const getPublicGamePageBySlugCached = unstable_cache(async function getPublicGamePageBySlugCached(slug: string): Promise<PublicGamePageSnapshot | null> {
   const detail = await getPublishedGameDetailBySlug(slug);
   if (!detail) return null;
   const primaryCategory = detail.categories[0];
+  const { games: settings } = await getPublicSettings();
+  // The page renders one recommendation strategy. Do not download the other two.
   const [relatedGames, latestCategoryGames, popularCategoryGames] = await Promise.all([
-    getRelatedPublishedGames(detail.game.id, 25, detail.game.primaryCategoryId),
-    primaryCategory?.id ? getCategoryRecommendationGames(primaryCategory.id, detail.game.id, "latest", 25) : Promise.resolve([]),
-    primaryCategory?.id ? getCategoryRecommendationGames(primaryCategory.id, detail.game.id, "popular", 25) : Promise.resolve([]),
+    settings.similarGameStrategy === "taxonomy" ? getRelatedPublishedGames(detail.game.id, 12, detail.game.primaryCategoryId) : Promise.resolve([]),
+    settings.similarGameStrategy === "category" && primaryCategory?.id ? getCategoryRecommendationGames(primaryCategory.id, detail.game.id, "latest", 12) : Promise.resolve([]),
+    settings.similarGameStrategy === "popular" && primaryCategory?.id ? getCategoryRecommendationGames(primaryCategory.id, detail.game.id, "popular", 12) : Promise.resolve([]),
   ]);
 
   return {
@@ -564,11 +600,11 @@ const getPublicGamePageBySlugCached = unstable_cache(async function getPublicGam
     latestCategoryGames,
     popularCategoryGames,
   };
-}, ["public-game-page-snapshot-v4"], { revalidate: 3600, tags: ["games", "categories", "tags"] });
+}, ["public-game-page-snapshot-v5"], { revalidate: CATALOG_TTL.detail, tags: ["games", "categories", "tags", "site-settings"] });
 
 export const getPublicGamePageBySlug = cache(getPublicGamePageBySlugCached);
 
-export async function searchPublishedGames(query: string, page = 1, perPage = 24): Promise<{ items: Game[]; total: number }> {
+const searchPublishedGamesCached = unstable_cache(async function searchPublishedGamesCached(query: string, page: number, perPage: number): Promise<{ items: Game[]; total: number }> {
   const normalized = query.trim().slice(0, 80);
   if (!normalized) return { items: [], total: 0 };
 
@@ -591,13 +627,21 @@ export async function searchPublishedGames(query: string, page = 1, perPage = 24
     p_limit: safePerPage,
     p_offset: (safePage - 1) * safePerPage,
   }));
-  if (error || !data || typeof data !== "object") return { items: [], total: 0 };
+  if (error && !allowPublicDemoData()) throw publicDataUnavailable("Oyun arama", error.message);
+  if (!data || typeof data !== "object") return { items: [], total: 0 };
 
   const result = data as PublicGameSearchRpc;
   return {
     items: Array.isArray(result.items) ? result.items.map(mapGameRow) : [],
     total: Number(result.total ?? 0),
   };
+}, ["search-published-games-page-v1"], { revalidate: CATALOG_TTL.search, tags: ["games"] });
+
+export async function searchPublishedGames(query: string, page = 1, perPage = 24) {
+  const normalized = normalizeSearchQuery(query);
+  if (normalized.length < 3) return { items: [], total: 0 };
+  const safe = catalogPagination(page, perPage, 24);
+  return searchPublishedGamesCached(normalized, safe.page, safe.perPage);
 }
 
 const searchPublishedGameSuggestionsCached = unstable_cache(async function searchPublishedGameSuggestions(query: string, limit = 6): Promise<GameSearchSuggestion[]> {
@@ -628,7 +672,8 @@ const searchPublishedGameSuggestionsCached = unstable_cache(async function searc
     shortDescription: game.short_description ?? "",
   }));
 }, ["search-published-game-suggestions-v2"], { revalidate: 300, tags: ["games"] });
-export const searchPublishedGameSuggestions = cache(searchPublishedGameSuggestionsCached);
+export const searchPublishedGameSuggestions = cache((query: string, limit = 6) =>
+  searchPublishedGameSuggestionsCached(normalizeSearchQuery(query), boundedInteger(limit, 6, 10)));
 
 const getPopularGameSuggestionsCached = unstable_cache(async function getPopularGameSuggestions(limit = 5): Promise<GameSearchSuggestion[]> {
   const safeLimit = Math.min(Math.max(limit, 1), 10);
@@ -682,9 +727,9 @@ const getPublishedGamesByIdKeyCached = unstable_cache(async function getPublishe
 }, ["published-games-by-id-key-v1"], { revalidate: 3600, tags: ["games"] });
 
 export async function getPublishedGamesByIds(ids: string[]): Promise<Game[]> {
-  const normalizedIds = normalizeGameIds(ids);
+  const normalizedIds = normalizeGameIds(ids.slice(0, 150));
   if (!normalizedIds.length) return [];
 
   const games = await getPublishedGamesByIdKeyCached(normalizedIds.join(","));
-  return restoreRequestedGameOrder(ids, games);
+  return restoreRequestedGameOrder(ids.slice(0, 150), games);
 }
